@@ -106,3 +106,6 @@ The below will orient input_file.pdb on a grid of 40 starting configurations. It
 The below will orient input_file.pdb on a grid of 40 starting configurations with 150 minimisation interations. It will be minimised with a double membrane system. Once minimised the code will build the top 2 ranks using insane. The CG system built with insane will have asymentric membranes, one with POPE,POPG and CARD the other with only LIPA.
 
 >python MemPrO_Script.py -f input_file.pdb -o "Output_dir/" -ng 40 -ni 150 -dm -bd 2 -bd_args "-x 20 -y 20 -z 35 -salt 0.15 -sol W -l POPE:7 -l POPG:2 -l CARD:1 -lo LIPA" -itp "PATH/TO/MARTINI"
+
+## FAQ
+There are currently no frequently asked questions. If you do have any questions or encounter errors that you cannot fix please contact me via my email m.parrag@warwick.ac.uk and I will do my best to provide help.
