@@ -37,6 +37,9 @@ MemPrO will also output information about the progress of the oreination to the 
 ## Flags
 MemPro will takes the following flags as input:
 
+
+-h, --help : This will display a help message with all possible flags and some informtation on their use.
+
 -f, --file_name : This is the name of the input file for the protein that you wish to orient. It must be a .pdb. In future support for .gro files may be added. The protein can be either atomistic or coarse grained. The code should detect which it is and ingnore unknown atom/bead types, however in the case of an error please let me know and send me the file which caused it. It is reccomended that the PDB files had no missing atoms as this can cause the orientation to be of lower quaility.
 
 -o, --output : This is the name of the ouput directory. The code will deafult to a folder called Orient in the directory where the code is run. The syntax for this flag is -o "Output_dir/". Note that a backslash is required.
