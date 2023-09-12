@@ -1,5 +1,5 @@
 # MemPrO
-Membrain Protein Orientation in Lipid Bilayers
+Membrane Protein Orientation in Lipid Bilayers
 
 ## Installation
 TBD
