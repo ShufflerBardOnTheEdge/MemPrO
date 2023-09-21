@@ -6,7 +6,9 @@ TBD
 
 >pip install MemPrO
 
-There may be additional steps after this to deal with paths
+There may be additional steps after this to deal with paths. 
+
+MemPrO is also accessible on Google Colab via the link [ADD LINK]. The Colab will contain instructions for use. 
 
 ## Outputs
 
