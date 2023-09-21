@@ -93,7 +93,7 @@ This should be run before any other commands
 
 >export NUM_CPU=N
 
-Where N is replaced by the number of CPU you wish to used, for the examples below 20 were used.
+Where N is replaced by the number of CPU you wish to use, for the examples below 20 were used.
 
 The below will orient input_file.pdb on a grid of 40 starting configurations with 150 minimisation iterations
 
