@@ -137,6 +137,27 @@ MemPrO comes with Insane4MemPrO which is a heavily modifed version of Insane. In
 
 -zpbc: This indicates if there is z periodicty when determining the number of solvent compartments in the system.
 
+### Examples
+These instrctions will run through building a CG system with a curved membrane with multiple proteins placed.
+
+Inititally a template needs to be created. To do this a command similar to the following should be run:
+    
+>python PATH/TO/Insane4MemPrO.py -l POPE -salt 0.15,0.15 -sol W -x 10 -y 10 -z 50 -o test.gro -p topol.top -curv 0.1,0.15,1 -fudge 0.3 -curv_ext 6 charge_ratio 1,1 -ct template.pdb
+
+This will create a membrane with only POPE (-l POPE). The box size if set to be (10,10,50) although as this too small to contain the curvature it is automatically increased. The curvature is described by 0.1,0.15,1 indicating a curvature of 0.1 at the peak, a curvature 0.15 at the base, and the curved region points in postive Z direction. The curved region will maintain the curvature of 0.1 for 6 Angstroms before returning to planar. The name of the template file is template.pdb (-ct template.pdb)
+    
+After this open template.pdb in pymol. The position of the proteins will be indicated by the b-factors in this pdb. Select a single bead where you would like to place a protein and then type the command alter sele,b=1 After this deselect the bead and repeat the process increasing the b-fac value by 1 each time for each protein you would like to add.
+    
+It is important to increase the b-factors by 1 as this will indicated the order in which the proteins are placed. i.e. The n-th protein will be placed at the bead with b-factor n. Once all b-factors have been changed type the command save template.pdb.
+    
+Next run the following command in terminal:
+    
+>python PATH/TO/Insane4MemBrain_V2.py -l POPE -salt 0.15,0.15 -sol W -x 10 -y 10 -z 50 -o test.gro -p topol.top -curv 0.1,0.15,1 -fudge 0.3 -curv_ext 6 -charge_ratio 1,1 -in_t template.pdb -fs prots.txt
+    
+Ensure all the membrane relevant values are the same. The template file (-in_t template.pdb) should be the one with altered b-factors. -fs takes the .txt mentioned earlier, this should contain the same number of proteins as altered b-facs. This will then build the system.
+    
+The flag -p will create a rudimentary .top file. The Protein related entries will need to be changed but the other values are correct.
+
 ## FAQ
 There are currently no frequently asked questions. If you do have any questions or encounter errors that you cannot fix please contact me via my email m.parrag@warwick.ac.uk and I will do my best to provide help.
 
