@@ -85,9 +85,13 @@ MemPro will takes the following flags as input:
 
 ## Examples
 
-This should be run before any other commands
+These lines should be run before any other commands
 
 >export NUM_CPU=N
+
+>export PATH_TO_INSANE=PATH/TO/INSANE4MEMPRO
+
+>export PATH_TO_MARTINI=PATH/TO/MARTINI3
 
 Where N is replaced by the number of CPU you wish to use, for the examples below 20 were used.
 
