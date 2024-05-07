@@ -77,7 +77,7 @@ MemPro will takes the following flags as input:
 
 -c, --curvature : This toggles global curvature minimisation. This is currently not compatible with -dm. 
 
--itp, --itp_file : The code makes heavy use of the martini parameters. The path to a martini 3 itp file should go here. The default loaction is TBD.
+-itp, --itp_file : The code makes heavy use of the martini parameters. The path to a martini 3 itp file should go here. The default loaction is read from the environment variable PATH_TO_MARTINI.
 
 -bd, --build_system : This should be a number that indicates how many of the final configurations should be build using Insane. This will currently only work if your input file is coarse grain.  
 
