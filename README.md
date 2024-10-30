@@ -112,41 +112,121 @@ The below will orient input_file.pdb on a grid of 40 starting configurations wit
 
 >python MemPrO_Script.py -f input_file.pdb -o "Output_dir/" -ng 40 -ni 150 -dm -bd 2 -bd_args "-salt 0.15,0.15,0.15 -charge_ratio 1,1,1 -sol W -l POPE:7 -l POPG:2 -l CARD:1 -lo LIPA" -itp "PATH/TO/MARTINI"
 ## Insane4MemPrO
-MemPrO comes with Insane4MemPrO which is a heavily modifed version of Insane. Insane4MemPrO allows the user to build more complex systems with upto 2 membranes, curvature and multiple proteins. When used with MemPrO directly via the -bd flag the system will be automatically built.
+MemPrO comes with Insane4MemPrO a CG system builder based on Insane. Insane4MemPrO allows the user to build more complex systems with upto 2 membranes, curvature, multiple proteins and more. When used with MemPrO directly via the -bd flag the system will be automatically built.
 
 
-### Additional/edited flags:
+### Flags:
 
--uo/-lo: These are used to define lipid composition of the outer membrane if building a double membrane system. They have the same syntax as the original -u,-l
+I/O related flags:
 
--ps: This should be a float value equal the half the distance between the two membranes. For flat systems and pores this is the distance between planar regions. For curved double membrane systems it is the distance between the center of each membrane.
+-f : (Optional) Input protein to build CG system around.
 
--ct: This creates a "template" file along with a txt. The template file is a .pdb which contains a representation of the membrane, this can then be edited in pymol to indicate positions of multiple proteins. The .txt will have the same name as the template and contain the membrane relevant options used to create the membrane.
+-o : (Required) Output file name.
 
--in_t: This is the input template for multiple protein placements.
+-p : (Optional) Output topology file
 
--fs: This is .txt that contains a ordered list of proteins to be placed in the membrane. Each line should be "file_name direction ring". Here file_name is the path to the protein, direction is either 1 or -1 and can be used to flip individual proteins by 180 and ring is either 0 or 1 and determins if lipids inside the protein are removed or not. 0 indicating the lipids are removed.
+-ct : (Optional) If used this will create a template file. The B factors can be edited to indicate placment of multiple proteins. More detail in examples section.
 
--curv/-curv_o: These should be 3 comma seperated values "c,rc,dc" where c is the curvature at the center of the membrane, rc is the curvature of the membrane as it returns to planar (Return curvature) and dc is the direction  of the curvature.
+-in_t: (Optional) If a template created by -ct is being used it is inputted with this flag. This will build a CG system with proteins indicated in -fs being placed where indicated in the template.
 
--curv_ext: This is the extent of the curved region. When not using templates this will be ignored as the extent is calculated from the protein. This can be used to control the size of the pore.
+-fs : (Optional) A text file with an ordered list of proteins for use in multiple protein placements.
 
--pore: This flags if a pore should be created or not. When this is used the first value of -curv will be ignored as will the last. The return curvature cannot be zero and will be set to 0.1 by default.
+Options relating to system size:
 
--fudge: This indicates how close lipids can be the to beads in the protein in nm. A value of 0 means complete overlap. Generally 0.3 works well, but if there are errors with overlapping atoms then try increasing this. 
+-x : (Required) Indicates size of box in x dimention
 
--salt: This has been changed to be a comma seperated list of upto 3 values. As a double membrane system will create disjoint compartments the salt concentration can be set for each compartment. if there is no z periodicity then there are 3 compartents for a double membrane system.
+-y : (Required) Indicates size of box in y dimention
 
--charge_ratio: This is similar to salt but instead indicates how to split the charge across the compartments. Only the first n values will be read where n is the number of compartments in the system. The values need not add to 1 as they will be normalised. 
+-z : (Required) Indicates size of box in z dimention
 
--zpbc: This indicates if there is z periodicty when determining the number of solvent compartments in the system.
+Membrane/lipid related options:
+
+-l : (Optional) Lipid type and relative abundance (NAME\[:N\]) in membrane (or just lower leaflet if -u used)
+
+-u : (Optional) Lipid type and relative abundance (NAME\[:N\]) in upper leaflet
+
+-lo : (Optional) Lipid type and relative abundance (NAME\[:N\]) in outer membrane (or just lower leaflet if -uo used)
+
+-uo : (Optional) Lipid type and relative abundance (NAME\[:N\]) in outer membrane upper leaflet
+
+-a : (Default: 0.6) Area per lipid (nm\*nm) in membrane (or just lower leaflet if -au used)
+
+-au : (Optional) Area per lipid (nm\*nm) in upper leaflet
+
+-ao : (Optional) Area per lipid (nm\*nm) in outer membrane (or just lower leaflet if -au used)
+
+-auo : (Optional) Area per lipid (nm\*nm) in outer membrane upper leaflet
+
+-ps : (Default 0) Specifies distance between inner and outer membrane. 
+
+-curv : (Default 0,0,1) Curvature of the membrane, consists of 3 comma separated values. The curvature at the middle the curvature as it relaxes back to planar and the direction of the curvature.
+
+-curv_o: (Default 0,0,1) Curvature of outer membrane. see -curv.
+
+-curv_ext: (Default 3) Extent of curved region in the absence of a protein, this also controls the size of the pore if -pore is used.
+
+-pore : (Optional) Create a pore, with inner radius equal to -curv_ext and length equal to -ps.
+
+-micelle: (Optional) Builds a micelle around a protein instead of a bilayer.
+
+PG cell wall related options:
+
+-pgl : (Optional) Number of PG layers to place at -pgl_z.
+
+-pgl_z : (Optional) Z position of PG layer relative to center of periplasmic space.
+
+-cper : (Default 0.4) Percentage of crosslinks.
+
+-lper : (Default 0.1) Percentage of crosslinks that are between layers.
+
+-oper : (Default 1) Percentage change of a monomer linking with a oligomer. (Apllied after initial chance for a crosslink to form hence true change is cper\*oper).
+
+-per33 : (Default 0.03) Percentage of crosslinks that are of type 3-3.
+
+-gdist : (Default 0.75,4,8.9,0.25,10,45) Distribution of glycan strand lengths. Format as weight 1,standard deviation 1,mean 1,weight 2..., were each triple describes a gaussian. The sum of these forms the distribution. The default value corresponds to E-coli.
+
+Protein related options:
+
+-fudge : (Default 0.3) Fudge factor for allowing lipid-protein overlap
+
+Solvent related options:
+
+-sol : (Required) indicates the solvent used.
+
+-sold : (Default 0.5) Indicates how tightly packed the solvent is.
+
+-solr : (Default 0.1) Magnitude of random deviations to solvent positions.
+
+Charge related optiond:
+
+-posi_c0 : (Requried) Positive ion type and relative abundance (NAME\[:N\]) in system (Or compartment 0 if -posi_c1/-posi_c2 used) When using multiple membranes disjoint compartments of water may form, these flags allow for each compartment to be neutralised independantly and with different ions.
+
+-negi_c0 : (Requried) Negative ion type and relative abundance (NAME\[:N\]) in system (Or compartment 0 if -negi_c1/-negi_c2 used).
+
+-posi_c1 : (Optional) Positive ion type and relative abundance (NAME\[:N\]) in comparment 1.
+
+-negi_c1 : (Optional) Negative ion type and relative abundance (NAME\[:N\]) in comparment 1.
+
+-posi_c2 : (Optional) Positive ion type and relative abundance (NAME\[:N\]) in comparment 2.
+
+-negi_c2 : (Optional) Negative ion type and relative abundance (NAME\[:N\]) in comparment 2.
+
+-ion_conc: (Default 0.15,0.15,0.15) Concentration of ions in each compartment.
+
+-charge : (Default "auto") Charge of system. "auto" detects charge automatically.
+
+-charge_ratio : (Optional) When supplied indicates how to split the charge across compartments, otherwise each compartment is neutralised seperately.
+
+-zpbc : (Optional) Determines if Z periodicity is used when calculating compartments.
+
+
 
 ### Examples
 These instrctions will run through building a CG system with a curved membrane with multiple proteins placed.
 
 Inititally a template needs to be created. To do this a command similar to the following should be run:
     
->python PATH/TO/Insane4MemPrO.py -l POPE -salt 0.15,0.15 -sol W -x 10 -y 10 -z 50 -o test.gro -p topol.top -curv 0.1,0.15,1 -fudge 0.3 -curv_ext 6 charge_ratio 1,1 -ct template.pdb
+>python PATH/TO/Insane4MemPrO.py -l POPE -sol W -x 10 -y 10 -z 50 -o test.gro -p topol.top -curv 0.1,0.15,1 -fudge 0.3 -curv_ext 6 -ct template.pdb -negi_c0 CL -posi_c0 NA
 
 This will create a membrane with only POPE (-l POPE). The box size if set to be (10,10,50) although as this too small to contain the curvature it is automatically increased. The curvature is described by 0.1,0.15,1 indicating a curvature of 0.1 at the peak, a curvature 0.15 at the base, and the curved region points in postive Z direction. The curved region will maintain the curvature of 0.1 for 6 Angstroms before returning to planar. The name of the template file is template.pdb (-ct template.pdb)
     
@@ -156,7 +236,7 @@ It is important to increase the b-factors by 1 as this will indicated the order 
     
 Next run the following command in terminal:
     
->python PATH/TO/Insane4MemBrain_V2.py -l POPE -salt 0.15,0.15 -sol W -x 10 -y 10 -z 50 -o test.gro -p topol.top -curv 0.1,0.15,1 -fudge 0.3 -curv_ext 6 -charge_ratio 1,1 -in_t template.pdb -fs prots.txt
+>python PATH/TO/Insane4MemBrain_V2.py -l POPE -sol W -x 10 -y 10 -z 50 -o test.gro -p topol.top -curv 0.1,0.15,1 -fudge 0.3 -curv_ext 6 -in_t template.pdb -fs prots.txt -negi_c0 CL -posi_c0 NA
     
 Ensure all the membrane relevant values are the same. The template file (-in_t template.pdb) should be the one with altered b-factors. -fs takes the .txt mentioned earlier, this should contain the same number of proteins as altered b-facs. This will then build the system.
     
