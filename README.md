@@ -85,7 +85,7 @@ MemPro will takes the following flags as input:
 
 ## Examples
 
-These lines should be run before any other commands
+Before running MemPrO some enviroment varibles must be set, for Linux users the following lines can be run.
 
 >export NUM_CPU=N
 
