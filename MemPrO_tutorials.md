@@ -77,6 +77,12 @@ Let us now look in the folder "Rank_1". Looking at "Z_potential_curve.png" we se
 
 >python PATH/TO/MemPrO_Script.py -f 6bpz.pdb -ng 16 -ni 150 -o "Orient_Curv/" -c
 
+Looking now in the folder "Orient_Curv" we can immidietely see we have fewer final orientations. Looking in "orientations.txt" shows only one orientation with negative potential and a deep minima. This indicates a much more stable prediction. Looking at "oriented_rank_1.pdb" from the folder we can see the protein has been placed in a highly curved membrane. Looking at "curv_potential_curve.png" we can see the minima has actually shifted even further, this is because without curvature prediction there is a much greater error on the placment which affects the curvature calculations.
+
+It is not always possible to see if a membrane should be curved by looking at "curv_potential_curve.png" in a planar orientation, but in many cases it may give an idication if the protein prefers curved enviroments.
+
+
+
 
 
 
