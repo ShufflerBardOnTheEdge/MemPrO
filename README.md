@@ -112,7 +112,7 @@ The below will orient input_file.pdb on a grid of 40 starting configurations wit
 
 >python MemPrO_Script.py -f input_file.pdb -o "Output_dir/" -ng 40 -ni 150 -dm -bd 2 -bd_args "-salt 0.15,0.15,0.15 -charge_ratio 1,1,1 -sol W -l POPE:7 -l POPG:2 -l CARD:1 -lo LIPA" -itp "PATH/TO/MARTINI"
 
-A more detailed tutorial is avialable (here)[MemPrO_tutorials.md]
+A more detailed tutorial is avialable [here](MemPrO_tutorials.md)
 
 ## Insane4MemPrO
 MemPrO comes with Insane4MemPrO a CG system builder based on Insane. Insane4MemPrO allows the user to build more complex systems with upto 2 membranes, curvature, multiple proteins and more. When used with MemPrO directly via the -bd flag the system will be automatically built.
