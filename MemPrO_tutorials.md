@@ -35,4 +35,38 @@ The first of the images Z_potential_curve.png shows the potential as the protein
 Hopefully, one can see that MemPrO is very easy to use and also provides lots of information about the orientation. The next few tutorials will focus on a few of the more advanced features.
 
 ## Double membrane systems
+We will now look at the double membrane orientation in MemPrO. We will need to download a double membrane protein, let us choose 5NIK from the protein data bank. To download this one can use the fetch commmand in PyMOL followed by saving as a .pdb, further details on this method can be found [here](https://pymolwiki.org/index.php/Fetch). Otherwise go to the [following page on the PDB website](https://www.rcsb.org/structure/5nik) and download in PDB format.
+
+Now create a folder called "Tutorial2" to contain all the files for this tutorial, and place the downloaded pdb file in there as before. Now in a termail navigate to the folder you just created and run the follwoing:
+>python PATH/TO/MemPrO_Script.py -f 5nik.pdb -ng 16 -ni 150 -dm
+
+The only difference here is the addition of the flag -dm, this tells MemPrO to used two membranes for the orientation of this protein.
+
+Once the code has finished running, which with ~16 CPUs should take about 140 seconds, you should find a folder called "Orient" in the Tutorial2 folder. The structure of the Orient folder is very similar to previously. We will look at a few differences. The ranking method is different in the case of double membrane proteins which is reflected in "oreintations.txt" in which the final 3 values for each rank should be 0. Double membranes are ranked on relative potential only due to the different nature of such orientations.
+
+Within "Rank_1" we no longer see the two images, but we still have "info_rank_1.txt" and "oriented_rank_1.pdb". Looking at "info_rank_1.txt" we find on the first line "Inter-Membrane distance" with the value 272.556 angstroms inidicating the distance between the inner and outer membranes.
+
+## Predicting the PG layer
+
+5NIK is a periplasm spanning protein so the peptidoglycan (PG) layer would reside within the inner and outer membranes. We can use MemPrO to predict the placement of this. First copy 5nik.pdb across to a new folder called "Tutorial3" and run the following in a termial in Tutorial3
+>python PATH/TO/MemPrO_Script.py -f 5nik.pdb -ng 16 -ni 150 -dm -pg
+
+As before after the code has finished running (Which should take 150 seconds with 16 CPUs) we will find the "Orient" folder.
+
+In the folder "Orient/Rank_1" we will now find two graphs. We will focus only on "PG_potential_curve.png". This graph shows the potential associated with placing the PG layer at that position. One should be able to see the potential is lowest around 0-30 angstroms from the center. In this region there are two minima that are reasonable deep at around ~10 and ~30 angstroms. The first of these is at the lowest potential and is added to "oreinted_rank_1.pdb" as another set of dummy beads. The second is also a valid placement, as external factors can have an effect on the placement which may easily tip the balance between the two minima. In "info_rank_1.txt" we will find the exat position and the cross-sectional area of the protein at that positions alongside the other information.
+
+If additional information is known about where the PG layer may be, such as the length of LPP in the particular bacteria, then -pg_guess can be used to bias the potential. The value of pg_guess is the distance from the outer membrane to the PG layer. For E-coli LPP is about 75 angstroms long (corresponding to 30 A from the center which was our second minima) so we can run the follwoing
+
+>python PATH/TO/MemPrO_Script.py -f 5nik.pdb -ng 16 -ni 150 -dm -pg -pg_guess 75 -o "Orient_PG_Guess/"
+
+This will output to a folder called "Orient_PG_Guess" as specified by the -o flag. 
+
+Looking at the file "Rank_1/oriented_rank_1.pdb" in Orient_PG_Guess, we should now see the PG layer placed higher up the protein.
+
+## Global curvature predictions
+
+We will now move onto predicting global curvature of proteins. 
+
+
+
 
