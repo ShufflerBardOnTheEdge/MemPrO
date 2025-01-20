@@ -35,7 +35,7 @@ The first of the images Z_potential_curve.png shows the potential as the protein
 Hopefully, one can see that MemPrO is very easy to use and also provides lots of information about the orientation. The next few tutorials will focus on a few of the more advanced features.
 
 ## Double membrane systems
-We will now look at the double membrane orientation in MemPrO. We will need to download a double membrane protein, let us choose 5NIK from the protein data bank. To download this one can use the fetch commmand in PyMOL followed by saving as a .pdb, further details on this method can be found [here](https://pymolwiki.org/index.php/Fetch). Otherwise go to the [following page on the PDB website](https://www.rcsb.org/structure/5nik) and download in PDB format.
+We will now look at the double membrane orientation in MemPrO. We will need to download a double membrane protein PDB, let us choose 5NIK from the protein data bank. To download this one can use the fetch commmand in PyMOL followed by saving as a .pdb, further details on this method can be found [here](https://pymolwiki.org/index.php/Fetch). Otherwise go to the [following page on the PDB website](https://www.rcsb.org/structure/5nik) and download in PDB format.
 
 Now create a folder called "Tutorial2" to contain all the files for this tutorial, and place the downloaded pdb file in there as before. Now in a termail navigate to the folder you just created and run the follwoing:
 >python PATH/TO/MemPrO_Script.py -f 5nik.pdb -ng 16 -ni 150 -dm
@@ -65,7 +65,20 @@ Looking at the file "Rank_1/oriented_rank_1.pdb" in Orient_PG_Guess, we should n
 
 ## Global curvature predictions
 
-We will now move onto predicting global curvature of proteins. 
+We will now move onto predicting global curvature of proteins.  We will need to download a PDB file for a protein that causes membrane curvature, let us choose 6BPZ from the protein data bank. To download this one can use the fetch commmand in PyMOL followed by saving as a .pdb, further details on this method can be found [here](https://pymolwiki.org/index.php/Fetch). Otherwise go to the [following page on the PDB website](https://www.rcsb.org/structure/6bpz) and download in PDB format.
+
+As before let us make a folder called "Tutorial4" and place 6bpz.pdb in this folder. We will start by running a standard orientation to illustrate why global curvature predictions are sometimes needed.
+
+>python PATH/TO/MemPrO_Script.py -f 6bpz.pdb -ng 16 -ni 150 -o "Orient_NoCurv/"
+
+Looking in the folder "Orient_NoCurv" we find there are many more ranks than in previous examples. Let us look at "orientations.txt" and "orientations.pdb" to investigate. We see from orientations.txt none of the orientations have a negative potential, which doesn't neccassraily mean there is an issue but can be indicative of an orientation where something is not quite right. We find that of the many ranks the first few have a final value much higher than the others. In my case these are around ~280000 with the others < 80000. Looking at the orientations in orientations.pdb we see for these the transmembrane regions are placed roughly within the membrane but there is alot of variance in the position. This indicates either a highly mobile orientation or a unstable orientation. 
+
+Let us now look in the folder "Rank_1". Looking at "Z_potential_curve.png" we see a extemly deep minima suggesting the orientation is perhaps not mobile (In Z at least), looking at "curv_potential_curve.png" reveals the issue. We find this graph shows a minima at -0.005 meaning a fairly significat negative curvature has lower potential than a planar membrane. Let us now run the following to inculde global curvature prediction
+
+>python PATH/TO/MemPrO_Script.py -f 6bpz.pdb -ng 16 -ni 150 -o "Orient_Curv/" -c
+
+
+
 
 
 
