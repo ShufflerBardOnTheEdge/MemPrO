@@ -23,6 +23,7 @@ PATH_TO_INSANE = os.environ["PATH_TO_INSANE"]
 warnings.filterwarnings('ignore')
 
 #We define some enumerations for use later
+"""
 class Reses(Enum):
 	ALA = 0
 	GLY = 1
@@ -45,7 +46,9 @@ class Reses(Enum):
 	CYS = 18
 	MET = 19
 	UNK = 20
-	
+"""
+Reses = {"ALA":0,"GLY":1,"ILE":2,"LEU":3,"PRO":4,"VAL":5,"PHE":6,"TYR":7,"TRP":8,"ARG":9,"LYS":10,"HIS":11,"SER":12,"THR":13,"ASP":14,"GLU":15,"ASN":16,"GLN":17,"CYS":18,"MET":19,"UNK":20}
+"""
 class Beads(Enum):
 	BB =  0
 	SC1 = 1
@@ -54,7 +57,9 @@ class Beads(Enum):
 	SC4 = 4
 	SC5 = 5
 	SC6 = 6
-	
+"""
+Beads = {"BB":0,"SC1":1,"SC2":2,"SC3":3,"SC4":4,"SC5":5,"SC6":6}
+"""
 class Beadtype(Enum):
 	SP2 = 0 #p4
 	TC3 = 1 #p4
@@ -78,7 +83,40 @@ class Beadtype(Enum):
 	C6 = 19 #c5
 	P5 = 20 #p5
 	SP5 = 21 #p4
-	GHOST = 22
+	GHOST = 22 #May need for PG as well
+"""
+Beadtype = {"SP2":0, #p4
+	"TC3" : 1, #p4
+	"SP1" : 2, #P1
+	"P2" : 3, #p5
+	"SC2" :4, #AC2
+	"SP2a" : 5, #p5
+	"SC3" :6, #c3
+	"SC4": 7, #SC5
+	"TC5" : 8, #SC5
+	"TC4" : 9, #SC4
+	"TN6" : 10, #SP1
+	"TN6d" : 11, #SNd
+	"SQ3p" : 12, #Qp
+	"SQ4p" : 13, #Qp
+	"TN5a" : 14, #SP1
+	"TP1" :15, #P1
+	"SQ5n" : 16, #Qa
+	"Q5n" : 17, #Qa
+	"TC6" : 18, #c5
+	"C6" : 19, #c5
+	"P5" : 20, #p5
+	"SP5" : 21, #p4
+	"GHOST" : 22} #May need for PG as well}
+
+ResToBead = [["SP2","TC3"],["SP1"],["P2","SC2"],["P2","SC2"],["SP2a","SC3"],["SP2","SC3"],["P2","SC4","TC5","TC5"],["P2","TC4","TC5","TC5","TN6"],["P2","TC4","TN6d","TC5","TC5","TC5"],["P2","SC3","SQ3p"],["P2","SC3","SQ4p"],["P2","TC4","TN6d","TN5a"],["P2","TP1"],["P2","SP1"],["P2","SQ5n"],["P2","Q5n"],["P2","P5"],["P2","SP5"],["P2","TC6"],["P2","C6"],["GHOST"]]
+AtomsToBead = [[["N","C","O"],["CB"]],[["N","C","O","CA"]],[["N","C","O"],["CB","CD1","CG1","CG2"]],[["N","C","O"],["CB","CG","CD1","CD2"]],
+				 [["C","O"],["CB","CA","CD","CG","N"]],[["N","C","O"],["CB","CG1","CG2"]],[["N","C","O"],["CB","CA","CG"],["CD1","CE1"],["CD2","CE2"]],
+				 [["N","C","O"],["CB"],["CD1"],["CD2"],["CZ"]],[["N","C","O"],["CB"],["CG","NE1","CD1"],["CD2","CE2"],["CZ3","CE3"],["CZ2","CH2"]],
+				 [["N","C","O"],["CB","CG","CD"],["NE","CZ","NH2","NH1"]],[["N","C","O"],["CB","CG"],["CD","CE","NZ"]],[["N","C","O"],["CB","CG"],["CD2","NE2"],["ND1","CE1"]],
+				 [["N","C","O"],["CB","OG"]],[["N","C","O"],["CB","CG2","OG1"]],[["N","C","O"],["CB","CG","OD2"]],[["N","C","O"],["CD","CG","OE2","OE1"]],
+				 [["N","C","O"],["CB","CG","ND2"]],[["N","C","O"],["CD","CG","NE2"]],[["N","C","O"],["SG","CB"]],[["N","C","O"],["SD","CE","CG"]],[]]	
+		
 	
 #We need to force JAX to fully utilize a multi-core cpu
 no_cpu = int(os.environ["NUM_CPU"])
@@ -98,14 +136,14 @@ devices = jax.devices()
 
 #This is a class that deals with the pdb files and all construction of position arrays
 class PDB_helper:
-	def __init__(self,fn,use_weights,build_no,ranges):
+	def __init__(self,fn,use_weights,build_no,ranges,lsurf):
 		#A list to help with getting the correct bead types from a cg pdb
-		self.beads = [["SP2","TC3"],["SP1"],["P2","SC2"],["P2","SC2"],["SP2a","SC3"],["SP2","SC3"],["P2","SC4","TC5","TC5"],["P2","TC4","TC5","TC5","TN6"],["P2","TC4","TN6d","TC5","TC5","TC5"],["P2","SC3","SQ3p"],["P2","SC3","SQ4p"],["P2","TC4","TN6d","TN5a"],["P2","TP1"],["P2","SP1"],["P2","SQ5n"],["P2","Q5n"],["P2","P5"],["P2","SP5"],["P2","TC6"],["P2","C6"],["GHOST"]]
-		
+		self.beads = ResToBead
 		self.fn = fn
 		self.use_weights = use_weights
 		self.build_no = build_no
 		self.ranges = ranges
+		self.lsurf = lsurf
 		
 		#Placeholder vars
 		self.surface = 0
@@ -123,12 +161,12 @@ class PDB_helper:
 		#We need the following two methods to tell jax what is and what is not static
 	def _tree_flatten(self):
 		children = (self.surface,self.spheres,self.surface_poses,self.bead_types,self.surf_b_vals,self.poses,self.all_poses,self.b_vals,self.map_to_beads,self.normals,self.all_bead_types)
-		aux_data = {"Beads":self.beads,"fn":self.fn,"weights":self.use_weights,"Build_no":self.build_no,"ranges":self.ranges}
+		aux_data = {"Beads":self.beads,"fn":self.fn,"weights":self.use_weights,"Build_no":self.build_no,"ranges":self.ranges,"Lsurf":self.lsurf}
 		return (children,aux_data)
 	
 	@classmethod
 	def _tree_unflatten(cls,aux_data,children):
-		obj = cls(aux_data["fn"],aux_data["weights"],aux_data["Build_no"],aux_data["ranges"])
+		obj = cls(aux_data["fn"],aux_data["weights"],aux_data["Build_no"],aux_data["ranges"],aux_data["Lsurf"])
 		obj.surface = children[0]
 		obj.spheres = children[1]
 		obj.surface_poses = children[2]
@@ -159,77 +197,20 @@ class PDB_helper:
 			if(len(c) > 46):
 				if("[" not in c and c[:4]=="ATOM"):	
 					bead = c[12:17].strip()
-					if(bead not in ["BB","SC1","SC2","SC3","SC4","SC5"]):
-						return True
-		return False
+					if(bead in ["BB","SC1","SC2","SC3","SC4","SC5"]):
+						return False
+		return True
 	
 	#converts a atomistic resiude to cg representation
 	#This is by no means a good coarse graining but as there is no MD involved and only approximate locations are needed
 	#this is good enough. Orientations using this CG rep and a Martinized CG rep are very similar.
 	def convert_to_cg(self,res_type,poses,b_vals,atom_types):
-		if(res_type == 0):
-			num = 2
-			atom_to_bead = [["N","C","O"],["CB"]]
-		if(res_type == 1):
-			num = 1
-			atom_to_bead = [["N","C","O","CA"]]
-		if(res_type == 2):
-			num = 2
-			atom_to_bead = [["N","C","O"],["CB","CD1","CG1","CG2"]]
-		if(res_type == 3):
-			num = 2
-			atom_to_bead = [["N","C","O"],["CB","CG","CD1","CD2"]]
-		if(res_type == 4):
-			num = 2
-			atom_to_bead = [["C","O"],["CB","CA","CD","CG","N"]]
-		if(res_type == 5):
-			num = 2
-			atom_to_bead = [["N","C","O"],["CB","CG1","CG2"]]
-		if(res_type == 6):
-			num = 4
-			atom_to_bead = [["N","C","O"],["CB","CA","CG"],["CD1","CE1"],["CD2","CE2"]]
-		if(res_type == 7):
-			num = 5
-			atom_to_bead = [["N","C","O"],["CB"],["CD1"],["CD2"],["CZ"]]
-		if(res_type == 8):
-			num = 6
-			atom_to_bead = [["N","C","O"],["CB"],["CG","NE1","CD1"],["CD2","CE2"],["CZ3","CE3"],["CZ2","CH2"]]
-		if(res_type == 9):
-			num = 3
-			atom_to_bead = [["N","C","O"],["CB","CG","CD"],["NE","CZ","NH2","NH1"]]
-		if(res_type == 10):
-			num = 3
-			atom_to_bead = [["N","C","O"],["CB","CG"],["CD","CE","NZ"]]
-		if(res_type == 11):
-			num = 4
-			atom_to_bead = [["N","C","O"],["CB","CG"],["CD2","NE2"],["ND1","CE1"]]
-		if(res_type == 12):
-			num = 2
-			atom_to_bead = [["N","C","O"],["CB","OG"]]
-		if(res_type == 13):
-			num = 2
-			atom_to_bead = [["N","C","O"],["CB","CG2","OG1"]]
-		if(res_type == 14):
-			num = 2
-			atom_to_bead = [["N","C","O"],["CB","CG","OD2"]]
-		if(res_type == 15):
-			num = 2
-			atom_to_bead = [["N","C","O"],["CD","CG","OE2","OE1"]]
-		if(res_type == 16):
-			num = 2
-			atom_to_bead = [["N","C","O"],["CB","CG","ND2"]]
-		if(res_type == 17):
-			num = 2
-			atom_to_bead = [["N","C","O"],["CD","CG","NE2"]]
-		if(res_type == 18):
-			num = 2
-			atom_to_bead = [["N","C","O"],["SG","CB"]]
-		if(res_type == 19):
-			num = 2
-			atom_to_bead = [["N","C","O"],["SD","CE","CG"]]
 		if(res_type == 20):
 			num = 1
 			atom_to_bead = atom_types
+		else:
+			atom_to_bead = AtomsToBead[res_type]
+			num = len(atom_to_bead)
 		
 		reses = np.zeros(num)+res_type
 		beads_pos = np.zeros((num,3))
@@ -238,7 +219,7 @@ class PDB_helper:
 		new_bvals = np.zeros(num)
 		map_to_beads = np.zeros(len(poses))
 		for i in range(num):
-			bead_types[i] = Beadtype[self.beads[res_type][i]].value
+			bead_types[i] = Beadtype[self.beads[res_type][i]]
 		for i,xi in enumerate(poses):
 			#print("here",atom_types[i])
 			for k in range(num):
@@ -284,7 +265,7 @@ class PDB_helper:
 		for c in content:
 			if(len(c) > 46):
 				if("[" not in c and c[:4]=="ATOM"):	
-					res = c[17:20].strip()
+					res = c[17:21].strip()
 					bead = c[12:17].strip()
 					zpos = c[46:54]
 					ypos = c[38:46]
@@ -293,12 +274,12 @@ class PDB_helper:
 					atom_num = int(c[22:26].strip())
 					pos = np.array([float(xpos.strip()),float(ypos.strip()),float(zpos.strip())])
 					if(not np.any(np.isnan(pos))):
-						if(res not in dir(Reses)[:21]):
+						if(res not in Reses.keys()):
 							res = "UNK" 
 						self.all_poses.append(pos)
 						if(atom_num == prev_atom_num):
 							atom_types.append(bead)
-							reses2.append(Reses[res].value)
+							reses2.append(Reses[res])
 							poses2.append(pos)
 							if(self.ranges.size != 0):
 								if(self.in_ranges(atom_num)):
@@ -319,7 +300,7 @@ class PDB_helper:
 							b_vals2 = []
 							atom_types = []
 							atom_types.append(bead)
-							reses2.append(Reses[res].value)
+							reses2.append(Reses[res])
 							poses2.append(pos)
 							if(self.ranges.size != 0):
 								if(self.in_ranges(atom_num)):
@@ -330,7 +311,7 @@ class PDB_helper:
 								b_vals2.append(b_val)
 						else:
 							atom_types.append(bead)
-							reses2.append(Reses[res].value)
+							reses2.append(Reses[res])
 							poses2.append(pos)
 							if(self.ranges.size != 0):
 								if(self.in_ranges(atom_num)):
@@ -371,7 +352,7 @@ class PDB_helper:
 		for c in content:
 			if(len(c) > 46):
 				if("[" not in c and c[:4]=="ATOM"):	
-					res = c[17:20].strip()
+					res = c[17:21].strip()
 					bead = c[12:17].strip()
 					zpos = c[46:54]
 					ypos = c[38:46]
@@ -380,10 +361,10 @@ class PDB_helper:
 					b_val = float(c[60:66].strip())
 					pos = np.array([float(xpos.strip()),float(ypos.strip()),float(zpos.strip())])
 					if(not np.any(np.isnan(pos))):
-						if(res not in dir(Reses)[:21]):
+						if(res not in list(Reses.keys())):
 							res = "UNK" 
-						self.bead_types.append(Beadtype[self.beads[Reses[res].value][Beads[bead].value]].value)
-						self.reses.append(Reses[res].value)
+						self.bead_types.append(Beadtype[self.beads[Reses[res]][Beads[bead]]])
+						self.reses.append(Reses[res])
 						self.poses.append(pos)
 						if(self.ranges.size != 0):
 							if(self.in_ranges(atom_num)):
@@ -419,6 +400,8 @@ class PDB_helper:
 		if(not self.use_weights and self.ranges.size == 0):
 			self.b_vals = self.b_vals.at[:].set(1.0)
 		return pos_mean
+
+	
 
 			
 
@@ -498,7 +481,45 @@ class PDB_helper:
 		hit_points = hit_points.at[hit_points>0].set(1)
 		return hit_points
 
-		
+
+
+	@partial(jax.jit,static_argnums=3)
+	def get_surface_v3(self,points,bpoints,mrad):
+		srad = 16
+		thresh = 0.65
+		total = jnp.zeros((20,10))
+		total = get_sph_circ(total,jnp.array([0,0]),jnp.pi)
+		total_area = jnp.sum(total)
+		#jax.debug.print("TA{x}",x=total_area)
+		is_surf = jnp.zeros((points.shape[0]))
+		def sloopv3_1(is_surf,ind):
+			pind = ind
+			ang_grid = jnp.zeros((20,10))
+			def sloopv3_2(ang_grid,ind):
+				direc = points[pind]-points[bpoints[pind,ind]]
+				dist = jnp.linalg.norm(direc)
+				def far(ang_grid):
+					return ang_grid
+				def nfar(ang_grid):
+					angle = jnp.arccos(2*dist/srad)
+					cen_y = jnp.arccos(direc[2]/dist)
+					cen_x = jnp.arctan(direc[1]/direc[0])
+					ang_grid = get_sph_circ(ang_grid,jnp.array([cen_x,cen_y]),angle)
+					return ang_grid
+				ang_grid = jax.lax.cond((dist < srad)*(dist>1e-5),nfar,far,ang_grid)
+				return ang_grid,ind
+			ang_grid,_ = jax.lax.scan(sloopv3_2,ang_grid,jnp.arange(mrad))
+			perc = jnp.sum(ang_grid)/total_area
+			#jax.debug.print("Perc {x}",x=perc)
+			def gthresh(is_surf):
+				is_surf = is_surf.at[ind].set(1)
+				return is_surf
+			def lthresh(is_surf):
+				return is_surf
+			is_surf = jax.lax.cond(perc<thresh,gthresh,lthresh,is_surf)
+			return is_surf,ind
+		is_surf,_=jax.lax.scan(sloopv3_1,is_surf,jnp.arange(points.shape[0]))
+		return is_surf
 		
 	#This function gets the surface residues of a given cg protein
 	def get_surface(self):
@@ -510,6 +531,7 @@ class PDB_helper:
 		
 		
 		self.poses = jnp.pad(self.poses,((0,new_num-pos_num),(0,0)),mode="edge")
+		
 		#Calculating normals at each point of the cg protein
 		timer = time.time()
 		@partial(jax.vmap)
@@ -538,14 +560,18 @@ class PDB_helper:
 		jax.block_until_ready(self.normals)
 		self.surface = jnp.zeros((self.poses.shape[0],1))
 		
-		shard_points = jax.device_put(self.poses,sharding)
-		shard_surface = jax.device_put(self.surface,sharding)
 		
-		shard_surface = self.get_surface_v2(shard_points,shard_surface).block_until_ready()
+		if(self.lsurf):
+			bpoints,mrad = get_binned_points(np.array(self.poses),16)
+			is_surf = self.get_surface_v3(jnp.array(self.poses),jnp.array(bpoints),mrad).block_until_ready()
+			self.surface = self.surface.at[:,0].set(jnp.array(is_surf))
+		else:
+			shard_points = jax.device_put(self.poses,sharding)
+			shard_surface = jax.device_put(self.surface,sharding)
+			shard_surface = self.get_surface_v2(shard_points,shard_surface).block_until_ready()
+			self.surface = jnp.array(jax.device_get(shard_surface))
 		
-		self.surface = jnp.array(jax.device_get(shard_surface))
 		surface_number = jnp.sum(self.surface,dtype = "int")
-		
 		#A new array is created containg only surface positions
 		self.surface_poses = self.poses[self.surface[:,0] == 1]
 
@@ -1726,12 +1752,25 @@ class MemBrain:
 		plt.show()
 	
 	#This function evaluates the position of the PG layer 
-	def get_pg_pos(self,nums,min_ind,mem_structure_im,mem_structure_om):
+	def get_pg_pos(self,nums,min_ind,mem_structure_im,mem_structure_om,pg_guess):
 		mins = jnp.array(self.minima)
 		no_mins = (mins.shape[0]//5)
 		min_poses = mins[:no_mins]
 		ranger = jnp.abs(min_poses[min_ind][0]*jnp.cos(min_poses[min_ind][3]))
 		xs = jnp.linspace(-ranger-self.mem_structure[0]+self.pg_thickness/2,ranger+self.mem_structure[0]-self.pg_thickness/2,nums)
+		pguess = jnp.zeros(xs.shape[0])
+		def is_pgguess(pguess):
+			xval = xs-(-ranger-self.mem_structure[0]+pg_guess)
+			def pgloop(pguess,ind):
+				pguess = pguess.at[ind].set(1*((0.2*xval[ind]*xval[ind]-50))*sj(-xval[ind]*xval[ind],0.03))
+				return pguess,ind
+			pguess,_ = jax.lax.scan(pgloop,pguess,jnp.arange(xs.shape[0]))		
+			return pguess
+		def isn_pgguess(pguess):
+			return pguess
+		pguess = jax.lax.cond(pg_guess > 0,is_pgguess,isn_pgguess,pguess)
+			
+				
 		start_zdir = position_point_jit(0,min_poses[min_ind][2],min_poses[min_ind][3],jnp.array([[0.0,0.0,1.0]]))[0]
 		start_xydir =  position_point_jit(0,min_poses[min_ind][2],0.0,jnp.array([[0.0,-1.0,0.0]]))[0,:2]
 		test_pos = jnp.concatenate([jnp.array([min_poses[min_ind][0],min_poses[min_ind][1]]),start_zdir,start_xydir])
@@ -1740,7 +1779,7 @@ class MemBrain:
 			ps = ps.at[ind].set(self.calc_pot_pg(test_pos,xs[ind],mem_structure_im,mem_structure_om))
 			return ps, ind
 		ps,_ = jax.lax.scan(pg_pot_fun,ps,jnp.arange(nums))
-		return ps,xs
+		return ps+pguess,xs
 	
 
 	#A good starting point for periplasmic spanning proteins is very important
@@ -2239,11 +2278,13 @@ class MemBrain:
 		self.minima = self.minima.at[3*self.no_mins:4*self.no_mins].set(self.minima[nminima_ind+3*self.no_mins])
 		self.minima = self.minima.at[4*self.no_mins:].set(self.minima[nminima_ind+4*self.no_mins])
 		
-		self.re_rank_pots = self.re_rank_pots[nminima_ind]
-		self.re_rank_vals = self.re_rank_vals[nminima_ind]
-		self.re_rank_disses = self.re_rank_disses[nminima_ind]	
+
+		nminima_ind = jnp.array(nminima_ind)
+		self.re_rank_pots = jnp.array(self.re_rank_pots)[nminima_ind]
+		self.re_rank_vals = jnp.array(self.re_rank_vals)[nminima_ind]
+		self.re_rank_disses = jnp.array(self.re_rank_disses)[nminima_ind]	
 		
-		self.minima_ind = self.minima_ind[nminima_ind] #TODO?
+		self.minima_ind = jnp.array(self.minima_ind)[nminima_ind] #TODO?
 		
 		for i in range(self.no_mins):
 			inder = np.where(nminima_ind == i)
@@ -2265,7 +2306,7 @@ class MemBrain:
 		min_hits = 100*min_hits/(np.sum(min_hits))
 		min_pots = mins[no_mins*2:no_mins*3,0]
 		min_zdist = jnp.abs(mins[no_mins*3:,0])
-		min_curvs = mins[no_min*4:0,0]
+		min_curvs = mins[no_mins*4:0,0]
 		numa = self.numa
 		numb = self.numb
 		
@@ -2522,7 +2563,7 @@ class MemBrain:
 		return self.eval_chull(testing[[hull_pts]])
 	
 	#Functionto get all the PG layer position across different minima
-	def get_all_pg_pos(self,orient_dir):
+	def get_all_pg_pos(self,orient_dir,pg_guess):
 		mins = jnp.array(self.minima)
 		no_mins = (mins.shape[0]//5)
 		min_zdist = jnp.abs(mins[no_mins*3:,0])
@@ -2544,7 +2585,7 @@ class MemBrain:
 			meml = -l_w/2.0 -h1_w -h2_w-h3_w
 			mem_structure_om = jnp.array([meml,meml+h1_w,meml+h2_w+h1_w,meml+h2_w+h1_w+h3_w,meml+h2_w+h1_w+h3_w+l_w,meml+h2_w+h1_w+2*h3_w+l_w,meml+2*h2_w+h1_w+2*h3_w+l_w,meml+2*h2_w+2*h1_w+2*h3_w+l_w])
 			
-			pg_pos,pg_xs = self.get_pg_pos(400,ind,mem_structure_im,mem_structure_om)
+			pg_pos,pg_xs = self.get_pg_pos(400,ind,mem_structure_im,mem_structure_om,pg_guess)
 			return carry,jnp.array([pg_pos,pg_xs])
 		_,self.pg_poses = jax.lax.scan(pg_fun,0,jnp.arange(no_mins))
 		
@@ -2834,25 +2875,25 @@ class MemBrain:
 				area = self.get_area_pos(i,pg_pos)
 				infos.write("PG layer position (for -pg only): "+str(form(pg_pos))+" A \n")
 				infos.write("Cross-sectional area in PG layer (for -pg only): "+str(form(area))+" A^2 \n")
-				for xi in range(grid_num):
-					for xj in range(grid_num):
-						count += 1
-						count_str = (6-len(str(count)))*" "+str(count)
-						c = "ATOM "+count_str+" BB   PGL Z   1       0.000   0.000  15.000  1.00  0.00" 
-						xp = np.format_float_positional(xs[xi],precision=3)
-						yp = np.format_float_positional(ys[xj],precision=3)
-						zpa = np.format_float_positional(pg_pos+self.pg_thickness/2,precision=3)
-						zpb = np.format_float_positional(pg_pos-self.pg_thickness/2,precision=3)
-						xp += "0"*(3-len((xp.split(".")[1])))
-						yp += "0"*(3-len((yp.split(".")[1])))
-						zpa += "0"*(3-len((zpa.split(".")[1])))
-						zpb += "0"*(3-len((zpb.split(".")[1])))
-						new_c = c[:30]+(" "*(8-len(xp)))+xp+(" "*(8-len(yp)))+yp+(" "*(8-len(zpa))) +zpa+c[54:]+"\n"	
-						new_file.write(new_c)
-						all_orients.write(new_c)
-						new_c = c[:30]+(" "*(8-len(xp)))+xp+(" "*(8-len(yp)))+yp+(" "*(8-len(zpb))) +zpb+c[54:]+"\n"	
-						new_file.write(new_c)
-						all_orients.write(new_c)
+				xyz,norms = DiskGrid(0.4,big_ext)
+				for pos in xyz:
+					count += 1
+					count_str = (6-len(str(count)))*" "+str(count)
+					c = "ATOM "+count_str+" BB   PGL Z   1       0.000   0.000  15.000  1.00  0.00" 
+					xp = np.format_float_positional(pos[0],precision=3)
+					yp = np.format_float_positional(pos[1],precision=3)
+					zpa = np.format_float_positional(pg_pos+self.pg_thickness/2,precision=3)
+					zpb = np.format_float_positional(pg_pos-self.pg_thickness/2,precision=3)
+					xp += "0"*(3-len((xp.split(".")[1])))
+					yp += "0"*(3-len((yp.split(".")[1])))
+					zpa += "0"*(3-len((zpa.split(".")[1])))
+					zpb += "0"*(3-len((zpb.split(".")[1])))
+					new_c = c[:30]+(" "*(8-len(xp)))+xp+(" "*(8-len(yp)))+yp+(" "*(8-len(zpa))) +zpa+c[54:]+"\n"	
+					new_file.write(new_c)
+					all_orients.write(new_c)
+					new_c = c[:30]+(" "*(8-len(xp)))+xp+(" "*(8-len(yp)))+yp+(" "*(8-len(zpb))) +zpb+c[54:]+"\n"	
+					new_file.write(new_c)
+					all_orients.write(new_c)
 			new_file.close()
 			all_orients.write("TER\nEND\n")
 			infos.close()
@@ -3212,13 +3253,13 @@ def get_int_strength(bead_1,bead_2,martini_file):
 			
 def get_mem_def(martini_file):
 	#We use interactions strengths from martini using a POPE(Q4p)/POPG(P4)/POPC(Q1)? lipid as a template
-	W_B_mins = jnp.array([get_int_strength("W",Beadtype(i).name,martini_file) for i in range(23)])
-	LH1_B_mins = jnp.array([get_int_strength("P4",Beadtype(i).name,martini_file) for i in range(23)])
-	LH2_B_mins = jnp.array([get_int_strength("Q5",Beadtype(i).name,martini_file) for i in range(23)])
-	LH3_B_mins = jnp.array([get_int_strength("SN4a",Beadtype(i).name,martini_file) for i in range(23)])
-	LH4_B_mins = jnp.array([get_int_strength("N4a",Beadtype(i).name,martini_file) for i in range(23)])
-	LT1_B_mins = jnp.array([get_int_strength("C1",Beadtype(i).name,martini_file) for i in range(23)])
-	LT2_B_mins = jnp.array([get_int_strength("C4h",Beadtype(i).name,martini_file) for i in range(23)])
+	W_B_mins = jnp.array([get_int_strength("W",list(Beadtype.keys())[i],martini_file) for i in range(23)])
+	LH1_B_mins = jnp.array([get_int_strength("P4",list(Beadtype.keys())[i],martini_file) for i in range(23)])
+	LH2_B_mins = jnp.array([get_int_strength("Q5",list(Beadtype.keys())[i],martini_file) for i in range(23)])
+	LH3_B_mins = jnp.array([get_int_strength("SN4a",list(Beadtype.keys())[i],martini_file) for i in range(23)])
+	LH4_B_mins = jnp.array([get_int_strength("N4a",list(Beadtype.keys())[i],martini_file) for i in range(23)])
+	LT1_B_mins = jnp.array([get_int_strength("C1",list(Beadtype.keys())[i],martini_file) for i in range(23)])
+	LT2_B_mins = jnp.array([get_int_strength("C4h",list(Beadtype.keys())[i],martini_file) for i in range(23)])
 	Charge_B_mins =jnp.array([0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,-1,-1,0,0,0,0,0],dtype="float64")
 															   # #
 	return (W_B_mins,LH1_B_mins,LH2_B_mins,LH3_B_mins,LH4_B_mins,LT1_B_mins,LT2_B_mins,Charge_B_mins)	
@@ -3283,46 +3324,47 @@ def create_graphs(orient_dir,col_grid,pot_grid,angs,resa):
 def three2one(s):
 	if(s == "ALA"):
 		return "A"
-	if(s == "ARG"):
+	elif(s == "ARG"):
 		return "R"
-	if(s=="LYS"):
+	elif(s=="LYS"):
 		return "K"
-	if(s == "ASN"):
+	elif(s == "ASN"):
 		return "N"
-	if(s == "ASP"):
+	elif(s == "ASP"):
 		return "D"
-	if(s == "CYS"):
+	elif(s == "CYS"):
 		return "C"
-	if(s == "GLU"):
+	elif(s == "GLU"):
 		return "E"
-	if(s == "GLN"):
+	elif(s == "GLN"):
 		return "Q"
-	if(s == "GLY"):
+	elif(s == "GLY"):
 		return "G"
-	if(s == "HIS"):
+	elif(s == "HIS"):
 		return "H"
-	if(s == "ILE"):
+	elif(s == "ILE"):
 		return "I"
-	if(s == "LEU"):
+	elif(s == "LEU"):
 		return "L"
-	if(s == "MET"):
+	elif(s == "MET"):
 		return "M"
-	if(s == "PHE"):
+	elif(s == "PHE"):
 		return "F"
-	if(s == "PRO"):
+	elif(s == "PRO"):
 		return "P"
-	if(s == "SER"):
+	elif(s == "SER"):
 		return "S"
-	if(s == "THR"):
+	elif(s == "THR"):
 		return "T"
-	if(s == "TRP"):
+	elif(s == "TRP"):
 		return "W"
-	if(s == "TYR"):
+	elif(s == "TYR"):
 		return "Y"
-	if(s == "VAL"):
+	elif(s == "VAL"):
 		return "V"
-	if(s == "UNK"):
+	else:
 		return "X"
+	
 #formatting function	
 def form(val):
 	new_val = np.format_float_positional(val,precision=3)
@@ -3414,6 +3456,100 @@ def check_for_nan(val,pnum):
     
     
     
+def get_box_slice(points,p,r):
+	indices = np.arange(points.shape[0])
+	islice = indices[points[:,0]>p[0]-r[0]]
+	pslice = points[points[:,0]>p[0]-r[0]]
+	islice = islice[pslice[:,0]<p[0]+r[0]]
+	pslice = pslice[pslice[:,0]<p[0]+r[0]]
+	islice = islice[pslice[:,1]>p[1]-r[1]]
+	pslice = pslice[pslice[:,1]>p[1]-r[1]]
+	islice = islice[pslice[:,1]<p[1]+r[1]]
+	pslice = pslice[pslice[:,1]<p[1]+r[1]]
+	islice = islice[pslice[:,2]>p[2]-r[2]]
+	pslice = pslice[pslice[:,2]>p[2]-r[2]]
+	islice = islice[pslice[:,2]<p[2]+r[2]]
+	pslice = pslice[pslice[:,2]<p[2]+r[2]]
+	return pslice,islice
     
-    	
+def get_binned_points(points,rad):
+	binned_points = np.zeros((points.shape[0],points.shape[0]),dtype=int)
+	max_in_rad = 0	
+	for i,p in enumerate(points):
+		_,box = get_box_slice(points,p,[rad,rad,rad])
+		binned_points[i][:box.shape[0]] = box
+		binned_points[i][box.shape[0]:]=box[-1]
+		if(box.shape[0] > max_in_rad):
+			max_in_rad = box.shape[0]
+	return binned_points[:,:max_in_rad],max_in_rad   
+
+
+@jax.jit
+def get_sph_circ(grid,cen,angle):
+	n = 10
+	dx = jnp.pi/n
+	dy = jnp.pi/n
+	xs = jnp.linspace(0,2*jnp.pi-dx,2*n)+dx/2
+	ys = jnp.linspace(0,jnp.pi-dy,n)+dy/2
+	def scloop1(grid,ind):
+		ind1 = ind
+		def scloop2(grid,ind):
+			dist = jnp.arccos(jnp.cos(cen[0])*jnp.cos(xs[ind1])+jnp.sin(cen[0])*jnp.sin(xs[ind1])*jnp.cos(cen[1]-ys[ind]))
+			def langle(grid):
+				grid = grid.at[ind1,ind].set(dx*(jnp.cos(ys[ind]-dy/2)-jnp.cos(ys[ind]+dy/2)))
+				return grid
+			def gangle(grid):
+				return grid
+			grid = jax.lax.cond(dist<angle,langle,gangle,grid)
+			return grid,ind
+		grid,_ = jax.lax.scan(scloop2,grid,jnp.arange(n))
+		return grid,ind
+	grid,_ = jax.lax.scan(scloop1,grid,jnp.arange(2*n))
+	return grid
 	
+def add_Reses(Res,Resitp):
+	current_res_no = len(list(Reses.keys()))
+	current_beadtype_no = len(list(Beadtype.keys()))
+	current_bead_no = 0
+	Reses[Res] = current_res_no
+	itpfile = open(Resitp,"r")
+	itp_lines = itpfile.readlines()
+	itpfile.close()
+	restobead_add = []
+	for iline in itp_lines:
+		if Res in iline:
+			sline = iline.split()
+			if len(sline) == 7:
+				bt = sline[1]
+				restobead_add.append(bt)
+				bead = sline[4]
+				Beads[bead] = current_bead_no
+				current_bead_no += 1
+				if bt not in list(Beadtype.keys()):
+					Beadtype[bt] = current_beadtype_no
+					current_beadtype_no += 1
+	ResToBead.append(restobead_add)
+
+def add_AtomToBeads(fn):
+	bead_contents = []
+	bead_names = []
+	beads = []
+	first_bead = True
+	lfile = open(os.path.join(fn),"r")
+	content = lfile.read()
+	lfile.close()
+	content = content.split("\n")
+	for c in content:
+		if("[" not in c and c[:4]=="ATOM"):	
+			bead = c[12:17].strip()
+			beads.append(bead)
+		else:
+			bead_names.append(c[1:-1])
+			if first_bead:
+				first_bead = False
+			else:
+				bead_contents.append(beads)
+				beads = []
+	bead_contents.append(beads)
+	AtomsToBead.append(bead_contents)
+	return bead_names,bead_contents

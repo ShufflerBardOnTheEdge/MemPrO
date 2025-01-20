@@ -3,6 +3,10 @@
 import sys,math,random
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy as sp
+import jax
+import jax.numpy as jnp
+
 version   = "---"
 previous  = "20140603.11.TAW"
 
@@ -12,7 +16,8 @@ previous  = "20140603.11.TAW"
 
 #Modified by Matyas Parrag to build double membrane systems with additional flags -ps,-lo,-uo
 #Also updated to run with python 3
-#Heavy modification to include building of curved membranes and pores
+#Heavy modification to include building of curved membranes, pores and micelles
+#Continued heavy modification to add PG layer
 
 # PROTOLIPID (diacylglycerol), 18 beads
 #
@@ -25,6 +30,35 @@ lipidsx = {}
 lipidsy = {}
 lipidsz = {}
 lipidsa = {}
+
+#For building of PG layers in CG, This is a test and currently uses M2 beads
+moltype = "type_PEP"
+lipidsy[moltype] = (-0.03, 0.39, -0.03, -0.03, -0.03, -0.61, -0.93, -0.03, 0.40, -0.03, -0.45, -0.04, -0.41, -0.04, -0.03, -0.03, -0.03, -0.03, -0.66, -0.79)
+lipidsz[moltype] = (0.02, 0.15, 0.02, 0.03, 0.04, -0.12, 0.12, 0.05, 0.12, 0.06, -0.12, 0.10, -0.13, 0.10, 0.09, 0.08, 0.07, 0.06, -0.11, -0.14)
+lipidsx[moltype] = (4.41, 4.41, 3.64, 2.93, 2.23, 2.17, 2.65, 1.44, 1.32, 0.57, 0.69, -3.69, -3.71, -2.91, -2.21, -1.50, -0.77, -0.02, -1.60, -2.02)
+lipidsa.update({ "PEP":(moltype, "B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20")})
+lipidsa.update({ "SPEP":(moltype, "B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 - - - - - - - - -")})
+lipidsa.update({ "UPEP":(moltype, "B1 B2 B3 B4 B5 B6 B7 B8 B9 - - - - - - - - - - -")})
+lipidsa.update({ "UUPEP":(moltype, "B1 B2 B3 B4 B5 B6 B7 - - - - - - - - - - - - -")})
+
+
+
+moltype = "type_NAM"
+lipidsx[moltype] = (-0.00, 0.60, -0.58, 0.01, -0.52)
+lipidsz[moltype] = (0.03, -0.00, 0.04, 0.03, 0.05)
+lipidsy[moltype] = (4.70, 4.44, 4.74, 4.07, 3.81)
+lipidsa.update({ "NAM":(moltype, "B1 B2 B3 B4 B5")})
+
+
+moltype = "type_NAG"
+lipidsx[moltype] = (0.06, 0.65, -0.51, 0.02)
+lipidsz[moltype] = (0.00, -0.02, 0.00, 0.00)
+lipidsy[moltype] = (3.04, 2.74, 3.22, 2.42)
+lipidsa.update({ "NAG":(moltype, "B1 B2 B3 B4")})
+
+
+
+
 #
 ## Diacyl glycerols
 moltype = "lipid"
@@ -252,7 +286,7 @@ lipidsa.update({      #  1    2   3   4   5   6   7   8   9  10  11  12  13  14 
     "CDL2": (moltype, "GL5 PO41 GL1 GL2 C1A D2A C3A C4A   -   - C1B C2B C3B C4B   -   - PO42 GL3 GL4 C1C D2C D3C C4C   -   - C1D C2D C3D C4D   -   -"), # Warning not the same names is in .itp 
     "CL4P": (moltype, "GL5 PO41 GL1 GL2 C1A D2A C3A C4A   -   - C1B C2B C3B C4B   -   - PO42 GL3 GL4 C1C D2C C3C C4C   -   - C1D C2D C3D C4D   -   -"), 
     "CL4M": (moltype, "GL5 PO41 GL1 GL2 C1A D2A C3A   -   -   - C1B C2B C3B   -   -   - PO42 GL3 GL4 C1C D2C C3C   -   -   - C1D C2D C3D   -   -   -"), 
-    "CARD": (moltype, "GL5 PO1  GL1 GL2 C1A D2A C3A C4A   -   - C1B C2B C3B C4B   -   - PO2 GL3 GL4 C1C D2C C3C C4C   -   - C1D C2D C3D C4D   -   -"),
+    "CARD": (moltype, "GL0 PO1  GL1 GL2 C1A D2A C3A C4A   -   - C1B C2B C3B C4B   -   - PO2 GL3 GL4 C1C D2C C3C C4C   -   - C1D C2D C3D C4D   -   -"),
 ## Templates using the old lipid names and definitions
   "CL4.o" : (moltype, "GL5 PO41 GL1 GL2 C1A C2A D3A C4A C5A   - C1B C2B D3B C4B C5B   - PO42 GL3 GL4 C1C C2C D3C C4C C5C   - C1D C2D D3D C4D C5D   -"), 
   "CL4O.o": (moltype, "GL5 PO41 GL1 GL2 C1A C2A D3A C4A C5A   - C1B C2B D3B C4B C5B   - PO42 GL3 GL4 C1C C2C D3C C4C C5C   - C1D C2D D3D C4D C5D   -"),
@@ -273,16 +307,23 @@ lipidsa.update({      #  1    2   3   4   5   6   7   8   9  10  11  12  13  14 
 #       |      |   |
 #      37      1  18-19-20-21
 #
+#moltype = "LPS"
+#lipidsx[moltype] = (     0,   0,  1,  0,  2,  1,  2,  2,  1,  1,  1,  1,  1,  1,  1,  1,   0,  0,  0,  0,  0,  0,  0,  0,  2,  2,  2,  2,  2,  2,  2,  2,  1,  0,  0,  0,  0,  1,  1,  1,  2,  1,  0,  0,  0, 0,  0,   0,  1,  0,  0,  1,  2,  2,  2,  2,  0,  1,  0,  0,  1,  1,  1,  1,  2,  1,  1,  1,  0,  0,  0,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2 )
+#lipidsy[moltype] = (     0,   1,  0,  1,  1,  1,  0,  1,  0,  1,  1,  1,  1,  0,  0,  0,   0,  1,  1,  1,  1,  0,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0,  0,  1,  1,  1,  0,  0,  0,  1,  1,  1,  1,  0,  1, 0,  1,   1,  0,  1,  0,  1,  1,  0,  0,  0,  1,  0,  1,  1,  0,  0,  1,  1,  1,  0,  0,  1,  1,  1,  0,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1 )
+#lipidsz[moltype] = (     5,   5,  5,  6,  5,  5,  5,  6,  4,  4,  3,  2,  1,  3,  2,  1,   4,  4,  3,  2,  1,  3,  2,  1,  4,  3,  2,  1,  4,  3,  2,  1,  6,  7,  8,  9,  8,  9,  8,  9,  9,  8, 10, 11, 11, 12, 11, 12, 12, 13, 13, 13, 13, 13, 12, 14, 14, 14, 15, 16, 16, 15, 15, 16, 16, 17, 18, 17, 17, 18, 17, 21, 21, 21, 20, 20, 20, 20, 20, 20, 19, 19, 19, 19, 19, 19, 21, 21, 21, 22, 22, 22, 22, 22, 22, 23, 23, 23, 23, 23, 23, 24, 24, 24, 24, 24, 24, 25, 25, 25, 25, 25, 25, 26, 26, 26, 26, 26, 26, 27, 27, 27, 27, 27, 27, 28, 28, 28, 29, 29, 29 )
+#lipidsa.update({      #  1    2   3   4   5   6   7   8   9  10  11  12  13  14  15  16   17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47  48  49  50  51  52  53  54  55  56  57  58  59  60  61  62  63  64  65  66  67  68  69  70  71  72  73  74  75  76  77  78  79  80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98  99  100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127 128 129 120 121
+#    "LIPA": (moltype, " PO1  GM1 GM2 GM3 GM4 GM5 GM6 PO2 GL1 GL2 C1A C2A C3A C1B C2B C3B  GL3 GL4 C1C C2C C3C C1D C2D C3D GL5 GL6 C1E C2E GL7 GL8 C1F C2F  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   - "), 
+#    "REMP": (moltype, " PO1  GM1 GM2 GM3 GM4 GM5 GM6 PO2 GL1 GL2 C1A C2A C3A C1B C2B C3B  GL3 GL4 C1C C2C C3C C1D C2D C3D GL5 GL6 C1E C2E GL7 GL8 C1F C2F SO1 SO2 SO3 SO4 SO5 SO6 SO7 SO8 SO9 S10  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   - "), 
+#    "RAMP": (moltype, " PO1  GM1 GM2 GM3 GM4 GM5 GM6 PO2 GL1 GL2 C1A C2A C3A C1B C2B C3B  GL3 GL4 C1C C2C C3C C1D C2D C3D GL5 GL6 C1E C2E GL7 GL8 C1F C2F SO1 SO2 SO3 SO4 SO5 SO6 SO7 SO8 SO9 S10 S11 S12 S13 S14 S15 S16 S17 S18 S19 S20 S21 S22 S23 S24 S25 S26 S27 S28 S29 S30 S31 S32 S33 S34 S35 S36 S37 S38 S39  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   - "), 
+#    "OANT": (moltype, " PO1  GM1 GM2 GM3 GM4 GM5 GM6 PO2 GL1 GL2 C1A C2A C3A C1B C2B C3B  GL3 GL4 C1C C2C C3C C1D C2D C3D GL5 GL6 C1E C2E GL7 GL8 C1F C2F SO1 SO2 SO3 SO4 SO5 SO6 SO7 SO8 SO9 S10 S11 S12 S13 S14 S15 S16 S17 S18 S19 S20 S21 S22 S23 S24 S25 S26 S27 S28 S29 S30 S31 S32 S33 S34 S35 S36 S37 S38 S39 O40 O41 O42 O43 O44 O45 O46 O47 O48 O49 O50 O51 O52 O53 O54 O55 O56 O57 O58 O59 O60 O61 O62 O63 O64 O65 O66 O67 O68 O69 O70 O71 O72 O73 O74 O75 O76 O77 O78 O79 O80 O81 O82 O83 O84 O85 O86 O87 O88 O89 O90 O91 O92 O93 O94 O95 O96 O97 O98 O99"), 
+#})
+
+
 moltype = "LPS"
-lipidsx[moltype] = (     0,   0,  1,  0,  2,  1,  2,  2,  1,  1,  1,  1,  1,  1,  1,  1,   0,  0,  0,  0,  0,  0,  0,  0,  2,  2,  2,  2,  2,  2,  2,  2,  1,  0,  0,  0,  0,  1,  1,  1,  2,  1,  0,  0,  0, 0,  0,   0,  1,  0,  0,  1,  2,  2,  2,  2,  0,  1,  0,  0,  1,  1,  1,  1,  2,  1,  1,  1,  0,  0,  0,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2 )
-lipidsy[moltype] = (     0,   1,  0,  1,  1,  1,  0,  1,  0,  1,  1,  1,  1,  0,  0,  0,   0,  1,  1,  1,  1,  0,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0,  0,  1,  1,  1,  0,  0,  0,  1,  1,  1,  1,  0,  1, 0,  1,   1,  0,  1,  0,  1,  1,  0,  0,  0,  1,  0,  1,  1,  0,  0,  1,  1,  1,  0,  0,  1,  1,  1,  0,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1 )
-lipidsz[moltype] = (     5,   5,  5,  6,  5,  5,  5,  6,  4,  4,  3,  2,  1,  3,  2,  1,   4,  4,  3,  2,  1,  3,  2,  1,  4,  3,  2,  1,  4,  3,  2,  1,  6,  7,  8,  9,  8,  9,  8,  9,  9,  8, 10, 11, 11, 12, 11, 12, 12, 13, 13, 13, 13, 13, 12, 14, 14, 14, 15, 16, 16, 15, 15, 16, 16, 17, 18, 17, 17, 18, 17, 21, 21, 21, 20, 20, 20, 20, 20, 20, 19, 19, 19, 19, 19, 19, 21, 21, 21, 22, 22, 22, 22, 22, 22, 23, 23, 23, 23, 23, 23, 24, 24, 24, 24, 24, 24, 25, 25, 25, 25, 25, 25, 26, 26, 26, 26, 26, 26, 27, 27, 27, 27, 27, 27, 28, 28, 28, 29, 29, 29 )
-lipidsa.update({      #  1    2   3   4   5   6   7   8   9  10  11  12  13  14  15  16   17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47  48  49  50  51  52  53  54  55  56  57  58  59  60  61  62  63  64  65  66  67  68  69  70  71  72  73  74  75  76  77  78  79  80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98  99  100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127 128 129 120 121
-    "LIPA": (moltype, " PO1  GM1 GM2 GM3 GM4 GM5 GM6 PO2 GL1 GL2 C1A C2A C3A C1B C2B C3B  GL3 GL4 C1C C2C C3C C1D C2D C3D GL5 GL6 C1E C2E GL7 GL8 C1F C2F  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   - "), 
-    "REMP": (moltype, " PO1  GM1 GM2 GM3 GM4 GM5 GM6 PO2 GL1 GL2 C1A C2A C3A C1B C2B C3B  GL3 GL4 C1C C2C C3C C1D C2D C3D GL5 GL6 C1E C2E GL7 GL8 C1F C2F SO1 SO2 SO3 SO4 SO5 SO6 SO7 SO8 SO9 S10  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   - "), 
-    "RAMP": (moltype, " PO1  GM1 GM2 GM3 GM4 GM5 GM6 PO2 GL1 GL2 C1A C2A C3A C1B C2B C3B  GL3 GL4 C1C C2C C3C C1D C2D C3D GL5 GL6 C1E C2E GL7 GL8 C1F C2F SO1 SO2 SO3 SO4 SO5 SO6 SO7 SO8 SO9 S10 S11 S12 S13 S14 S15 S16 S17 S18 S19 S20 S21 S22 S23 S24 S25 S26 S27 S28 S29 S30 S31 S32 S33 S34 S35 S36 S37 S38 S39  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   - "), 
-    "OANT": (moltype, " PO1  GM1 GM2 GM3 GM4 GM5 GM6 PO2 GL1 GL2 C1A C2A C3A C1B C2B C3B  GL3 GL4 C1C C2C C3C C1D C2D C3D GL5 GL6 C1E C2E GL7 GL8 C1F C2F SO1 SO2 SO3 SO4 SO5 SO6 SO7 SO8 SO9 S10 S11 S12 S13 S14 S15 S16 S17 S18 S19 S20 S21 S22 S23 S24 S25 S26 S27 S28 S29 S30 S31 S32 S33 S34 S35 S36 S37 S38 S39 O40 O41 O42 O43 O44 O45 O46 O47 O48 O49 O50 O51 O52 O53 O54 O55 O56 O57 O58 O59 O60 O61 O62 O63 O64 O65 O66 O67 O68 O69 O70 O71 O72 O73 O74 O75 O76 O77 O78 O79 O80 O81 O82 O83 O84 O85 O86 O87 O88 O89 O90 O91 O92 O93 O94 O95 O96 O97 O98 O99"), 
-})
+lipidsx[moltype] = (-7.97, -8.52, -7.94, -8.14, -8.52, -7.87, -8.75, -8.77, -8.61, -8.58, -8.58, -7.69, -7.53, -7.47, -7.58, -7.45, -7.46, -7.37, -7.42, -6.88, -7.56, -7.11, -7.53, -7.26, -7.32, -7.42, -7.54, -8.07, -8.19, -8.44, -7.19, -6.72, -6.82, -6.81, -7.53, -7.74, -7.88, -7.67, -7.41, -7.86, -7.65, -7.51, -7.25, -7.68, -7.39, -7.84, -7.63, -7.18, -7.29)
+lipidsy[moltype] = (0.73, 0.52, 0.60, 0.62, 0.07, 0.51, 0.27, 0.54, 0.70, 0.96, 1.25, 0.51, 0.52, 0.58, 0.76, 0.49, 0.22, 0.10, 0.27, -0.31, -0.04, 0.72, -0.20, -0.29, -0.41, -0.51, -0.60, -0.35, -0.32, -0.13, 1.00, 1.26, 1.42, 1.75, 1.32, 1.56, 1.78, 0.33, 0.52, 0.52, 0.45, 0.85, 0.02, 0.31, -0.05, 0.19, 0.15, 0.58, -0.14)
+lipidsz[moltype] = (5.76, 5.32, 5.25, 5.44, 5.95, 4.51, 4.75, 4.25, 3.59, 2.78, 1.97, 4.00, 3.31, 2.47, 1.63, 6.12, 6.82, 6.30, 6.41, 6.10, 5.61, 5.60, 5.04, 4.41, 3.69, 2.97, 2.11, 4.54, 3.72, 2.80, 5.03, 4.58, 3.76, 2.85, 4.46, 3.68, 2.75, 7.59, 8.18, 8.03, 7.93, 7.36, 8.26, 8.81, 9.30, 9.27, 9.13, 8.95, 9.81)
+lipidsa.update({ "KLA":(moltype, "ZM1 ZM2 ZM3 VS1 PO1 ZM4 ZM5 CF C1F C2F C3F CE C1E C2E C3E GM1 GM2 GM3 VS2 PO2 GM4 GM5 CAB C1A C2A C3A C4A C1B C2B C3B CCD C1C C2C C3C C1D C2D C3D KR1 KR2 KR3 VS3 KS1 KS2 KR4 KR5 KR6 VS4 KS3 KS4")})
 
 moltype = "LPS2"
 lipidsx[moltype] = (     0,   0,  1,  0,  0,  0,  0,  1,  2,  2,  1,  2,  1,  1,  0,  0,  0,  0,  1,  1,  1,   1,  1,  1,  1,  1,  1,  1,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  3,  2,  2,  2,  3,  3,  3,  1,  2,  1,  0,  0,  0, 0,  0,   0,  1,  0,  0,  1,  2,  2,  2,  2,  0,  1,  0,  0,  1,  1,  1,  1,  2,  1,  1,  1,  0,  0,  0  )
@@ -398,7 +439,9 @@ lipidsa.update({#     ILE    CYS    LEU    GLU    ILE    LYS        ORN        I
 })
 
 # Lists for automatic charge determination
-charges = {"HPPA":-1,"4HPA":-1,"UDP2":-2,"UDP1":-1, "GLYP":-1, "GLYM":-1, "ARG":1, "LYS":1, "ASP":-1, "GLU":-1, "DOPG":-1, "POPG":-1, "DOPS":-1, "POPS":-1, "DSSQ":-1, "KPG":+1, "LIPA":-2, "PGIN":-1, "REMP":-6, "RAMP":-10, "OANT":-10, "CARD":-2, "A2P2":-1, "APM2":-1, "APM6":-1, "LIP2":-4, "LIP4":-6, "LIP6":-8, "LIP8":-10, "LI10":-12, "LI12":-14, "LI14":-16, "LI16":-18, "LI18":-20, "LI20":-22, "LI22":-24}
+charges = {"HPPA":-1,"4HPA":-1,"UDP2":-2,"UDP1":-1, "GLYP":-1, "GLYM":-1, "ARG":1, "LYS":1, "ASP":-1, "GLU":-1, "DOPG":-1, "POPG":-1, "DOPS":-1, "POPS":-1, "DSSQ":-1, "KPG":+1, "LIPA":-2, "PGIN":-1, "REMP":-6, "RAMP":-10, "OANT":-10, "CARD":-2, "A2P2":-1, "APM2":-1, "APM6":-1, "LIP2":-4, "LIP4":-6, "LIP6":-8, "LIP8":-10, "LI10":-12, "LI12":-14, "LI14":-16, "LI16":-18, "LI18":-20, "LI20":-22, "LI22":-24,"UPEP":-1,"SPEP":-2,"UUPEP":-1,"KLA":-6}
+ion_charges = {"NA" :1,"CL":-1,"CA":2}
+
 
 a,  b  = math.sqrt(2)/20, math.sqrt(2)/60
 ct, st = math.cos(math.pi*109.47/180), math.sin(math.pi*109.47/180) # Tetrahedral
@@ -583,7 +626,7 @@ def pdbAtom(a):
     ##01234567890123456789012345678901234567890123456789012345678901234567890123456789
     ##ATOM   2155 HH11 ARG C 203     116.140  48.800   6.280  1.00  0.00
     ## ===>   atom name,   res name,     res id, chain,       x,            y,             z       
-    return (S(a[12:16]),S(a[17:20]),I(a[22:26]),a[21],F(a[30:38])/10,F(a[38:46])/10,F(a[46:54])/10)
+    return (S(a[12:16]),S(a[17:21]),I(a[22:26]),a[21],F(a[30:38])/10,F(a[38:46])/10,F(a[46:54])/10)
 
 d2r = 3.14159265358979323846264338327950288/180
 def pdbBoxRead(a):
@@ -759,6 +802,9 @@ def SphereGrid(n):
         grid_points.append([math.cos(phi)*r, math.sin(phi)*r,y])
     return grid_points
 
+#All functions that follow return a set of 3d coordinates and normals. This is all that is needs for later in the code
+#where the actaul lipids are built
+
 #This function creates a set of points with inverted curvature. The points are placed such that they are evenly distributed.    
 def InvSphereGrid(den,inner_rad,start_ang,orad):
     grid_points = []
@@ -781,7 +827,6 @@ def SphereGridN(den,end_ang,orad):
     grid_points = []
     direcs = []
     frden = int(orad*den*2*(end_ang)/np.pi)+1
-    #print(frden)
     rings = np.linspace(0,end_ang,frden)
     for xr,r in enumerate(rings):
         rad = np.sin(r)*orad
@@ -795,11 +840,32 @@ def SphereGridN(den,end_ang,orad):
 
     return grid_points,direcs
     
+
 #Same as above two but for a disk
-def DiskGrid(den,inner_rad,xbox,ybox):
+def DiskGridFB(den,outer_rad):
+    gr = (1+np.sqrt(5))/2.0
     grid_points = []
     direcs = []
-    outer_rad = np.sqrt(xbox*xbox+ybox*ybox)
+    N = int((outer_rad*outer_rad*np.pi)*den)
+    for i in range(N):
+        ang1 = 2*np.pi*np.fmod((i/gr),1)
+        print(ang1)
+        rad = np.sqrt(i/(N-1))*outer_rad
+        grid_points.append([np.cos(ang1)*rad,np.sin(ang1)*rad,0])
+        direcs.append([0,0,1])
+    print(len(grid_points))
+    return grid_points,direcs
+
+#Same as above two but for a disk
+def DiskGrid(den,inner_rad,xbox,ybox,outer_rad):
+    grid_points = []
+    direcs = []
+    if outer_rad<0:
+        outer_rad = np.sqrt(xbox*xbox+ybox*ybox)
+    else:
+        new_den =2*den/np.pi
+        new_den = new_den*new_den
+        return DiskGridFB(new_den,outer_rad)
     frden = int(den*2*(outer_rad-inner_rad)/np.pi)
     rings = np.linspace(inner_rad,outer_rad,frden)
     for xr,r in enumerate(rings[1:]):
@@ -812,7 +878,9 @@ def DiskGrid(den,inner_rad,xbox,ybox):
             if(-xbox <np.cos(ang1)*rad < xbox-0.2 and -ybox < np.sin(ang1)*rad < ybox-0.2):
                 grid_points.append([np.cos(ang1)*rad,np.sin(ang1)*rad,0])
                 direcs.append([0,0,1])
+    print(len(grid_points))
     return grid_points,direcs
+
 
 #Same as above but for a tube
 def TubeGrid(den,rad,leng,keep_end):
@@ -832,11 +900,986 @@ def TubeGrid(den,rad,leng,keep_end):
             grid_points.append([np.cos(ang1)*rad,np.sin(ang1)*rad,-lenny])
             direcs.append([np.cos(ang1),np.sin(ang1),0])
     return grid_points,direcs
+
+#standard deviation for gaussians
+stand = 0.5
+
+#function that evalualtes a gaussian on a grid (points)
+def eval_gaussian(points,cen,std,height):
+    return height*np.exp(-np.linalg.norm((points-cen[None,None,:]),axis=2)/(2*std*std))
+
+
+#function that evaluates a sum of gaussians at a single point
+@jax.jit
+def eval_gaussianj(point,all_cens,std,height):
+    ret_val = 0
+    def egj_loop(ret_val,ind):
+        ret_val += height*jnp.exp(-jnp.linalg.norm(point-all_cens[ind])/(2*std*std))
+        return ret_val,ind
+    ret_val,_ = jax.lax.scan(egj_loop,ret_val,jnp.arange(all_cens.shape[0]))
+    return ret_val
+    
+
+
+#gradient of above
+eval_g_grad = jax.grad(eval_gaussianj,argnums=0)
+
+#this function evalualtes a sum of gaussians on a grid
+def gaussian_grid(points,xstart,ystart,xend,yend,xnum,ynum):
+    grid_vals = np.zeros((xnum,ynum,2))
+    grid_vals[:,:,0] += np.linspace(xstart,xend,xnum)[None,:]
+    grid_vals[:,:,1] += np.linspace(ystart,yend,ynum)[:,None]
+
+    ret_vals = np.zeros((xnum,ynum))
+    count =0
+    for i in points:
+        count += 1
+        ret_vals += eval_gaussian(grid_vals,i,stand,1)
+    return ret_vals,grid_vals
+
+
+#This takes a grid of values and draws along a contour at value coff, points are places along this with a given spacing
+#This contour can be draw further a constant width out from coff. This is the main part of building a micelle
+#This works by taking a step defined by (df/dy,-df/dx )*ds which by definition os along the contour
+def draw_along(spacing,all_cens,grid,grid_vals,coff,rad_plus,z):
+    max_iter = 100000
+    tol = 0.1
+    ds = 0.01
+    tot_ds = 0
+    start = jnp.array(grid_vals[jnp.logical_and(grid  > coff-tol,grid < coff+tol)][0])
+    grad = eval_g_grad(start,all_cens,stand,1)
+    grad_dir = -grad/jnp.linalg.norm(grad)
+    start_p = start+rad_plus*grad_dir
+    prev_start = start_p.copy()
+    all_cens = jnp.array(all_cens)
+    path=jnp.zeros((int(max_iter*ds/spacing)+1,2))
+    normals=jnp.zeros((int(max_iter*ds/spacing)+1,2))
+    def da_loop(path_data,ind):
+        path = path_data[0]
+        tot_ds = path_data[1]
+        count = path_data[2]
+        normals = path_data[3]
+        start = path_data[4]
+        prev_start = path_data[5]
+        def early_term(path,tot_ds,count,normals,start,prev_start):
+            return path,tot_ds,count,normals,start,prev_start
+        def nearly_term(path,tot_ds,count,normals,start,prev_start):
+            grad = eval_g_grad(start,all_cens,stand,1)
+            grad_dir = -grad/jnp.linalg.norm(grad)
+            norm = jnp.array([grad[1],-grad[0]])
+            norm /= jnp.linalg.norm(norm)
+            start += norm*ds
+            tot_ds += jnp.linalg.norm(prev_start-(start+rad_plus*grad_dir))
+            prev_start = start+rad_plus*grad_dir
+            def adder(path,tot_ds,count,normals):
+                path = path.at[count].set(start+rad_plus*grad_dir)
+                normals = normals.at[count].set(grad_dir)
+                count +=1
+                tot_ds = 0.0
+                return path,tot_ds,count,normals
+            def nadder(path,tot_ds,count,normals):
+                return path,tot_ds,count,normals
+            
+            path,tot_ds,count,normals = jax.lax.cond(tot_ds>spacing,adder,nadder,path,tot_ds,count,normals)
+            return path,tot_ds,count,normals,start,prev_start
+        path,tot_ds,count,normals,start,prev_start = jax.lax.cond(jnp.logical_and(jnp.linalg.norm(path[count-1]-start_p) < spacing/2,count > 5),early_term,nearly_term,path,tot_ds,count,normals,start,prev_start)
+        return (path,tot_ds,count,normals,start,prev_start),ind
+    path_data,_=jax.lax.scan(da_loop,(path,0.0,0,normals,start,prev_start),jnp.arange(max_iter))
+    path = np.array(path_data[0])[:path_data[2]]
+    normals = np.array(path_data[3])[:path_data[2]]
+    path = np.pad(path,((0,0),(0,1)),"constant",constant_values=(z,z))
+    return path,normals
+
+
+#This uses all the above to build the micelle. Using contours with radius and height varing as a semi circle
+#Additionally the center is filled with a disc of lipids
+def build_micelle(area_l,all_cens,grid,grid_vals,coff,pbcx,pbcy):
+    orad = 2.2    
+    end_ang = np.pi
+    den = np.pi/2*np.sqrt(1/area_l)
+    frden = int(orad*den*2*(end_ang)/np.pi)+1
+    rings = np.linspace(0,end_ang,frden)
+    gpoints = np.zeros((0,3))
+    normals = np.zeros((0,3))
+    sp = 0.5
+    for xr,r in enumerate(rings):
+        rad = np.sin(r)*orad
+        rad_a = sp*(frden/2)-np.abs(sp*(frden/2)-sp*xr)
+        z = np.cos(r)*orad
+        r1,nms = draw_along(np.sqrt(area_l),all_cens,grid,grid_vals,coff,rad,z)
+        nms_a = np.pad(nms,((0,0),(0,1)),"constant",constant_values=(0,0))
+        gpoints = np.concatenate((gpoints,np.array(r1+nms_a*rad_a)))
+        norms = nms*np.sin(r)
+        norms = np.pad(norms,((0,0),(0,1)),"constant",constant_values=(np.cos(r),np.cos(r)))
+        normals = np.concatenate((normals,norms))
+
+    disk_lips = []
+    disk_dirs = []
+    disk_grid,disc_direcs = DiskGrid(den,0,pbcx,pbcy,-1)
+    disc_direcs = np.array(disc_direcs)
+
+    for i,d in enumerate(disk_grid):
+        val = eval_gaussianj(jnp.array(d[:2]),jnp.array(all_cens),stand,1)
+        if(val > coff+5):
+            disk_lips.append(d-np.array([0,0,2]))
+            disk_dirs.append(-disc_direcs[i])
+            disk_lips.append(d+np.array([0,0,2]))
+            disk_dirs.append(disc_direcs[i])
+    disk_lips = np.array(disk_lips)
+    disk_dirs = np.array(disk_dirs)
+    gpoints = np.concatenate((gpoints,disk_lips))
+    normals = np.concatenate((normals,disk_dirs))
+
+
+    return gpoints,normals
+
+#This is an implementation of the KL divergence
+def kl_d(a,b):
+    kl = np.where(a != 0, a * np.log(a / b), 0)
+    kl  = kl[np.isfinite(kl)]
+    return np.sum(kl)
+#another gaussian
+def gaussian(x,sig,mu):
+    return (1/(sig*np.sqrt(2*np.pi)))*np.exp(-0.5*np.power(((x-mu)/sig),2))
+#The distribution of glycan strands in ecoli
+def ecoli_gdist(x):
+    return 0.75*gaussian(x,4,8.9)+0.25*gaussian(x,10,45)
+    
+#a function that evalualtes a custom glycan distribution
+def glycan_dist(x,gdist):
+    total = 0
+    for gd in gdist:
+        total += gd[0]*gaussian(x,gd[1],gd[2])
+    return total
+
+#a function that gets the KDE for a given set of glycan lengths
+def eval_kde(all_linesT):
+    lengs = []
+    leng = 0
+    zero = False
+    prev = 2
+    for line in all_linesT:   
+        pos_start = np.where(line == 0)[0]
+        if(len(list(pos_start)) < 1):
+            start = 0
+        else:
+            start = pos_start[0]
+        for ind in range(line.shape[0]):
+            sind = (ind+start)%(line.shape[0])
+            if(line[sind] == 1):
+                leng += 1
+                zero = False
+            elif(line[sind] == 0):
+                lengs.append(leng)
+                leng = 0
+                zero = True
+            else:
+                if(prev != 2):
+                    lengs.append(leng)
+                leng = 0
+                zero = True
+            prev = line[sind]
+        if(not zero):
+            lengs.append(leng)
+    return sp.stats.gaussian_kde(lengs)
+                
+#MCMC to obtain a glycan strand distribution close to the target
+def MC_Glycan_Strands(pbcy,pbcx,zpos,xoff,yoff,prot_coords,gdist,num):
+    no_gly = int(pbcy/0.9)-2 
+    no_lines = int(pbcx/2.3)
+    all_linesT = np.zeros((no_lines-1,no_gly-1))+1
+    prot_block = np.zeros((no_lines-1,no_gly-1))
+
+    yspace = np.linspace(0,pbcy,all_linesT.shape[1]+1)[:-1]
+    xspace = np.linspace(0,pbcx,all_linesT.shape[0]+1)[:-1]
+    if(prot_coords.size > 0):
+        prot_coords_zslice = prot_coords[prot_coords[:,2] > zpos-0.5]
+        prot_coords_zslice = prot_coords_zslice[prot_coords_zslice[:,2] < zpos+0.5]
+
+        
+
+        for l in range(prot_block.shape[0]):
+            for g in range(prot_block[l].shape[0]):
+                for pc in prot_coords_zslice:
+                    pos = np.array([xspace[l]+xoff,yspace[g]+yoff+0.5,zpos])
+                    if(np.linalg.norm(pc-pos) < 2):
+                        prot_block[l,g] = 1
+    
+
+    line_index = np.arange(no_gly-1)
+
+    all_linesT += prot_block
+
+    test_kde = eval_kde(all_linesT)
+    testx = np.linspace(0,65,100)
+    prev_kld = kl_d(glycan_dist(testx,gdist),test_kde(testx)) 
+    for i in range(30000):
+        rlind = random.randint(0,no_lines-2)
+
+        line_block = prot_block[rlind]
+        none_blocked = line_block[line_block==0]
+        nb_ind = random.randint(0,none_blocked.shape[0]-1)
+        glind = line_index[line_block==0][nb_ind]
+
+        all_linesT[rlind][glind] = (all_linesT[rlind][glind]+1)%2
+        
+        test_kde = eval_kde(all_linesT)
+        testx = np.linspace(0,65,100)
+        kld = kl_d(glycan_dist(testx,gdist),test_kde(testx))
+        
+        kT = 0.0025            
+        
+        accept = 1-np.exp(-(kld-prev_kld)/kT)
+
+        if(np.random.random() < accept):
+            all_linesT[rlind][glind] = (all_linesT[rlind][glind]+1)%2
+        else:
+            prev_kld = kld
+    test_kde = eval_kde(all_linesT)
+    testx = np.linspace(0,65,100)
+    plt.plot(test_kde(testx))
+    plt.plot(glycan_dist(testx,gdist))
+    plt.savefig("Dist"+str(num)+".png")
+    plt.clf()
+
+    for l in all_linesT:
+        l[l==2] = 0
+        if(np.sum(l) == l.shape[0]):
+            l[random.randint(0,l.shape[0]-1)] = 0
+
+    return all_linesT
+    
+    
+#This function uses data from the above to generate the coordinates for glycan strands
+def Create_Glycan_strands2(pgl_no,pbcy,pbcx,z_poses,xoff,yoff,pcoords, gdist):
+    #x y z dir type place linked 3-3
+    no_gly = int(pbcy/0.9)-2-1
+    no_lines = int(pbcx/2.3)-1
+    all_lines = np.zeros((pgl_no,no_lines,no_gly*2,14))
+    for pn in range(pgl_no):
+        z = pbcz/2+z_poses[pn]+Pos_PGL
+        chain_lens = MC_Glycan_Strands(pbcy,pbcx,z,1.25*(pn%2)+xoff,yoff,pcoords,gdist,pn) 
+        yspace = np.linspace(0,pbcy,chain_lens.shape[1]*2+1)[:-1]
+        xspace = np.linspace(0,pbcx,chain_lens.shape[0]+1)[:-1]
+        
+        for l in range(chain_lens.shape[0]):
+            y_shift = 0#np.random.random()*0.5
+            for g in range(chain_lens[l].shape[0]):
+                direc = random.randint(0,1)*2-1
+                x = xspace[l]+1.25*(pn%2)
+                y2 = yspace[2*g+1]+y_shift
+                y1 = yspace[2*g]+y_shift
+                all_lines[pn,l,2*g] = np.array([x+xoff,y1+yoff,z,direc,1,chain_lens[l,g],-1,-1,-1,-1,-1,-1,0,0])
+                all_lines[pn,l,2*g+1] = np.array([x+xoff,y2+yoff,z,direc,0,chain_lens[l,g],-1,-1,-1,-1,-1,-1,0,0])
+    return all_lines
+
+   
+    
+#enforces pbc   
+def enforce_pbc(pbcv,points):
+    points = np.where(points >= pbcv, points-pbcv, points)
+    points = np.where(points <0, points+pbcv, points)
+    return points
+
+#This function joins cross-links that are already cross-linked. (This flips that way they are linked)
+def flip_link(all_lines,lyind,lind,bind):
+    done = False
+    all_linesT = all_lines.copy()
+    if(all_linesT[lyind][lind][bind][13] == 1):
+        return all_lines, False
+    tmp = all_linesT[lyind,lind,bind,6:9].copy()
+    all_linesT[lyind,lind,bind,6:9] = all_linesT[lyind,lind,bind,9:12].copy()
+    all_linesT[lyind,lind,bind,9:12] = tmp.copy()
+    if(all_linesT[lyind,lind,bind,6] > -0.5):
+        tnlind = int(all_linesT[lyind,lind,bind,6])
+        tnbind = int(all_linesT[lyind,lind,bind,7])
+        tnlyind = int(all_linesT[lyind,lind,bind,8])
+        nlind = tnlind
+        nbind = tnbind
+        nlyind = tnlyind
+        switcher = 6
+    elif(all_linesT[lyind,lind,bind,9] > -0.5):
+        tnlind = int(all_linesT[lyind,lind,bind,9])
+        tnbind = int(all_linesT[lyind,lind,bind,10])
+        tnlyind = int(all_linesT[lyind,lind,bind,11])
+        nlind = tnlind
+        nbind = tnbind
+        nlyind = tnlyind
+        switcher = 9
+    while not done:
+        if(all_linesT[nlyind,nlind,nbind,13] == 1):
+            return all_lines,False
+        tmp = all_linesT[nlyind,nlind,nbind,6:9].copy()
+        all_linesT[nlyind,nlind,nbind,6:9] = all_linesT[nlyind,nlind,nbind,9:12].copy()
+        all_linesT[nlyind,nlind,nbind,9:12] = tmp.copy() 
+        tnlind = int(all_linesT[nlyind,nlind,nbind,switcher])
+        tnbind = int(all_linesT[nlyind,nlind,nbind,switcher+1])
+        tnlyind = int(all_linesT[nlyind,nlind,nbind,switcher+2])
+        nlind = tnlind
+        nbind = tnbind
+        nlyind = tnlyind
+        if(nlind < 0):
+            done = True
+            break
+    return all_linesT, True
+             
+#Similar algo to above, but doesn't flip. This is used to determin the length of oligomers
+def count_olig(all_lines,lyind,lind,bind):
+    done = False
+    count = 1
+    all_linesT = all_lines.copy()
+    if(all_linesT[lyind][lind][bind][13] == 1):
+        return 2, False
+    if(all_linesT[lyind,lind,bind,6] > -0.5):
+        tnlind = int(all_linesT[lyind,lind,bind,6])
+        tnbind = int(all_linesT[lyind,lind,bind,7])
+        tnlyind = int(all_linesT[lyind,lind,bind,8])
+        nlind = tnlind
+        nbind = tnbind
+        nlyind = tnlyind
+        switcher = 6
+    elif(all_linesT[lyind,lind,bind,9] > -0.5):
+        tnlind = int(all_linesT[lyind,lind,bind,9])
+        tnbind = int(all_linesT[lyind,lind,bind,10])
+        tnlyind = int(all_linesT[lyind,lind,bind,11])
+        nlind = tnlind
+        nbind = tnbind
+        nlyind = tnlyind
+        switcher = 9
+    else:
+        return 1,False
+    while not done:
+        count += 1
+        if(all_linesT[nlyind,nlind,nbind,13] == 1):
+            return count,False
+
+        tnlind = int(all_linesT[nlyind,nlind,nbind,switcher])
+        tnbind = int(all_linesT[nlyind,nlind,nbind,switcher+1])
+        tnlyind = int(all_linesT[nlyind,nlind,nbind,switcher+2])
+        nlind = tnlind
+        nbind = tnbind
+        nlyind = tnlyind
+        if(nlind < 0):
+            done = True
+            break
+    return count, True
+       
+
+#This function prevents knotting of the cross-links
+def get_allowed_beads(cind,clinks_np,bead,inder,no_gly):
+    eq = np.where(clinks_np[cind][:,inder] == bead)[0]
+    greater = np.where(clinks_np[cind][:,inder] > bead)[0]
+    less = np.where(clinks_np[cind][:,inder] < bead)[0]
+    if(len(greater) == 0):
+        urange = 0
+    else:
+        urange = greater[0]
+    if(len(less) == 0):
+        lrange = -1
+    else:
+        lrange = less[-1]
+    if(clinks_np[cind].size > 0):
+        if(clinks_np[cind].shape[0] == 1):
+            other_bead = clinks_np[cind][0,(inder+1)%2]
+            if(bead > clinks_np[cind][0,inder]):
+                if(other_bead > no_gly-2):
+                    allowed_beads = np.arange(0,int(no_gly/2))
+                else:
+                    allowed_beads = np.arange(other_bead,no_gly)
+            elif(bead < clinks_np[cind][0,inder]):
+                if(other_bead < 3):
+                    allowed_beads = np.arange(int(no_gly/2),no_gly)
+                else:
+                    allowed_beads = np.arange(0,other_bead)
+            else:
+                allowed_beads = np.arange(0,no_gly)
+            return allowed_beads
+        else:
+            
+
+            lrange_b2 = clinks_np[cind][lrange,inder]
+            urange_b2 = clinks_np[cind][urange,inder]
+
+            db_l = np.where(clinks_np[cind][:,inder] == lrange_b2)[0]
+            db_u = np.where(clinks_np[cind][:,inder] == urange_b2)[0]
+
+            poss_lrb = clinks_np[cind][db_l,(inder+1)%2]
+            poss_urb = clinks_np[cind][db_u,(inder+1)%2]
+
+            if(np.min(poss_lrb) == 1):
+                lrange_b = no_gly+1
+            else:
+                lrange_b = np.max(poss_lrb)
+
+        
+
+
+            if(np.max(poss_urb) == no_gly-1):
+                urange_b = 0
+            else:
+                urange_b = np.min(poss_urb)
+
+            inc_l = np.where(clinks_np[cind][:,(inder+1)%2] == lrange_b)[0]
+            inc_u = np.where(clinks_np[cind][:,(inder+1)%2] == urange_b)[0]
+
+            
+            if(len(inc_l) == 2):
+                lrange_b_adj = (lrange_b + 1)%no_gly
+            else:
+                lrange_b_adj = lrange_b
+            if(len(inc_u) == 2):
+                urange_b_adj = (urange_b - 1)%no_gly
+            else:
+                urange_b_adj = urange_b
+            if(lrange_b != urange_b):
+                if(lrange_b_adj < urange_b_adj):
+                    allowed_beads = np.arange(lrange_b_adj,urange_b_adj+1)
+                elif(lrange_b_adj > urange_b_adj):
+                    allowed_beads = np.concatenate([np.arange(0,urange_b_adj+1),np.arange(lrange_b_adj,no_gly)])
+                else:
+                    allowed_beads = np.array([lrange_b_adj])
+            else:
+                if((len(greater) >= 1 and len(less) > 0) or (len(greater) > 0 and len(less) >= 1)):
+                    allowed_beads =  np.array([2])
+                else:
+                    allowed_beads = np.arange(0,no_gly)
+            if(len(eq) > 0):
+                not_allow = clinks_np[cind][eq[0],(inder+1)%2]
+                delind = np.where(allowed_beads == not_allow)[0]
+                if(len(delind > 0)):
+                    allowed_beads = np.delete(allowed_beads,delind[0])
+            return allowed_beads
+    else:
+        return np.arange(0,no_gly)
+
+#Uses all of the above to create cross-links between glycan strands
+#This is fairly complicated to describe so I will not for now
+def cross_link(all_lines,pbcy,cper,per33,lper,oper):
+    no_layers = all_lines.shape[0]
+    no_lines = all_lines.shape[1]
+    no_gly = all_lines.shape[2]
+    clinks = []
+    clinks_np0 = []
+    clinks_np1 = []
+    for l in range(no_lines):
+        clinks.append([])
+    for cl in clinks:
+        if(len(cl) > 0):
+            cl_np = np.array(cl)
+            sort_ind0 = np.lexsort((cl_np[:,1],cl_np[:,0]))
+            sort_ind1 = np.lexsort((cl_np[:,0],cl_np[:,1]))
+            clinks_np0.append(cl_np[sort_ind0])
+            clinks_np1.append(cl_np[sort_ind1])
+        else:
+            clinks_np0.append(np.empty((0,2)))
+            clinks_np1.append(np.empty((0,2)))
+    for i in range(5000*no_layers):
+        layer_ind = random.randint(0,no_layers-1)
+        line_ind = random.randint(0,no_lines-1)
+        line1 = all_lines[layer_ind,line_ind]
+        line1_nam  = line1[line1[:,4]==0]
+        line1_nam = line1_nam[line1_nam[:,5]==1]
+        line1_nam = line1_nam[line1_nam[:,12]<2]
+        try:
+            b1ind = random.randint(0,line1_nam.shape[0]-1)
+        except:
+            continue
+        passed = False
+        flipped = 1
+        for fl in [1,-1]:
+            bead1 = line1_nam[b1ind]
+            direc = bead1[3]*fl
+            layer_ind2 = layer_ind
+            if(layer_ind != no_layers-1 and random.random() < lper and bead1[12] == 0):
+                layer_ind2 = layer_ind+1
+                if(layer_ind%2 == 0):
+                    acc_direc = (direc+1)/2
+                else:
+                    acc_direc = (direc-1)/2
+            else:
+                acc_direc = direc
+            ypos = bead1[1]
+            bead1_t = np.where(np.logical_and(all_lines[layer_ind,line_ind][:,1] > ypos-1e-7,all_lines[layer_ind,line_ind][:,1] < ypos+1e-7))[0][0]
+            if(layer_ind == layer_ind2):
+                if(direc == -1):
+                    allowed_beads = get_allowed_beads(line_ind,clinks_np0,bead1_t,0,no_gly)
+                elif(direc == 1):
+                    allowed_beads = get_allowed_beads((line_ind-int(direc))%no_lines,clinks_np1,bead1_t,1,no_gly)
+            else:
+                allowed_beads = np.arange(0,no_gly)
+            line2 = all_lines[layer_ind2,(line_ind-int(acc_direc))%no_lines,allowed_beads]
+            line2_nam = line2[line2[:,4]==0]
+            line2_nam = line2_nam[line2_nam[:,5]==1]
+            if(layer_ind != layer_ind2):
+                line2_nam = line2_nam[line2_nam[:,12]<1]
+            else:
+                line2_nam = line2_nam[line2_nam[:,12]<2]
+            line2_nam[:,1] -= ypos-pbcy/2
+            line2_nam[:,1] = enforce_pbc(pbcy,line2_nam[:,1])
+            rangee = 1.5
+            if(layer_ind != layer_ind2):
+                rangee = 0.75
+            line2_seg = line2_nam[line2_nam[:,1] > pbcy/2-rangee]
+            line2_seg = line2_seg[line2_seg[:,1] < pbcy/2+rangee]
+            line2_seg = line2_seg[np.logical_or(line2_seg[:,3] == -direc,np.logical_and(line2_seg[:,6] < 0,line2_seg[:,9] < 0))]
+            line2_seg[:,1] += ypos-pbcy/2
+            line2_seg[:,1] = enforce_pbc(pbcy,line2_seg[:,1])
+            try:
+                bead2_ind = random.randint(0,line2_seg.shape[0]-1)
+                passed = True
+                break
+            except:
+                bead1_t = np.where(np.logical_and(all_lines[layer_ind,line_ind][:,1] > ypos-1e-7,all_lines[layer_ind,line_ind][:,1] < ypos+1e-7))[0][0]
+                if(all_lines[layer_ind,line_ind,bead1_t,6] > -1 or all_lines[layer_ind,line_ind,bead1_t,9] > -1):
+                    break
+                flipped = -1
+                continue
+        if(not passed):
+            bead1_t = np.where(np.logical_and(all_lines[layer_ind,line_ind][:,1] > ypos-1e-7,all_lines[layer_ind,line_ind][:,1] < ypos+1e-7))[0][0]
+            if(layer_ind == layer_ind2):
+                all_lines[layer_ind,line_ind,bead1_t,12] += 2
+            continue
+        bead2 = line2_seg[bead2_ind]
+        ypos2 = bead2[1]
+        
+        
+        
+        all_lines[layer_ind,line_ind,bead1_t,3] *= flipped
+        ndirec = all_lines[layer_ind,line_ind,bead1_t,3]
+        if(layer_ind != layer_ind2):
+            if(layer_ind%2 == 0):
+                ndirec = (ndirec+1)/2
+            else:
+                ndirec = (ndirec-1)/2
+        fndirec = all_lines[layer_ind,line_ind,bead1_t,3]
+        bead2_t = np.where(np.logical_and(all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines][:,1] > ypos2-1e-7,all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines][:,1] < ypos2+1e-7))[0][0]
+        
+        
+        
+        lind1 = line_ind
+        lind2 = (line_ind-int(ndirec))%no_lines
+
+        if(abs(lind1-lind2) > 1):
+            if(lind1 > lind2):
+                clind = lind1
+                bind1 = bead1_t
+                bind2 = bead2_t
+            else:
+                clind = lind2
+                bind1 = bead2_t
+                bind2 = bead1_t
+        else:
+            if(lind1 < lind2):
+                clind = lind1
+                bind1 = bead1_t
+                bind2 = bead2_t
+            else:
+                clind = lind2
+                bind1 = bead2_t
+                bind2 = bead1_t
+        rand33 = random.random() 
+        if(random.random() < cper):
+            if(all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,6] < 0 and all_lines[layer_ind,line_ind,bead1_t,9] < 0):
+                if(all_lines[layer_ind,line_ind,bead1_t,6] != lind2 or all_lines[layer_ind,line_ind,bead1_t,7] != bead2_t):
+                    all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,6] = lind1
+                    all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,7] = bead1_t
+                    if(all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] == 0 and rand33 < per33 and all_lines[layer_ind,line_ind,bead1_t,9] < 0):
+                        all_lines[layer_ind,line_ind,bead1_t,12] +=1
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] +=2
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,13] = 1
+                        all_lines[layer_ind,line_ind,bead1_t,13] = 2
+                    else:
+                        all_lines[layer_ind,line_ind,bead1_t,12] +=1
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] +=1
+
+                    if(layer_ind != layer_ind2 or random.random() > oper):
+                        all_lines[layer_ind,line_ind,bead1_t,12] = 2
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] = 2
+                    
+                    all_lines[layer_ind,line_ind,bead1_t,9] = lind2
+                    all_lines[layer_ind,line_ind,bead1_t,10] = bead2_t
+                    all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,8] = layer_ind
+                    all_lines[layer_ind,line_ind,bead1_t,11] = layer_ind2
+                    all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,3] =-fndirec
+                    clinks[clind].append([bind1,bind2])
+            elif(all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,9] < 0 and all_lines[layer_ind,line_ind,bead1_t,6] < 0):
+                if(all_lines[layer_ind,line_ind,bead1_t,9] != lind2 or all_lines[layer_ind,line_ind,bead1_t,10] != bead2_t):
+                    all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,9] = lind1
+                    all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,10] = bead1_t
+                    if(all_lines[layer_ind,line_ind,bead1_t,12] == 0 and rand33 < per33 and all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,9] < 0):
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] +=1
+                        all_lines[layer_ind,line_ind,bead1_t,12] +=2
+                        all_lines[layer_ind,line_ind,bead1_t,13] = 1
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,13] = 2
+                    else:
+                        all_lines[layer_ind,line_ind,bead1_t,12] +=1
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] +=1
+
+                    if(layer_ind != layer_ind2 or random.random() > oper):
+                        all_lines[layer_ind,line_ind,bead1_t,12] = 2
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] = 2
+
+                    all_lines[layer_ind,line_ind,bead1_t,6] = lind2
+                    all_lines[layer_ind,line_ind,bead1_t,7] = bead2_t
+                    all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,11] = layer_ind
+                    all_lines[layer_ind,line_ind,bead1_t,8] = layer_ind2
+                    all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,3] =-fndirec
+                    clinks[clind].append([bind1,bind2])
+            else:
+                all_lines,is_flipped = flip_link(all_lines,layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t)
+                if(not is_flipped):
+                    all_lines,is_flipped = flip_link(all_lines,layer_ind,line_ind,bead1_t)
+                    if(not is_flipped):
+                        all_lines[layer_ind,line_ind,bead1_t,3] *= flipped
+                        continue
+                if(all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,6] < 0 and all_lines[layer_ind,line_ind,bead1_t,9] < 0):
+                    if(all_lines[layer_ind,line_ind,bead1_t,6] != lind2 or all_lines[layer_ind,line_ind,bead1_t,7] != bead2_t):
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,6] = lind1
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,7] = bead1_t
+                        if(all_lines[layer_ind,line_ind,bead1_t,12] == 0 and rand33 < per33 and all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,9] < 0):
+                            all_lines[layer_ind,line_ind,bead1_t,12] +=2
+                            all_lines[layer_ind,line_ind,bead1_t,13] = 1
+                            all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,11] = 2
+                        else:
+                            all_lines[layer_ind,line_ind,bead1_t,12] +=1
+                            if(all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] == 0 and rand33 < per33 and all_lines[layer_ind,line_ind,bead1_t,9] < 0):
+                                all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] +=2
+                                all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,13] = 1
+                                all_lines[layer_ind,line_ind,bead1_t,13] = 2
+                            else:
+                                all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] +=1
+
+                        if(layer_ind != layer_ind2 or random.random() > oper):
+                            all_lines[layer_ind,line_ind,bead1_t,12] = 2
+                            all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] = 2
+                        all_lines[layer_ind,line_ind,bead1_t,9] = lind2
+                        all_lines[layer_ind,line_ind,bead1_t,10] = bead2_t
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,8] = layer_ind
+                        all_lines[layer_ind,line_ind,bead1_t,11] = layer_ind2
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,3] =-fndirec
+                        clinks[clind].append([bind1,bind2])
+                elif(all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,9] < 0 and all_lines[layer_ind,line_ind,bead1_t,6] < 0):
+                    if(all_lines[layer_ind,line_ind,bead1_t,9] != lind2 or all_lines[layer_ind,line_ind,bead1_t,10] != bead2_t):
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,9] = lind1
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,10] = bead1_t
+                        if(all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] == 0 and rand33 < per33 and all_lines[layer_ind,line_ind,bead1_t,9] < 0):
+                            all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] +=2
+                            all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,13] = 1
+                            all_lines[layer_ind,line_ind,bead1_t,13] = 2
+                        else:
+                            all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] +=1
+                            if(all_lines[layer_ind,line_ind,bead1_t,12] == 0 and rand33 < per33 and all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,9] < 0):
+                                all_lines[layer_ind,line_ind,bead1_t,12] +=2
+                                all_lines[layer_ind,line_ind,bead1_t,13] = 1
+                                all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,13] = 2
+                            else:
+                                all_lines[layer_ind,line_ind,bead1_t,12] +=1
+                        if(layer_ind != layer_ind2 or random.random() > oper):
+                            all_lines[layer_ind,line_ind,bead1_t,12] = 2
+                            all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] = 2
+                        all_lines[layer_ind,line_ind,bead1_t,6] = lind2
+                        all_lines[layer_ind,line_ind,bead1_t,7] = bead2_t
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,11] = layer_ind
+                        all_lines[layer_ind,line_ind,bead1_t,8] = layer_ind2
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,3] =-fndirec
+                        clinks[clind].append([bind1,bind2])
+
+        else:
+            all_lines[layer_ind,line_ind,bead1_t,3] *= flipped
+            all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] += 1
+            all_lines[layer_ind,line_ind,bead1_t,12] +=1
+
+        clinks_np0 = []
+        clinks_np1 = []
+        for cl in clinks:
+            if(len(cl) > 0):
+                cl_np = np.array(cl)
+                sort_ind0 = np.lexsort((cl_np[:,1],cl_np[:,0]))
+                sort_ind1 = np.lexsort((cl_np[:,0],cl_np[:,1]))
+                clinks_np0.append(cl_np[sort_ind0])
+                clinks_np1.append(cl_np[sort_ind1])
+            else:
+                clinks_np0.append(np.empty((0,2)))
+                clinks_np1.append(np.empty((0,2)))
+       
+    return all_lines
+    
+#uses count_olig to determin distribution of oligomer lengths
+def count_all_olig(all_lines):
+    test_lines = all_lines[np.logical_and(all_lines[:,:,:,5] == 1,all_lines[:,:,:,4] == 0),:]
+    olig_lens = np.zeros(test_lines.shape[0])
+    olig_count = 0
+    for ly in range(all_lines.shape[0]):
+        for l in range(all_lines[ly].shape[0]):
+            for b in range(all_lines[ly,l].shape[0]):
+                if(all_lines[ly,l,b,5] == 1 and all_lines[ly,l,b,4] == 0):
+                    num,_ = count_olig(all_lines,ly,l,b) 
+                    olig_lens[olig_count] = num
+                    olig_count += 1
+    return olig_lens
+
+#loads an itp file
+def load_itp(fn):
+    tmp_f = open(fn,"r")
+    tmp_lines = tmp_f.readlines()
+    tmp_f.close()
+    
+    data = [[],[],[],[],[]]           
+    
+    data_ind = -1
+    for lines in tmp_lines:
+        if lines == "[ atoms ]\n":
+            data_ind = 0
+        elif lines == "[ bonds ]\n": 
+            data_ind = 1
+        elif lines == "[ constraints ]\n":
+            data_ind = 2
+        elif lines == "[ angles ]\n":
+            data_ind = 3
+        elif lines == "[ dihedrals ]\n":
+            data_ind = 4
+        elif len(lines) < 5:
+            data_ind = -1
+        elif lines[0] != ";":
+            if(data_ind > -1):
+                data[data_ind].append(lines.split())
+    return data
+            
+#flattens glycan strand data into 2d array
+def lines_to_coords(all_lines):
+    old_shape = all_lines.shape
+    all_lines = all_lines.reshape(int(all_lines.size/14),14)
+    #sind = np.argsort(all_lines[:,4])
+    return all_lines,old_shape
+            
+#Writes the itp file for PG          
+def write_PGL_itp(all_lines,nam_itp,nag_itp,spep_itp,upep_itp,uupep_itp,prev_str,prev_nos):  
+    nam_data = load_itp(nam_itp)
+    nag_data = load_itp(nag_itp)
+    upep_data = load_itp(upep_itp)
+    uupep_data = load_itp(uupep_itp)
+    spep_data = load_itp(spep_itp)
+    
+        
+    data = [nam_data,nag_data]
+    atoms_str = prev_str[0]#"[ atoms ]\n"
+    bonds_str = prev_str[1]#"[ bonds ]\n"
+    constraints_str = prev_str[2]#"[ constraints ]\n"
+    angles_str = prev_str[3]#"[ angles ]\n"
+    dihedrals_str = prev_str[4]#"[ dihedrals ]\n"
+    
+    resno = prev_nos[0]
+    atm_no = prev_nos[1]
+    #x y z dir type place linked
+    #0 1 2 3    4    5     6
+    ang_link1=[
+    [2,     1,     8,     2,      90.000,      130.00],
+    [3,     1,     8,     2,     118.000,      100.00],
+    [4,     1,     8,    10,     151.000,      170.00],
+    [1,     8,     6,    10,      70.000,      600.00],
+    [1,     8,     9,    10,      93.000,      180.00],
+    [1,     8,     5,    10,     160.000,      555.00]]
+    a_link_add1 = [[0,0,-1],[0,0,-1],[0,0,-1],[0,-1,-1],[0,-1,-1],[0,-1,-1]]
+    dihedral_link1=[
+    [2,     1,     8,     5,     9,       0.000,        3.50,     1],
+    [2,     1,     8,     5,     9,       0.000,        3.00,     2],
+    [2,     1,     8,     6,     9,       0.000,        3.50,     1],
+    [2,     1,     8,     6,     9,       0.000,        3.00,     2],
+    [3,     1,     8,     9,     9,       0.000,        8.00,     1],
+    [3,     1,     8,     9,     9,       0.000,        2.00,     2],
+    [4,     1,     8,     6,     9,       0.000,        7.00,     1],
+    [4,     1,     8,     6,     9,       0.000,        3.00,     2],
+    [4,     1,     8,     9,     9,     180.000,        2.00,     2],
+    [4,     1,     8,     9,     9,     180.000,        3.00,     3]]
+    ang_link2=[
+    [2,     1,    9,    10,     113.000,       90.00],
+    [3,     1,    9,    10,      99.000,      100.00],
+    [4,     1,    9,    10,     145.000,      250.00],
+    [1,    9,    7,    10,      76.000,      400.00],
+    [1,    9,    6,    10,     135.000,      970.00]]
+    
+    a_link_add2 = [[0,0,-1],[0,0,-1],[0,0,-1],[0,-1,-1],[0,-1,-1]]
+    
+    dihedral_link2=[
+    [4,     1,    9,    6,     9,       0.000,        8.00,     1],
+    [4,     1,    9,    6,     9,       0.000,        2.00,     2],
+    [4,     1,    9,    7,     9,       0.000,        7.00,     1],
+    [4,     1,    9,    7,     9,       0.000,        3.00,     2],
+    [2,     1,    9,    6,     9,     180.000,        6.00,     1],
+    [2,     1,    9,    6,     9,       0.000,        4.00,     2]]
+    
+    atm_start = []
+    for layer in all_lines:
+        atm_start_p1 = []
+        for line in layer:
+            atm_start_p2 = []
+            prev_p = 0
+            for res in line:
+                atm_start_p2.append(atm_no)
+                if(res[5] == 1):
+                    r4 = int(res[4])
+                    
+                    if(prev_p == 1):
+                        if(r4 == 0):
+                            bonds_str += "\t"+str(1+atm_no-4)+"\t"+str(8+atm_no-4)+"\t"+str(1)+"\t"+str(0.316)+"\t"+str(28500.00)+"\n"       
+                            for ang in ang_link1:
+                                angles_str += "\t"+str(ang[0]+atm_no-4)+"\t"+str(ang[1]+atm_no-4)+"\t"+str(ang[2]+atm_no-4)+"\t"+str(ang[3])+"\t"+str(ang[4])+"\t"+str(ang[5])+"\n"
+                            for dih in dihedral_link1:
+                                dihedrals_str += "\t"+str(dih[0]+atm_no-4)+"\t"+str(dih[1]+atm_no-4)+"\t"+str(dih[2]+atm_no-4)+"\t"+str(dih[3]+atm_no-4)+"\t"+str(dih[4])+"\t"+str(dih[5])+"\t"+str(dih[6])+"\t"+str(dih[7])+"\n"                
+                        else:
+                            bonds_str += "\t"+str(1+atm_no-5)+"\t"+str(9+atm_no-5)+"\t"+str(1)+"\t"+str(0.288)+"\t"+str(32000.00)+"\n"      
+                            for ang in ang_link2:
+                                angles_str += "\t"+str(ang[0]+atm_no-5)+"\t"+str(ang[1]+atm_no-5)+"\t"+str(ang[2]+atm_no-5)+"\t"+str(ang[3])+"\t"+str(ang[4])+"\t"+str(ang[5])+"\n"
+                            for dih in dihedral_link2:
+                                dihedrals_str += "\t"+str(dih[0]+atm_no-5)+"\t"+str(dih[1]+atm_no-5)+"\t"+str(dih[2]+atm_no-5)+"\t"+str(dih[3]+atm_no-5)+"\t"+str(dih[4])+"\t"+str(dih[5])+"\t"+str(dih[6])+"\t"+str(dih[7])+"\n"                
+                            
+                        
+                    for bd in data[r4][1]:
+                        bonds_str += "\t"+str(int(bd[0])+atm_no)+"\t"+str(int(bd[1])+atm_no)+"\t"+bd[2]+"\t"+bd[3]+"\t"+bd[4]+"\n"                
+
+                        
+                    for cd in data[r4][2]:
+                        constraints_str += "\t"+str(int(cd[0])+atm_no)+"\t"+str(int(cd[1])+atm_no)+"\t"+cd[2]+"\t"+cd[3]+"\t"+cd[4]+"\n"                
+                    for ad in data[r4][3]:
+                        angles_str += "\t"+str(int(ad[0])+atm_no)+"\t"+str(int(ad[1])+atm_no)+"\t"+str(int(ad[2])+atm_no)+"\t"+ad[3]+"\t"+ad[4]+"\t"+ad[5]+"\n"
+                    for dd in data[r4][4]:
+                        dihedrals_str += "\t"+str(int(dd[0])+atm_no)+"\t"+str(int(dd[1])+atm_no)+"\t"+str(int(dd[2])+atm_no)+"\t"+str(int(dd[3])+atm_no)+"\t"+dd[4]+"\t"+dd[5]+"\t"+dd[6]+"\t"+dd[7]+"\n"
+                    
+                    for ad in data[r4][0]:
+                        atoms_str += "\t"+str(atm_no+1)+"\t"+ad[1]+"\t"+str(resno)+"\t"+ad[3]+"\t"+ad[4]+"\t"+str(atm_no+1)+"\t"+ad[6]+"\t"+ad[7]+"\n"
+                        atm_no += 1
+                    
+                        
+                    
+                    resno += 1
+                prev_p = res[5]
+            
+            if(line[0][5] == 1 and line[-1][5] == 1):
+                if(int(line[0][4]) == 0):
+                    bonds_str += "\t"+str(1+atm_start_p2[0])+"\t"+str(8+atm_start_p2[-1]-4)+"\t"+str(1)+"\t"+str(0.316)+"\t"+str(28500.00)+"\n"       
+                    for nn,ang in enumerate(ang_link1):
+                        angles_str += "\t"+str(ang[0]+atm_start_p2[a_link_add1[nn][0]]+4*a_link_add1[nn][0])+"\t"+str(ang[1]+atm_start_p2[a_link_add1[nn][1]]+4*a_link_add1[nn][1])+"\t"+str(ang[2]+atm_start_p2[a_link_add1[nn][2]]+4*a_link_add1[nn][2])+"\t"+str(ang[3])+"\t"+str(ang[4])+"\t"+str(ang[5])+"\n"
+                    for dih in dihedral_link1:
+                        dihedrals_str += "\t"+str(dih[0]+atm_start_p2[0])+"\t"+str(dih[1]+atm_start_p2[0])+"\t"+str(dih[2]+atm_start_p2[-1]-4)+"\t"+str(dih[3]+atm_start_p2[-1]-4)+"\t"+str(dih[4])+"\t"+str(dih[5])+"\t"+str(dih[6])+"\t"+str(dih[7])+"\n"                
+                else:
+                    bonds_str += "\t"+str(1+atm_start_p2[0])+"\t"+str(9+atm_start_p2[-1]-5)+"\t"+str(1)+"\t"+str(0.288)+"\t"+str(32000.00)+"\n"      
+                    for nn,ang in enumerate(ang_link2):
+                        angles_str += "\t"+str(ang[0]+atm_start_p2[a_link_add2[nn][0]]+5*a_link_add1[nn][0])+"\t"+str(ang[1]+atm_start_p2[a_link_add2[nn][1]]+5*a_link_add1[nn][1])+"\t"+str(ang[2]+atm_start_p2[a_link_add2[nn][2]]+5*a_link_add1[nn][2])+"\t"+str(ang[3])+"\t"+str(ang[4])+"\t"+str(ang[5])+"\n"
+                    for dih in dihedral_link2:
+                        dihedrals_str += "\t"+str(dih[0]+atm_start_p2[0])+"\t"+str(dih[1]+atm_start_p2[0])+"\t"+str(dih[2]+atm_start_p2[-1]-5)+"\t"+str(dih[3]+atm_start_p2[-1]-5)+"\t"+str(dih[4])+"\t"+str(dih[5])+"\t"+str(dih[6])+"\t"+str(dih[7])+"\n"                
+                
+                 
+            atm_start_p1.append(atm_start_p2)
+        atm_start.append(atm_start_p1)
+            
+      
+    blink3 = [[5,    1,     1,       0.319,    14800.00]]   
+    
+    ang_link3 =[[ 4,     5,   1,    10,     104.000,       80.00],
+    [5,    1,   3,    10,     107.000,       60.00],
+    [5,    1,    2,     2,     100.000,       25.00]]
+    
+    dih_link3 = [[4,     5,    1,    3,     9,      60.000,        3.00,     2],
+    [5,    1,    3,    4,     9,     140.000,        3.00,     2]]
+
+    iplink = [8, 7, 1, 0.350, 1100.00]
+    ang_iplink = [[5,8,7,10,114,75],[8,7,6,10,95,75]]
+    
+    cl_atm_start = []
+    
+    for lyind,layer in enumerate(all_lines):
+        cl_atm_start_p1 = []
+        for lind,line in enumerate(layer):
+            cl_atm_start_p2 = []
+            for bind,res in enumerate(line):
+                cl_atm_start_p2.append(atm_no)
+                if(res[5] == 1):
+                    r4 = int(res[4])
+                    if(r4 == 0):
+                        if(res[13] == 1):
+                            data = uupep_data
+                        else:
+                            if(res[6] != -1 or res[13] == 2):
+                                data = upep_data
+                            else:
+                                data = spep_data
+                        
+                        b1_s = atm_start[lyind][lind][bind]
+                        for bd in blink3:
+                            bonds_str += "\t"+str(bd[0]+b1_s)+"\t"+str(bd[1]+atm_no)+"\t"+str(bd[2])+"\t"+str(bd[3])+"\t"+str(bd[4])+"\n"
+                        
+                        angles_str += "\t"+str(ang_link3[0][0]+b1_s)+"\t"+str(ang_link3[0][1]+b1_s)+"\t"+str(ang_link3[0][2]+atm_no)+"\t"+str(ang_link3[0][3])+"\t"+str(ang_link3[0][4])+"\t"+str(ang_link3[0][5])+"\n"
+                        angles_str += "\t"+str(ang_link3[1][0]+b1_s)+"\t"+str(ang_link3[1][1]+atm_no)+"\t"+str(ang_link3[1][2]+atm_no)+"\t"+str(ang_link3[1][3])+"\t"+str(ang_link3[1][4])+"\t"+str(ang_link3[1][5])+"\n"
+                        angles_str += "\t"+str(ang_link3[2][0]+b1_s)+"\t"+str(ang_link3[2][1]+atm_no)+"\t"+str(ang_link3[2][2]+atm_no)+"\t"+str(ang_link3[2][3])+"\t"+str(ang_link3[2][4])+"\t"+str(ang_link3[2][5])+"\n"
+                                        
+                        dihedrals_str += "\t"+str(dih_link3[0][0]+b1_s)+"\t"+str(dih_link3[0][1]+b1_s)+"\t"+str(dih_link3[0][2]+atm_no)+"\t"+str(dih_link3[0][3]+atm_no)+"\t"+str(dih_link3[0][4])+"\t"+str(dih_link3[0][5])+"\t"+str(dih_link3[0][6])+"\t"+str(dih_link3[0][7])+"\n"                
+                        dihedrals_str += "\t"+str(dih_link3[0][0]+b1_s)+"\t"+str(dih_link3[0][1]+atm_no)+"\t"+str(dih_link3[0][2]+atm_no)+"\t"+str(dih_link3[0][3]+atm_no)+"\t"+str(dih_link3[0][4])+"\t"+str(dih_link3[0][5])+"\t"+str(dih_link3[0][6])+"\t"+str(dih_link3[0][7])+"\n"                
+                        
+                        for bd in data[1]:
+                            bonds_str += "\t"+str(int(bd[0])+atm_no)+"\t"+str(int(bd[1])+atm_no)+"\t"+bd[2]+"\t"+bd[3]+"\t"+bd[4]+"\n"                
+                        for cd in data[2]:
+                            constraints_str += "\t"+str(int(cd[0])+atm_no)+"\t"+str(int(cd[1])+atm_no)+"\t"+cd[2]+"\t"+cd[3]+"\t"+cd[4]+"\n"                
+                        for ad in data[3]:
+                            angles_str += "\t"+str(int(ad[0])+atm_no)+"\t"+str(int(ad[1])+atm_no)+"\t"+str(int(ad[2])+atm_no)+"\t"+ad[3]+"\t"+ad[4]+"\t"+ad[5]+"\n"
+                        for dd in data[4]:
+                            dihedrals_str += "\t"+str(int(dd[0])+atm_no)+"\t"+str(int(dd[1])+atm_no)+"\t"+str(int(dd[2])+atm_no)+"\t"+str(int(dd[3])+atm_no)+"\t"+dd[4]+"\t"+dd[5]+"\t"+dd[6]+"\t"+dd[7]+"\n"
+                        
+                        for ad in data[0]:
+                            atoms_str += "\t"+str(atm_no+1)+"\t"+ad[1]+"\t"+str(resno)+"\t"+ad[3]+"\t"+ad[4]+"\t"+str(atm_no+1)+"\t"+ad[6]+"\t"+ad[7]+"\n"
+                            atm_no += 1
+                        resno += 1
+            cl_atm_start_p1.append(cl_atm_start_p2)
+        cl_atm_start.append(cl_atm_start_p1)
+    
+    for lyind,layer in enumerate(all_lines):
+        for lind,line in enumerate(layer):
+            for bind,res in enumerate(line):
+                c_atm1 = cl_atm_start[lyind][lind][bind]
+                ly2ind = int(res[8])
+                l2ind = int(res[6])
+                b2ind = int(res[7])
+                if(l2ind != -1):
+                    c_atm2 = cl_atm_start[ly2ind][l2ind][b2ind]
+                    if(all_lines[lyind][lind][bind][13] == 1 or all_lines[ly2ind][l2ind][b2ind][13] == 1):
+                        iplink[0] = 7
+                    else:
+                        pass
+                        #angles_str += "\t"+str(ang_iplink[0][0]+c_atm1)+"\t"+str(ang_iplink[0][1]+c_atm1)+"\t"+str(ang_iplink[0][2]+c_atm2)+"\t"+str(ang_iplink[0][3])+"\t"+str(ang_iplink[0][4])+"\t"+str(ang_iplink[0][5])+"\n"
+                        angles_str += "\t"+str(ang_iplink[1][0]+c_atm1)+"\t"+str(ang_iplink[1][1]+c_atm2)+"\t"+str(ang_iplink[1][2]+c_atm2)+"\t"+str(ang_iplink[1][3])+"\t"+str(ang_iplink[1][4])+"\t"+str(ang_iplink[1][5])+"\n"
+                        
+                    bonds_str += "\t"+str(iplink[0]+c_atm1)+"\t"+str(iplink[1]+c_atm2)+"\t"+str(iplink[2])+"\t"+str(iplink[3])+"\t"+str(iplink[4])+"\n"
+    
+    return [atoms_str,bonds_str,constraints_str,angles_str,dihedrals_str],[resno,atm_no]        
+        
+    
+    
+    
+                    
+#write the PG itp     
+def write_all_itp(itp_str):
+    pgl_file = open("PGL.itp","w")    
+    pgl_file.write("[ moleculetype ]\n")
+    pgl_file.write("PGL    1\n\n")
+    pgl_file.write(itp_str[0]+"\n")
+    pgl_file.write(itp_str[1]+"\n")
+    pgl_file.write(itp_str[2]+"\n")
+    pgl_file.write(itp_str[3]+"\n")
+    pgl_file.write(itp_str[4]+"\n")
+    pgl_file.close()
+            
+    
+    
+    
+    
+    
+    
+    
+        
     
 #Function that creates a leaflet using all of the above
-def create_leaflet(den,xbox,ybox,curv_A,curv_B,ch_ang,pore,leng,keep_end): 
+def create_leaflet(den,xbox,ybox,curv_A,curv_B,ch_ang,pore,leng,keep_end,mem_outer_red): 
     if(curv_A < 1e-5 or curv_B < 1e-5):
-        gpoints3,direcs3 = np.array(DiskGrid(den,0,xbox,ybox))
+        gpoints3,direcs3 = np.array(DiskGrid(den,0,xbox,ybox,mem_outer_red))
         return gpoints3,direcs3
     rad_A = 1.0/curv_A
     rad_B = 1.0/curv_B 
@@ -861,7 +1904,7 @@ def create_leaflet(den,xbox,ybox,curv_A,curv_B,ch_ang,pore,leng,keep_end):
         
         
     gpoints2,direcs2 = np.array(InvSphereGrid(den,in_rad,(np.pi/2-ch_ang),rad_B))
-    gpoints3,direcs3 = np.array(DiskGrid(den,rad_B+in_rad,xbox,ybox))
+    gpoints3,direcs3 = np.array(DiskGrid(den,rad_B+in_rad,xbox,ybox,mem_outer_red))
     shift = -gpoints[-1,2]+s2*rad_B-rad_B
     if(pore):
          gpoints[:,2] = gpoints[:,2]-rad_B
@@ -873,7 +1916,8 @@ def create_leaflet(den,xbox,ybox,curv_A,curv_B,ch_ang,pore,leng,keep_end):
     gpoints = np.concatenate([gpoints,gpoints2,gpoints3])
     direcs = np.concatenate([direcs,direcs2,direcs3])
     return gpoints,direcs
- 
+
+
 #A fully analytic function of the leaflet. This is very useful for accurate exclusion of solute 
 def leaflet_function(x,y,curv_A,curv_B,ch_ang,pore,leng):
     if(curv_A < 1e-5 or curv_B < 1e-5):
@@ -999,14 +2043,83 @@ def reorder_atoms(atoms,coords):
             new_atoms.append(lip_split[i][k])
             new_coords.append(lip_split_coords[i][k])
     return new_atoms,new_coords
+    
+#Ignore this  
+def LocBias(coords,lnums,lipids,steps,loc_lipids,bias_grid):
+    lipids=list(lipids)
+    lip_ranges = []
+    total = 0
+    for l in range(len(lipids)):
+        lip_ranges.append([total,total+lnums[l]])
+        total += lnums[l]
+    swap = []
+    nswap = []
+    for l in range(len(lipids)):
+        if lipids[l] in loc_lipids:
+            swap.append(l)
+        else:
+            nswap.append(l) 
+    for i in range(steps):
+        bulk = random.choice(nswap)
+        swaper = random.choice(swap)
+        bstart,bend = lip_ranges[bulk]
+        sstart,send = lip_ranges[swaper]
+        blip = random.randint(bstart,bend-1)
+        slip = random.randint(sstart,send-1)
+        bcoord = coords[blip]
+        scoord = coords[slip]
+        binda,bindb = put_into_grid(bcoord[:2],[pbcx, pbcy],[bias_grid.shape[0],bias_grid.shape[1]],[0,0])
+        sinda,sindb = put_into_grid(scoord[:2],[pbcx, pbcy],[bias_grid.shape[0],bias_grid.shape[1]],[0,0])
+        
+        swap_val = -bias_grid[sinda,sindb]+bias_grid[binda,bindb]
+        swap_prob = 1/(1+np.exp(-0.3*swap_val))
+        
+        if random.random() < swap_prob:
+            coords[slip]=bcoord
+            coords[blip]=scoord
+    return coords
             
+#gets charge between a lower and upper bound, for neutralising compartments
+def get_charge(lz,uz):
+    last = None
+    mcharge = 0
+    for ind,j in enumerate(membrane.atoms):
+        pos = membrane.coord[ind]
+        if not j[0].strip().startswith('v') and j[1:3] != last:
+            if(pos[2] > lz and pos[2] < uz):
+                mcharge += charges.get(j[1].strip(),0)
+        last = j[1:3]
+        
+    last = None   
+    pgcharge = 0
+    for ind,j in enumerate(PGL.atoms):
+        pos = PGL.coord[ind]
+        if not j[0].strip().startswith('v') and j[1:3] != last:
+            if(pos[2] > lz and pos[2] < uz):
+                pgcharge += charges.get(j[1].strip(),0)
+        last = j[1:3]
+
+    last = None
+    pcharge = 0
+    for ind,j in enumerate(protein.atoms):
+        pos = protein.coord[ind]
+        if not j[0].strip().startswith('v') and j[1:3] != last:
+            if(pos[2] > lz and pos[2] < uz):
+                pcharge += charges.get(j[1].strip(),0)  
+        last = j[1:3]
+    total_charge = mcharge+pgcharge+pcharge
+    return total_charge,pcharge,mcharge,pgcharge
             
 tm   = []
 lipL = []
 lipU = []
+lipL_loc = []
+lipU_loc = []
 lipLO = []
 lipUO = []
 solv = []
+pos_ions = [[],[],[]]
+neg_ions = [[],[],[]]
 
 # HII edit - lipid definition, for extra lipid definitaions
 usrmols  = []
@@ -1067,6 +2180,8 @@ added using -pore.
     ("-uo",      Option(lipUO.append, 1,   None, "Lipid type and relative abundance (For double membrane definitions) (NAME[:#])")),
     ("-a",      Option(float,       1,        0.60, "Area per lipid (nm*nm)")),
     ("-au",     Option(float,       1,        None, "Area per lipid (nm*nm) for upper layer")),
+    ("-ao",      Option(float,       1,        None, "Area per lipid (nm*nm) for outer membrane")),
+    ("-auo",     Option(float,       1,        None, "Area per lipid (nm*nm) for outer membrane upper layer")),
     ("-asym",   Option(int,         1,        None, "Membrane asymmetry (number of lipids)")),
     ("-rand",   Option(float,       1,         0.1, "Random kick size (maximum atom displacement)")),
     ("-bd",     Option(float,       1,         0.3, "Bead distance unit for scaling z-coordinates (nm)")),
@@ -1075,13 +2190,23 @@ added using -pore.
     ("-curv_o",        Option(str,        1,          "0,0,1", "Curvature of the outer membrane, see -curv")),
     ("-curv_ext",        Option(float,        1,          3, "Extent of curved region in the absence of a protein, this also controls the size of the pore if -pore is used")),
     ("-pore",        Option(bool,        0,          None, "Create a pore, with inner radius equal to -curv_ext and length equal to -ps")),
+    ("-loc",      Option(str,         1,        None, "Input .npz for localisation data to bias lipid arangment.")),
+    ("-l_loc",      Option(lipL_loc.append, 1,   None, "Lipid type for localisation")),
+    ("-u_loc",      Option(lipU_loc.append, 1,   None, "Lipid type for localisation")),
+    ("-pgl",        Option(int,        1,          0, "Number of PG layers to place at -pgl_z.")),
+    ("-pgl_z",        Option(float,        1,          0, "Z position of PG layer relative to center of periplasmic space.")),
+    ("-cper",        Option(float,        1,          0.4, "Percentage of crosslinks.")),
+    ("-lper",        Option(float,        1,          0.1, "Percentage of crosslinks that are between layers.")),
+    ("-per33",        Option(float,        1,          0.03, "Percentage of 3-3 crosslinks, all other crosslinks will be 3-4.")),
+    ("-oper",        Option(float,        1,          1, "Percentage chance of a monomer linking with a oligomer. (Actual change of link is cper*oper)")),
+    ("-gdist",        Option(str,        1,          "0.75,4,8.9,0.25,10,45", "Distribution of glycan strand lengths. Format as weight 1,standard deviation 1,mean 1,weight 2..., were each triple describes a gaussian. The sum of these forms the distribution.")),
+    ("-micelle",        Option(bool,        0,          None, "Builds a micelle around a protein instead of a bilayer")),
+    ("-radius",        Option(float,        1,          -1, "Radius of membrane outer disk. This is by default the whole cell")),
     """
-Protein related options. -fudge gives the exculsion radiusa around the protein.
+Protein related options. -fudge gives the exclusion radius around the protein.
 """,
     ("-center", Option(bool,        0,        None, "Center the protein on z")),
     ("-rotate", Option(str,         1,        None, "Rotate protein (random|princ|angle(float))")),
-    ("-od",     Option(float,       1,         1.0, "Grid spacing for determining orientation")),
-    ("-op",     Option(float,       1,         4.0, "Hydrophobic ratio power for determining orientation")),
     ("-fudge",  Option(float,       1,         0.3, "Fudge factor for allowing lipid-protein overlap")),
     ("-ring",   Option(bool,        0,        None, "Put lipids inside the protein")),
     ("-dm",     Option(float,       1,        None, "Shift protein with respect to membrane")),
@@ -1093,12 +2218,18 @@ Solvent related options.
     ("-solr",   Option(float,       1,         0.1, "Solvent random kick")),
     ("-excl",   Option(float,       1,         1.5, "Exclusion range (nm) for solvent addition relative to membrane center")),
     """
-Salt related options.
+Charge related options.
 """,
-    ("-salt",   Option(str,         1,        None, "Salt concentration")),
+    ("-posi_c0",   Option(pos_ions[0].append,         1,        None, "Positive ion type and relative abundance (NAME[:#]) in compartment 0")),
+    ("-negi_c0",   Option(neg_ions[0].append,         1,        None, "Negative ion type and relative abundance (NAME[:#]) in compartment 0")),
+    ("-posi_c1",   Option(pos_ions[1].append,         1,        None, "Positive ion type and relative abundance (NAME[:#]) in compartment 1")),
+    ("-negi_c1",   Option(neg_ions[1].append,         1,        None, "Negative ion type and relative abundance (NAME[:#]) in compartment 1")),
+    ("-posi_c2",   Option(pos_ions[2].append,         1,        None, "Positive ion type and relative abundance (NAME[:#]) in compartment 2")),
+    ("-negi_c2",   Option(neg_ions[2].append,         1,        None, "Negative ion type and relative abundance (NAME[:#]) in compartment 2")),
+    ("-ion_conc",   Option(str,       1,         "0.15,0.15,0.15", "Concentration of ions in each compartment")),
     ("-charge", Option(str,         1,      "auto", "Charge of system. Set to auto to infer from residue names")),
-    ("-charge_ratio", Option(str,         1,      "1,1,1", "Ratios of charge in each compartment")),
-    ("-zpbc", Option(bool,         0,      None, "Charge of system. Set to auto to infer from residue names")),
+    ("-charge_ratio", Option(str,         1,      None, "Ratios of charge in each compartment")),
+    ("-zpbc", Option(bool,         0,      None, "Toggles if water compartments are determined with pbc in the Z axis.")),
     """
 Define additional lipid types (same format as in lipid-martini-itp-v01.py)
 """,
@@ -1208,7 +2339,32 @@ if options["-box"].value:
     options["-x"].value = options["-box"].value[:3]
     options["-y"].value = options["-box"].value[3:6]
     options["-z"].value = options["-box"].value[6:]
+    
+    
+mem_outer_red = options["-radius"].value
 
+Num_PGL =  options["-pgl"].value
+Pos_PGL =  options["-pgl_z"].value
+cper = options["-cper"].value
+lper = options["-lper"].value
+per33 = options["-per33"].value
+oper = options["-oper"].value
+gdist_str = options["-gdist"].value
+
+gdist = gdist_str.split(",")
+gdist = np.array(gdist,dtype=float)
+gdist = gdist.reshape(int(gdist.size/3),3)
+
+
+is_micelle = options["-micelle"].value
+print(is_micelle)
+
+if(is_micelle is not None):
+    is_micelle = True
+else:
+    is_micelle = False
+
+print(is_micelle)
 
 # options -x, -y, -z take precedence over automatic determination
 pbcSetX = 0
@@ -1230,8 +2386,6 @@ elif options["-z"].value:
     pbcSetZ = [0,0,options["-z"].value]
 
 
-lo_lipd  = math.sqrt(options["-a"].value)
-up_lipd  =  options["-au"].value or lo_lipd
 
 
 ################
@@ -1243,6 +2397,8 @@ protein  = Structure()
 protein_lip = Structure()
 prot     = []
 xshifts  = [0] # Shift in x direction per protein
+
+#Reading and processing inputs
 
 double_mem = False
 if(options["-ps"].value > 1e-5):
@@ -1261,6 +2417,7 @@ if(add_pore is not None):
     add_pore = True
 else:
     add_pore = False
+
 
 zdist = float(options["-ps"].value)
 
@@ -1368,7 +2525,7 @@ if not tm or options["-ct"].value != None or using_temp:
     pbcz = pbcSetZ and pbcSetZ[2]
 
 ## B. PROTEIN ---
-
+    #for writing a template for muliple protein placments
     if(options["-ct"].value != None):
         new_file = open(options["-ct"].value,"w")
         count = 0
@@ -1380,7 +2537,7 @@ if not tm or options["-ct"].value != None or using_temp:
                     inner_leng = zdist-(1/rcurvs_mid[i])
                 else:
                     inner_leng = 0         
-                temp_points,direcs = create_leaflet(4,pbcx/2,pbcy/2,curvs_mid[i],rcurvs_mid[i],ang_exts[i],add_pore,inner_leng,trufal[i])
+                temp_points,direcs = create_leaflet(4,pbcx/2,pbcy/2,curvs_mid[i],rcurvs_mid[i],ang_exts[i],add_pore,inner_leng,trufal[i],mem_outer_red)
                 if(cdirs[i] > 0):
                     temp_points[:,2] = -temp_points[:,2]
                     direcs[:,2] = -direcs[:,2]
@@ -1414,6 +2571,7 @@ if not tm or options["-ct"].value != None or using_temp:
 
 
     if(using_temp):
+        #WHen a template is present it used to build membrane
         in_prots = options["-fs"].value
         prot_file = open(in_prots,"r")
         lines = prot_file.read().split("\n")
@@ -1429,7 +2587,6 @@ if not tm or options["-ct"].value != None or using_temp:
             stl = tl.split()
             if(len(stl)>2):
                 prot_no = int(float(stl[-2]))-1
-                #print(prot_no)
                 if(prot_no> -1):
                     zpos = float(tl[46:54])
                     ypos = float(tl[38:46])
@@ -1452,6 +2609,7 @@ if not tm or options["-ct"].value != None or using_temp:
 
 if(using_temp or tm):
     if(not using_temp):
+        #when not using a template
         tm_lip    = [ Structure(i) for i in tm ]
         tm    = [ Structure(i) for i in tm ]
               
@@ -1627,17 +2785,31 @@ rx, ry, rz = pbcx+1e-8, pbcy+1e-8, pbcz+1e-8
 membrane = Structure()
 
 if lipL:
-    # Lipids are added on grid positions, using the prototypes defined above.
-    # If a grid position is already occupied by protein, the position is untagged.
-    
+    #reading inputs
     area_l = float(options["-a"].value)
     if(not options["-au"].value is None):
         area_u = float(options["-au"].value)
     else:
         area_u = float(options["-a"].value)
+
+    if(not options["-ao"].value is None):
+        area_lo = float(options["-ao"].value)
+    else:
+        area_lo = float(options["-a"].value)
     
-    density_l = np.pi/2*np.sqrt(1/area_l)
-    density_u = np.pi/2*np.sqrt(1/area_u)
+    
+    if(not options["-auo"].value is None):
+        area_uo = float(options["-auo"].value)
+    else:
+        if(not options["-ao"].value is None):
+            area_uo = float(options["-ao"].value)
+        else:
+            area_uo = float(options["-a"].value)
+    
+    density_l = [np.pi/2*np.sqrt(1/area_l),np.pi/2*np.sqrt(1/area_lo)]
+    density_u = [np.pi/2*np.sqrt(1/area_u),np.pi/2*np.sqrt(1/area_uo)]
+    area_ls = [area_l,area_lo]
+
 
    
     
@@ -1648,79 +2820,76 @@ if lipL:
     
     
     trufal = [True,False]
+    #building membrae grid points and normals based on inputs
     for i in range(2):
-        if(add_pore):
-            inner_leng = zdist-(1/rcurvs_mid[i])
-            curv_up[i] = 1/(extent+2)
-            curv_lo[i] = 1/(extent-2)
+        if(options["-ps"].value > 1e-5 or i == 0):
+            if(add_pore):
+                inner_leng = zdist-(1/rcurvs_mid[i])
+                curv_up[i] = 1/(extent+2)
+                curv_lo[i] = 1/(extent-2)
+            else:
+                inner_leng = 0
+            if(is_micelle):
+                prot_points = np.array(protein.coord)
+                prot_points = prot_points[np.logical_and(prot_points[:,2]+zdist*(i*2-1) < 2,prot_points[:,2]+zdist*(i*2-1) > -2)]
+                prot_points = prot_points[:,:2]
+                prot_points = prot_points[::2]
+                prot_points = jnp.array(prot_points)
+
+
+                ret_val,grid_vals = gaussian_grid(prot_points,-pbcx/2,-pbcx/2,pbcx/2,pbcx/2,300,300)
+
+                up_grid,direcs = build_micelle(area_ls[i],prot_points,ret_val,grid_vals,8,pbcx,pbcy)
+
+
+                lo_grid = np.zeros((0,3))
+                direcs2 = np.zeros((0,3))
+            else:
+                up_grid,direcs = create_leaflet(density_u[i],pbcx/2,pbcy/2,curv_up[i],rcurv_up[i],ang_exts[i],add_pore,inner_leng,trufal[i],mem_outer_red)
+                lo_grid,direcs2 = create_leaflet(density_l[i],pbcx/2,pbcy/2,curv_lo[i],rcurv_lo[i],ang_exts[i],add_pore,inner_leng,trufal[i],mem_outer_red)
+                up_grid[:,2] = -up_grid[:,2]+2
+                lo_grid[:,2] = -lo_grid[:,2]-2
+
+
+            if(cdirs[i] < 0):
+                temp = up_grid
+                up_grid = lo_grid
+                lo_grid= temp
+                
+                dtemp = -direcs
+                direcs = -direcs2
+                direcs2= dtemp        
+                
+                up_grid[:,2] = -up_grid[:,2]
+                lo_grid[:,2] = -lo_grid[:,2]
+                direcs[:,2] = -direcs[:,2]
+                direcs2[:,2] = -direcs2[:,2]
+            if(not is_micelle):
+                up_grid = up_grid+np.array([pbcx/2,pbcy/2,0])
+                lo_grid = lo_grid+np.array([pbcx/2,pbcy/2,0])
         else:
-            inner_leng = 0
-        up_grid,direcs = create_leaflet(density_u,pbcx/2,pbcy/2,curv_up[i],rcurv_up[i],ang_exts[i],add_pore,inner_leng,trufal[i])
-        lo_grid,direcs2 = create_leaflet(density_l,pbcx/2,pbcy/2,curv_lo[i],rcurv_lo[i],ang_exts[i],add_pore,inner_leng,trufal[i])
-       
-    
-        up_grid[:,2] = -up_grid[:,2]+2
-        lo_grid[:,2] = -lo_grid[:,2]-2
-        if(cdirs[i] < 0):
-            temp = up_grid
-            up_grid = lo_grid
-            lo_grid= temp
+            up_grid = np.zeros((0,3))
+            direcs = np.zeros((0,3))
+            lo_grid = np.zeros((0,3))
+            direcs2 = np.zeros((0,3))
             
-            dtemp = -direcs
-            direcs = -direcs2
-            direcs2= dtemp        
-            
-            up_grid[:,2] = -up_grid[:,2]
-            lo_grid[:,2] = -lo_grid[:,2]
-            direcs[:,2] = -direcs[:,2]
-            direcs2[:,2] = -direcs2[:,2]
-        up_grid = up_grid+np.array([pbcx/2,pbcy/2,0])
-        lo_grid = lo_grid+np.array([pbcx/2,pbcy/2,0])
-        
         up_grids.append(up_grid)
         lo_grids.append(lo_grid)
         direcss.append(direcs)
-        direcs2s.append(direcs2)    
-    
-    
-    
-
-    lipd = lo_lipd
-
-    # Number of lipids in x and y in lower leaflet if there were no solute 
-    lo_lipids_x = int(pbcx/lipd+0.5)
-    lo_lipdx    = pbcx/lo_lipids_x
-    lo_rlipx    = range(lo_lipids_x)
-    lo_lipids_y = int(pbcy/lipd+0.5)
-    lo_lipdy    = pbcy/lo_lipids_y
-    lo_rlipy    = range(lo_lipids_y)
-
-    if options["-au"].value:
-        lipd = up_lipd
-
-    # Number of lipids in x and y in upper leaflet if there were no solute 
-    up_lipids_x = int(pbcx/lipd+0.5)
-    up_lipdx    = pbcx/up_lipids_x
-    up_rlipx    = range(up_lipids_x)
-    up_lipids_y = int(pbcy/lipd+0.5)
-    up_lipdy    = pbcy/up_lipids_y
-    up_rlipy    = range(up_lipids_y)
-
+        direcs2s.append(direcs2)   
 
     upper, lower = [], []
     random.seed()
     
     
     lipU = lipU or lipL
+    lipU_loc = lipU_loc or lipL_loc
     lipLO = lipLO or lipL
     lipUO = lipUO or lipLO
     lipUs = [lipU,lipUO]
     lipLs = [lipL,lipLO]
     
-    total_up_lips = up_lipids_x*up_lipids_y
-    total_lo_lips = lo_lipids_x*lo_lipids_y
-    
-
+    #removing lipids within -fudge of protein
     prot_coords = np.array(protein_lip.coord)
     tails = np.linspace(0,3,10)
     exprot = float(options["-fudge"].value)
@@ -1767,14 +2936,14 @@ if lipL:
             # Sort on the random number
             upper_tmp.sort()
             lower_tmp.sort()
+            
+            
     
     
             # Extract coordinates, taking asymmetry in account
             asym  = options["-asym"].value or 0
             upper_tmp = [i[1:] for i in upper_tmp[max(0, asym):]]
             lower_tmp = [i[1:] for i in lower_tmp[max(0,-asym):]]
-            print("; X: %.3f (%d bins) Y: %.3f (%d bins) in upper leaflet"%(pbcx,up_lipids_x,pbcy,up_lipids_y),file=sys.stderr )
-            print("; X: %.3f (%d bins) Y: %.3f (%d bins) in lower leaflet"%(pbcx,lo_lipids_x,pbcy,lo_lipids_y),file=sys.stderr )
             print("; %d lipids in upper leaflet, %d lipids in lower leaflet"%(len(upper_tmp),len(lower_tmp)),file=sys.stderr )
     
             # Types of lipids, relative numbers, fractions and numbers
@@ -1785,23 +2954,28 @@ if lipL:
             num_up     = [int(len(upper_tmp)*i/totU) for i in numU]
             
             lip_up     = [l for i,l in list(zip(num_up,lipU_new)) for j in range(i)]
-            leaf_up    = ( 1,list(zip(lip_up,upper_tmp)),up_lipdx,up_lipdy)
+
+            leaf_up    = ( 1,list(zip(lip_up,upper_tmp)))
             
             # Lower leaflet (-1)
             lipL_new, numL = list(zip(*[ parse_mol(i) for i in lipLs[gi] ]))
             totL       = float(sum(numL))
             num_lo     = [int(len(lower_tmp)*i/totL) for i in numL]
             lip_lo     = [l for i,l in list(zip(num_lo,lipL_new)) for j in range(i)]
-            leaf_lo    = (-1,list(zip(lip_lo,lower_tmp)),lo_lipdx,lo_lipdy)
+            
+            #lower_tmp = LocBias(lower_tmp,num_lo,lipL_new,10000,lipL_loc,loc_grid[0])
+            leaf_lo    = (-1,list(zip(lip_lo,lower_tmp)))
             if(gi == 0):
                 molecules  = list(zip(lipU_new,num_up)) + list(zip(lipL_new,num_lo))
             else:
                 molecules  += list(zip(lipU_new,num_up)) + list(zip(lipL_new,num_lo))
     
             kick       = options["-rand"].value
-  
+            
+            
+            
             # Build the membrane
-            for leaflet,leaf_lip,lipdx,lipdy in [leaf_up,leaf_lo]:
+            for leaflet,leaf_lip in [leaf_up,leaf_lo]:
                 for lipid, pos_dir in leaf_lip:
                     pos = pos_dir[:3]
                     dirs = pos_dir[3:]
@@ -1842,15 +3016,175 @@ if lipL:
                         
                         membrane.atoms.append((at[i],lipid,resi,0,0,0))
                         atid += 1
+                     
 
 
-# Now move everything to the center of the box before adding solvent
-mz  = pbcz/2
-z   = [ i[2] for i in protein.coord+membrane.coord ]
-mz -= (max(z)+min(z))/2
-protein += (0,0,mz)
-membrane += (0,0,mz)
+    # Now move everything to the center of the box before adding solvent
+    mz  = pbcz/2
+    z   = [ i[2] for i in protein.coord+membrane.coord ]
+    mz -= (max(z)+min(z))/2
+    protein += (0,0,mz)
+    membrane += (0,0,mz)
+else:
+    mz=0
 
+
+
+
+#PG layer
+
+PGL = Structure()
+if(Num_PGL > 0):
+    spaceing = 2.5
+    z_poses = np.linspace(-spaceing*(Num_PGL-1)/2,spaceing*(Num_PGL-1)/2,Num_PGL)
+    exprot = float(options["-fudge"].value)
+    prev_str = ["[ atoms ]\n","[ bonds ]\n","[ constraints ]\n","[ angles ]\n","[ dihedrals ]\n"]
+    prev_nos = [1,0]
+    Gposes = Create_Glycan_strands2(Num_PGL,pbcy,pbcx,z_poses,0,0,np.array(protein.coord),gdist)
+    Gposes = cross_link(Gposes,pbcy,cper,per33,lper,oper)
+    olig_lens = count_all_olig(Gposes)
+    total_clink = olig_lens.shape[0]
+    mono = olig_lens[olig_lens == 1].shape[0]/total_clink
+    dimer = olig_lens[olig_lens == 2].shape[0]/total_clink
+    olig_plus = olig_lens[olig_lens > 2].shape[0]/total_clink
+    print("Momomer:",mono)
+    print("Dimer:",dimer)
+    print("Higher oligomer:",olig_plus)
+    prev_str,prev_nos = write_PGL_itp(Gposes,"NAM.itp","NAG.itp","SNPEP.itp","UNPEP.itp","UUNPEP.itp",prev_str,prev_nos)
+
+    Gposes,Gshape = lines_to_coords(Gposes)
+    
+    No_Nag = Gposes[Gposes[:,4] == 0].shape[0]
+    No_Nam = Gposes[Gposes[:,4] == 1].shape[0]
+    
+    PG_Glycan = ["NAG:"+str(No_Nag),"NAM:"+str(No_Nam)]
+    
+    
+    Gly_new, numG = list(zip(*[ parse_mol(i) for i in PG_Glycan ]))
+    totG       = float(sum(numG))
+    num_g     = [int(len(Gposes)*i/totG) for i in numG]
+    
+    Gly     = [l for i,l in list(zip(num_g,Gly_new)) for j in range(i)]
+    
+    
+    Gly_s    = (list(zip(Gly,Gposes)))
+    
+    glycans = ["NAM","NAG"]
+    #Placing templates of components at each point defined
+    for pos in Gposes:
+        glycan = glycans[int(pos[4])]
+        if(pos[5] > 0):
+            resi += 1 
+            atoms    = list(zip(lipidsa[glycan][1].split(),lipidsx[lipidsa[glycan][0]],lipidsy[lipidsa[glycan][0]],lipidsz[lipidsa[glycan][0]]))
+            at,ax,ay,az = list(zip(*[i for i in atoms if i[0] != "-"]))
+            az       = [ i+pos[2] for i in az ]
+            xx       = list(zip( ax,ay ))
+            nx       = [pos[3]*i+pos[0] for i in ax]
+            ny       = [j+pos[1] for j in ay]
+            for i in range(len(at)):
+                atom  = "%5d%-5s%5s%5d"%(resi,glycan,at[i],atid)
+                PGL.coord.append((nx[i],ny[i],az[i]))               
+                PGL.atoms.append((at[i],glycan,resi,0,0,0))
+                atid += 1
+                
+
+    atoms_nam    = list(zip(lipidsa["NAM"][1].split(),lipidsx[lipidsa["NAM"][0]],lipidsy[lipidsa["NAM"][0]],lipidsz[lipidsa["NAM"][0]]))
+    atn,axn,ayn,azn = list(zip(*[i for i in atoms_nam if i[0] != "-"]))            
+    nam_temp = np.array([axn[-1],ayn[-1],azn[-1]])
+    for pos in Gposes:
+        glycan = glycans[int(pos[4])]
+        b1_pos = pos[:3]+np.array([pos[3],1,1])*nam_temp
+        if(pos[13] == 1):
+            atm = "UUPEP"
+        else:
+            if(pos[6] != -1 or pos[13] ==2):
+                atm = "UPEP"
+            else:
+                atm = "SPEP"
+        if(pos[5] > 0 and glycan == "NAM"):
+            resi += 1 
+            atoms    = list(zip(lipidsa[atm][1].split(),lipidsx[lipidsa[atm][0]],lipidsy[lipidsa[atm][0]],lipidsz[lipidsa[atm][0]]))
+            if(pos[6] > -0.5 and pos[9] > -0.5):
+                lind1 = int(pos[6])
+                bind1 = int(pos[7])
+                lyind1 = int(pos[8])
+                lind2 = int(pos[9])
+                bind2 = int(pos[10])
+                lyind2 = int(pos[11])
+                b2_posA = Gposes[lyind1*Gshape[1]*Gshape[2]+lind1*Gshape[2]+bind1][:3]
+                b2_posB = Gposes[lyind2*Gshape[1]*Gshape[2]+lind2*Gshape[2]+bind2][:3]
+                b2_posB = b2_posB-b2_posA+np.array([pbcx/2,pbcy/2,0])
+                while(b2_posB[0]<0):
+                    b2_posB[0] += pbcx
+                while(b2_posB[0]>=pbcx):
+                    b2_posB[0] -= pbcx
+                while(b2_posB[1]<0):
+                    b2_posB[1] += pbcy
+                while(b2_posB[1]>=pbcy):
+                    b2_posB[1] -= pbcy
+                b2_pos = (b2_posB+np.array([pbcx/2,pbcy/2,0]))/2+b2_posA-np.array([pbcx/2,pbcy/2,0])
+            elif(pos[6] > -0.5):
+                lind1 = int(pos[6])
+                bind1 = int(pos[7])
+                lyind1 = int(pos[8])
+                b2_pos = Gposes[lyind1*Gshape[1]*Gshape[2]+lind1*Gshape[2]+bind1][:3]
+            elif(pos[9] > -0.5):
+                lind1 = int(pos[9])
+                bind1 = int(pos[10])
+                lyind1 = int(pos[11])
+                b2_pos = Gposes[lyind1*Gshape[1]*Gshape[2]+lind1*Gshape[2]+bind1][:3]  
+            else:
+                b2_pos = b1_pos-np.array([pos[3],0,0])*2.5
+
+
+            pbcb2= b2_pos-b1_pos+np.array([pbcx/2,pbcy/2,0])
+            while(pbcb2[0]<0):
+                pbcb2[0] += pbcx
+            while(pbcb2[0]>=pbcx):
+                pbcb2[0] -= pbcx
+            while(pbcb2[1]<0):
+                pbcb2[1] += pbcy
+            while(pbcb2[1]>=pbcy):
+                pbcb2[1] -= pbcy
+            leng = np.linalg.norm(pbcb2-np.array([pbcx/2,pbcy/2,0]))-0.64
+            if(leng < 1.5):
+                leng = 1.5 #changed this maybe change back idk
+
+            v2 = pbcb2-np.array([pbcx/2,pbcy/2,0])
+            v2 = v2/np.linalg.norm(v2)
+            v1 = [-1,0,0]
+            vcross = np.cross(v1,v2)
+            vmat = np.array([[0,-vcross[2],vcross[1]],[vcross[2],0,-vcross[0]],[-vcross[1],vcross[0],0]])
+            asin = np.linalg.norm(vcross)
+            acos = np.dot(v1,v2)
+            if(np.abs(1+acos) < 1e-6):
+                rot_mat = np.array([[-1,0,0],[0,1,0],[0,0,1]])
+            else:
+                rot_mat = np.eye(3)+vmat+np.dot(vmat,vmat)*(1/(1+acos))
+
+
+            
+            npos = (np.array([pbcx/2,pbcy/2,0])+pbcb2)/2+b1_pos-np.array([pbcx/2,pbcy/2,0])
+            
+            dil = leng/2.03
+
+
+
+            at,ax,ay,az = list(zip(*[i for i in atoms if i[0] != "-"]))
+            xx       = list(zip( ax,ay,az ))
+            nx       = [rot_mat[0,0]*i*dil+rot_mat[0,1]*j+rot_mat[0,2]*k+npos[0] for i,j,k in xx]
+            ny       = [rot_mat[1,0]*i*dil+rot_mat[1,1]*j+rot_mat[1,2]*k+npos[1] for i,j,k in xx]
+            nz       = [rot_mat[2,0]*i*dil+rot_mat[2,1]*j+rot_mat[2,2]*k+npos[2] for i,j,k in xx]
+            for i in range(len(at)):
+                atom  = "%5d%-5s%5s%5d"%(resi,glycan,at[i],atid)
+                PGL.coord.append((nx[i],ny[i],nz[i]))               
+                PGL.atoms.append((at[i],atm,resi,0,0,0))
+                atid += 1
+    
+
+    
+    molecules.extend(list(zip(["PGL"],[1])))
+    write_all_itp(prev_str)
 
 ################
 ## 3. SOLVENT ##
@@ -1858,30 +3192,25 @@ membrane += (0,0,mz)
 
 # Charge of the system so far
 
-last = None
-mcharge = 0
-for j in membrane.atoms:
-    if not j[0].strip().startswith('v') and j[1:3] != last:
-        mcharge += charges.get(j[1].strip(),0)  
-    last = j[1:3]
 
-last = None
-pcharge = 0
-for j in protein.atoms:
-    if not j[0].strip().startswith('v') and j[1:3] != last:
-        pcharge += charges.get(j[1].strip(),0)  
-    last = j[1:3]
+charge,pcharge,mcharge,pgcharge = get_charge(0,pbcz)
 
-charge  = mcharge + pcharge
 plen, mlen, slen = 0, 0, 0
 plen = protein and len(protein) or 0
 
-print("; NDX Solute %d %d" % (1, protein and plen or 0),file=sys.stderr)
+print("; NDX Protein %d %d" % (1, protein and plen or 0),file=sys.stderr)
 print("; Charge of protein: %f" % pcharge,file=sys.stderr)
 
 mlen = membrane and len(membrane) or 0
+
+pglen = PGL and len(PGL) or 0
+
 print("; NDX Membrane %d %d" % (1+plen, membrane and plen+mlen or 0),file=sys.stderr)
 print("; Charge of membrane: %f" % mcharge,file=sys.stderr)
+
+print("; NDX PG Layer %d %d" % (1+mlen+plen, PGL and plen+mlen+pglen or 0),file=sys.stderr)
+print("; Charge of PG Layer: %f" % pgcharge,file=sys.stderr)
+
 print("; Total charge: %f" % charge,file=sys.stderr)
 
 
@@ -1896,9 +3225,10 @@ def pointsOnSphere(n):
 if solv:
 
     # Set up a grid
-    d        = 1/options["-sold"].value
+    d        = 1/(options["-sold"].value*np.sqrt(3)/2)
+    da =     1/options["-sold"].value
 
-    nx,ny,nz = int(1+d*pbcx),int(1+d*pbcy),int(1+d*pbcz)
+    nx,ny,nz = int(1+da*pbcx),int(1+d*pbcy),int(1+d*pbcz)
       
     dx,dy,dz = pbcx/nx,pbcy/ny,pbcz/nz
     zdist = options["-ps"].value
@@ -1917,7 +3247,6 @@ if solv:
             memz_upp   = [i[2] for i in membrane.coord if i[2]>midz]
             midz_upp   = (max(memz_upp)+min(memz_upp))/2
             memz_low   = [i[2] for i in membrane.coord if i[2]<=midz]
-            #print(memz_upp,memz_low)
             midz_low   = (max(memz_low)+min(memz_low))/2
             midz = (midz_upp+midz_low)/2
             excl -= 1
@@ -1928,30 +3257,31 @@ if solv:
         zshift = (hz+0.5)*nz - midz # Shift of membrane middle to center of grid layer
     # Initialize a grid of solvent, spanning the whole cell
     # Exclude all cells within specified distance from membrane center
-    if(options["-ps"].value > 1e-5):
-        grids = []      
-        for gk in range(2):
+    if(not is_micelle and lipL and mem_outer_red<0):
+        if(options["-ps"].value > 1e-5):
+            grids = []      
+            for gk in range(2):
+            
+                if(cdirs[gk] < 0):
+                    grid   = [[[(pbcz*i)/nz < -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[gk],rcurv_up[gk],ang_exts[gk],add_pore,inner_lengs[gk]-2)[0]-2+mz+zdist*(2*gk-1) or (pbcz*i)/nz > -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[gk],rcurv_lo[gk],ang_exts[gk],add_pore,inner_lengs[gk]+2)[0]+2+mz+zdist*(2*gk-1) for i in range(nz)] for j in range(ny)] for k in range(nx)]
+                else:  
+                    grid   = [[[(pbcz*i)/nz > leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[gk],rcurv_up[gk],ang_exts[gk],add_pore,inner_lengs[gk]-2)[0]+2+mz+zdist*(2*gk-1) or (pbcz*i)/nz < leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[gk],rcurv_lo[gk],ang_exts[gk],add_pore,inner_lengs[gk]+2)[0]-2+mz+zdist*(2*gk-1) for i in range(nz)] for j in range(ny)] for k in range(nx)]
+                grids.append(grid)
+            grids = np.array(grids)
+            grid = grids[0]*grids[1]
         
-            if(cdirs[gk] < 0):
-                grid   = [[[(pbcz*i)/nz < -leaflet_function((pbcx*k)/nx-pbcx/2,(pbcy*j)/nx-pbcy/2,curv_up[gk],rcurv_up[gk],ang_exts[gk],add_pore,inner_lengs[gk]-2)[0]-2+mz+zdist*(2*gk-1) or (pbcz*i)/nz > -leaflet_function((pbcx*k)/nx-pbcx/2,(pbcy*j)/nx-pbcy/2,curv_lo[gk],rcurv_lo[gk],ang_exts[gk],add_pore,inner_lengs[gk]+2)[0]+2+mz+zdist*(2*gk-1) for i in range(nz)] for j in range(ny)] for k in range(nx)]
+        else:            
+            if(cdirs[0] < 0):
+                grid   = [[[(pbcz*i)/nz < -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]-2+mz or (pbcz*i)/nz > -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]+2+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
+
             else:  
-                grid   = [[[(pbcz*i)/nz > leaflet_function((pbcx*k)/nx-pbcx/2,(pbcy*j)/nx-pbcy/2,curv_up[gk],rcurv_up[gk],ang_exts[gk],add_pore,inner_lengs[gk]-2)[0]+2+mz+zdist*(2*gk-1) or (pbcz*i)/nz < leaflet_function((pbcx*k)/nx-pbcx/2,(pbcy*j)/nx-pbcy/2,curv_lo[gk],rcurv_lo[gk],ang_exts[gk],add_pore,inner_lengs[gk]+2)[0]-2+mz+zdist*(2*gk-1) for i in range(nz)] for j in range(ny)] for k in range(nx)]
-            grids.append(grid)
-        grids = np.array(grids)
-        grid = grids[0]*grids[1]
-    
-    else:            
-        if(cdirs[0] < 0):
-            grid   = [[[(pbcz*i)/nz < -leaflet_function((pbcx*k)/nx-pbcx/2,(pbcy*j)/nx-pbcy/2,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]-2+mz or (pbcz*i)/nz > -leaflet_function((pbcx*k)/nx-pbcx/2,(pbcy*j)/nx-pbcy/2,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]+2+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
-
-        else:  
-            grid   = [[[(pbcz*i)/nz > leaflet_function((pbcx*k)/nx-pbcx/2,(pbcy*j)/nx-pbcy/2,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]+2+mz or (pbcz*i)/nz < leaflet_function((pbcx*k)/nx-pbcx/2,(pbcy*j)/nx-pbcy/2,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]-2+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
-
+                grid   = [[[(pbcz*i)/nz > leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]+2+mz or (pbcz*i)/nz < leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]-2+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
+    else:
+        grid   =   [[[True for i in range(nz)] for j in range(ny)] for k in range(nx)]
     # Flag all cells occupied by protein or membrane
-    for p,q,r in protein.coord+membrane.coord:
+    for p,q,r in protein.coord+membrane.coord+PGL.coord:
         for s,t,u in pointsOnSphere(20):
             x,y,z = p+0.33*s,q+0.33*t,r+0.33*u
- 
             
             if z >= pbcz:
                 x -= box[2][0]
@@ -1971,11 +3301,28 @@ if solv:
                 x -= box[0][0]
             if x < 0: 
                 x += box[0][0]
-            grid[int(nx*x/rx)][int(ny*y/ry)][int(nz*z/rz)] = False
+
+
+            zgrid = int(nz*z/rz)
+            y = y-(0.5*dy)*(zgrid%2)
+            ygrid = int(ny*y/ry)
+            x = x - (0.5*dx)*((zgrid+ygrid)%2)
+
+
+            grid[int(nx*x/rx)][ygrid][zgrid] = False
+    anti_freeze = 0.2
+    if(is_micelle):
+        anti_freeze = 0.2
+    for i in range(nx):
+        for j in range(ny):
+            for k in range(nz):
+                if(random.random() < anti_freeze):
+                    grid[i][j][k] = False
+
 
     # Set the center for each solvent molecule
     kick = options["-solr"].value
-    grid = [ [R(),(i+0.5+R()*kick)*dx,(j+0.5+R()*kick)*dy,(k+0.5+R()*kick)*dz] 
+    grid = [ [R(),(i+0.5+R()*kick)*dx + (0.5*dx)*((j+k)%2),(j+0.5+R()*kick)*dy+(0.5*dy)*(k%2),(k+0.5+R()*kick)*dz] 
              for i in range(nx) for j in range(ny) for k in range(nz) if grid[i][j][k] ]
     
     comp_nos = np.zeros(3)    
@@ -2023,7 +3370,7 @@ if solv:
 
     # Set the number of ions to add
     nna, ncl = 0, 0
-        
+  
     charge_rats = np.zeros(3)
     if options["-charge_ratio"].value:
         concs = options["-charge_ratio"].value.split(",")
@@ -2031,17 +3378,20 @@ if solv:
         countc = 0    
         for c in concs:
             charge_rats[countc] = float(c)
-            countc += 1    
+            countc += 1
+        
+
+        
     
     non_zero = 0
     for cn in comp_nos:
         if(cn > 1e-5):
             non_zero += 1
-    charge_rats /= np.sum(charge_rats[:non_zero])
+    
 
     concentrations = np.zeros(3)
-    if options["-salt"].value:
-        concs = options["-salt"].value.split(",")
+    if options["-ion_conc"].value:
+        concs = options["-ion_conc"].value.split(",")
         # If the concentration is set negative, set the charge to zero  
         countc = 0    
         for c in concs:
@@ -2058,24 +3408,151 @@ if solv:
     else:
         charge = 0
  
-    charges = np.array(charge*charge_rats,dtype=int)
-    diff_c = charge-np.sum(charges)
-    charges[0] += diff_c
+    ncharges = np.zeros(3,dtype=int)
+    if options["-charge_ratio"].value:
+        charge_rats /= np.sum(charge_rats[:non_zero])
+        ncharges = np.array(charge*charge_rats,dtype=int)
+    else:
+        if(zdist > 1e-5):
+            ncharges[1],_,_,_ = get_charge(mz-zdist,mz+zdist)
+            ncharges[2],_,_,_ = get_charge(mz+zdist,pbcz)
+            ncharges[0],_,_,_ = get_charge(0,mz-zdist)
+            if(zpbc):
+                ncharges[0] = ncharges[0]+ncharges[2]
+        else:
+            if(zpbc):
+                ncharges[0] = charge
+            else:
+                ncharges[2],_,_,_ = get_charge(mz,pbcz)
+                ncharges[0],_,_,_ = get_charge(0,mz)
+
+
+    #dealing with charge of each compartment
+    diff_c = charge-np.sum(ncharges)
+    ncharges[0] += diff_c
     new_solnames = []
     new_num_sol = []
     rcomp_nos = comp_nos/np.sum(comp_nos)
+
+    if(len(pos_ions[1]) == 0):
+        pos_ions[1] = pos_ions[0]
+    if(len(pos_ions[2]) == 0):
+        pos_ions[2] = pos_ions[0]
+
+    if(len(neg_ions[1]) == 0):
+        neg_ions[1] = neg_ions[0]
+    if(len(neg_ions[2]) == 0):
+        neg_ions[2] = neg_ions[0]
+    ion_names = []
+    for pi in pos_ions:
+        for pii in pi:
+            mole = parse_mol(pii)[0]
+            if(mole not in solnames):
+                solnames.append(mole)
+                ion_names.append(mole)
+    for pi in neg_ions:
+        for pii in pi:
+            mole = parse_mol(pii)[0]
+            if(mole not in solnames):
+                solnames.append(mole)
+                ion_names.append(mole)
     
-    solnames.append("CL")
-    solnames.append("NA")
     for ci,cn in enumerate(comp_nos):
         added = 0
         new_nsol = nsol*rcomp_nos[ci]
-        ncl  = max(max(0,charges[ci]),int(.5+.5*(concentrations[ci]*new_nsol/(27.7+concentrations[ci])+charges[ci])))
-        nna  = ncl - charges[ci]
-        ngrid   = cn - nna - ncl
+        total_ions  = int(1+(concentrations[ci]*new_nsol/(27.7+concentrations[ci])))
+        
+        cperi = -ncharges[ci]/total_ions
+
+        negi = neg_ions[ci]
+        posi = pos_ions[ci]
+
+
+        total_negc = 0
+        total_posc = 0
+        total_negi = 0
+        total_posi = 0
+        for ni_c in negi:
+            iname, icount = parse_mol(ni_c)
+            total_negc += ion_charges[iname]*icount
+            total_negi += icount
+
+        for pi_c in posi:
+            iname, icount = parse_mol(pi_c)
+            total_posc += ion_charges[iname]*icount
+            total_posi += icount
+
+
+        if(total_negc-(total_negi/total_posi) == 0):
+            A_pos = (cperi-total_negc/total_negi)/(total_posc-total_negc*(total_posi/total_negi))
+            A_neg = (cperi-total_posc*A_pos)/total_negc
+        elif(total_posc-(total_posi/total_negi) == 0):
+            A_neg = (cperi-total_posc/total_posi)/(total_negc-total_posc*(total_negi/total_posi))
+            A_pos = (cperi-total_negc*A_neg)/total_posc
+        else:
+            A_neg = (cperi-total_posc/total_posi)/(total_negc-total_posc*(total_negi/total_posi))
+            A_pos = (cperi-total_negc/total_negi)/(total_posc-total_negc*(total_posi/total_negi))
+
+        if(A_pos < 0):
+            A_pos = 0
+            A_neg = cperi/total_negc
+        if(A_neg < 0):
+            A_neg = 0
+            A_pos = cperi/total_posc
+
+        A_pos = max(0,A_pos)*total_ions
+        A_neg = max(0,A_neg)*total_ions
+
+        negi_dict = {}
+        posi_dict = {}
+
+        for pi_c in ion_names:
+            negi_dict[pi_c]=0
+            posi_dict[pi_c]=0
+            
+        for ni_c in negi:
+            iname, icount = parse_mol(ni_c)
+            negi_dict[iname]=icount*A_neg
+
+        total_pic = 0
+        for pi_c in posi:
+            iname, icount = parse_mol(pi_c)
+            posi_dict[iname]=icount*A_pos
+
+        ion_nums = []
+        for inn in ion_names:
+            ion_nums.append(int(posi_dict[inn]+negi_dict[inn]))
+
+        
+
+        total_ion_charge = 0
+        for ind,inn in enumerate(ion_names):
+            total_ion_charge += ion_charges[inn]*ion_nums[ind]
+
+
+        cdiff = ncharges[ci]+total_ion_charge
+
+
+        if(cdiff > 0):
+            for ind,inn in enumerate(ion_names):
+                if(ion_charges[inn] == -1):
+                    ion_nums[ind] += cdiff
+                    break
+
+        elif(cdiff < 0):
+            for ind,inn in enumerate(ion_names):
+                if(ion_charges[inn] == 1):
+                    ion_nums[ind] -= cdiff
+                    break
+  
+
+        ngrid   = cn - np.sum(ion_nums)
         num_sol = [int(ngrid*i/totS) for i in solnums]
-        num_sol.append(nna)
-        num_sol.append(ncl)
+        for inn in ion_nums:
+            num_sol.append(inn)
+
+        
+
         for n,sn in enumerate(solnames):
             adj_cn = num_sol          
             if(cn > 1e-5):
@@ -2083,7 +3560,8 @@ if solv:
                 new_num_sol.append(num_sol[n])
                 added += num_sol[n]
         differ = int(cn-added)
-        new_num_sol[-len(solnames)]+=differ
+        if(len(new_num_sol)>0):
+            new_num_sol[-len(solnames)]+=differ
 
     num_sol = []    
     for i in range(len(solnames)):
@@ -2140,8 +3618,8 @@ else:
 ## Write the output ##
 slen = solvent and len(sol) or 0
 
-print("; NDX Solvent %d %d" % (1+plen+mlen, solvent and plen+mlen+slen or 0),file=sys.stderr)
-print("; NDX System %d %d" % (1, plen+mlen+slen),file=sys.stderr)
+print("; NDX Solvent %d %d" % (1+plen+mlen+pglen, solvent and plen+mlen+slen+pglen or 0),file=sys.stderr)
+print("; NDX System %d %d" % (1, plen+mlen+slen+pglen),file=sys.stderr)
 print("; \"I mean, the good stuff is just INSANE\" --Julia Ormond",file=sys.stderr)
 
 # Open the output stream
@@ -2160,7 +3638,7 @@ else:
 print(title,file=oStream)
 
  #print(the number of atoms)
-print("%5d"%(len(protein)+len(membrane)+len(sol)),file=oStream)
+print("%5d"%(len(protein)+len(membrane)+len(sol)+len(PGL)),file=oStream)
 
 
 membrane.atoms,membrane.coord = reorder_atoms(membrane.atoms,membrane.coord)
@@ -2189,6 +3667,14 @@ if membrane:
         x,y,z    = membrane.coord[i]
         oStream.write("%5d%-5s%5s%5d%8.3f%8.3f%8.3f\n"%(ri%1e5,rn,at,id%1e5,x,y,z))
         id += 1
+if PGL:
+    for i in range(len(PGL)):
+        at,rn,ri = PGL.atoms[i][:3]
+        x,y,z    = PGL.coord[i]
+        x = x%pbcx
+        y = y%pbcy
+        oStream.write("%5d%-5s%5s%5d%8.3f%8.3f%8.3f\n"%(ri%1e5,rn,at,id%1e5,x,y,z))
+        id += 1
 if sol:
     # print(the solvent)
     print("\n".join([i[0]+"%8.3f%8.3f%8.3f"%i[1] for i in sol]),file=oStream)
@@ -2196,7 +3682,7 @@ if sol:
 
 # print(the box)
 print("%10.5f%10.5f%10.5f%10.5f%10.5f%10.5f%10.5f%10.5f%10.5f\n"%grobox,file=oStream)
-
+oStream.close()
 if options["-p"].value:
     # Write a rudimentary topology file
     with open(options["-p"].value,"w") as top:
@@ -2205,6 +3691,8 @@ if options["-p"].value:
         print('#include "martini_v3.0.0_ions_v1.itp"\n',file=top)
         print('#include "martini_v3.0.0_solvents_v1.itp"\n',file=top)
         print('#include "martini_v3.0.0_phospholipids_v1.itp"\n',file=top)
+        if(PGL):
+            print('#include "PGL.itp"\n',file=top)
 
         if protein:
             print('#include "protein-cg.itp"\n',file=top)

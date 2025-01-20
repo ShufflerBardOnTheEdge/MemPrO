@@ -31,6 +31,8 @@ parser.add_argument("-dm","--dual_membrane",action="store_true",help="Toggle dua
 parser.set_defaults(dual_membrane=False)
 parser.add_argument("-pg","--predict_pg_layer",action="store_true",help="Toggle peptidogylcan call wall prediction")
 parser.set_defaults(predict_pg_layer=False)
+parser.add_argument("-pg_guess","--pg_layer_guess",help="Inputs a guess for the position of the PG layer. This is usually based off of standard PG layer positions in specific bacteria.")
+parser.set_defaults(pg_layer_guess=-1)
 parser.add_argument("-pr","--peripheral",action="store_true",help="Toggle peripheral (or close to) orientation")
 parser.set_defaults(peripheral=False)
 parser.add_argument("-w","--use_weights",action="store_true",help="Toggle use of b-factors to weight orientation")
@@ -51,6 +53,12 @@ parser.add_argument("-mt","--membrane_thickness",help="Initial thickness of (inn
 parser.set_defaults(membrane_thickness=28.0)
 parser.add_argument("-mt_o","--outer_membrane_thickness",help="Initial thickness of outer membrane in Angstroms (Deafult: 24)")
 parser.set_defaults(outer_membrane_thickness=24.0)
+parser.add_argument("-res","--additional_residues",help="Comma seperate list of additional residues in input files (eg: POPG)")
+parser.set_defaults(additional_residues="")
+parser.add_argument("-res_itp","--additional_residues_itp_file",help="Path to the itp file describing all additional residues. A CG representation is required, for atomisitic inputs an additional file is required which describes the beading.")
+parser.set_defaults(additional_residues_itp_file="")
+parser.add_argument("-res_cg","--residue_cg_file",help="Folder that contains a files of name RES.pdb describing the beading for each additional RES")
+parser.set_defaults(residue_cg_file="")
 parser.add_argument("-mt_opt","--membrane_thickness_optimisation",action="store_true",help="Toggle membrane thickness optimisation. Cannot use with -c")
 parser.set_defaults(membrane_thickness_optimisation=False)
 parser.add_argument("-tm","--transmembrane_residues",help="This indicates if there are residues known to be in the membrane. Input is formatted as a comma seperated list of inclusive-exclusive ranges e.g. -tm 1-40,50-60.")
@@ -60,6 +68,18 @@ parser.set_defaults(write_bfactors=False)
 parser.add_argument("-rank","--rank",help="The method by which to rank the minima. auto will rank using a calculated value intended to give the best result. Hits (h) will rank by percentage hits. Potential (p) will rank by lowest potential. Default (auto)")
 parser.set_defaults(rank="auto")
 args = parser.parse_args()
+
+
+add_reses = args.additional_residues.split(",")
+if(len(add_reses) > 0):
+	if(len(add_reses[0]) > 0):
+		print("Using additional residues:",", ".join(add_reses))
+		if args.additional_residues_itp_file == "":
+			print("ERROR: Additional resisidue itp is required if using additional residues.")
+			exit()
+		if args.residue_cg_file == "":
+			print("WARNING: You have not added beading information for the added residues, this will cause an error if orienting a atomisitic input.")
+		
 
 #Error checking user inputs
 try:
@@ -101,6 +121,16 @@ except:
 if(mem_data[2] <= 0):
 	print("ERROR: Could not read value of -mt. Must be a float > 0.")
 	exit()
+
+pgl_guess = 0
+	
+try:
+	pgl_guess = float(args.pg_layer_guess)
+except:
+	print("ERROR: Could not read value of -pg_guess. Must be a float")
+	exit()
+	
+	
 	
 try:
 	mem_data[3] = float(args.outer_membrane_thickness)
@@ -207,9 +237,14 @@ else:
 		os.mkdir(orient_dir)
 
 timer = time.time()
+if(len(add_reses) > 0):
+	if(len(add_reses[0]) > 0):
+		for i in add_reses:
+			ori.add_Reses(i,args.additional_residues_itp_file)
+			ori.add_AtomToBeads(args.residue_cg_file.lstrip("/")+"/"+i+".pdb")
 
 #Creating a helper class that deals with loading the PDB files
-PDB_helper_test = ori.PDB_helper(fn,args.use_weights,build_system,ranges)
+PDB_helper_test = ori.PDB_helper(fn,args.use_weights,build_system,ranges,False)
 
 #Loading PDB
 _ = PDB_helper_test.load_pdb()
@@ -217,7 +252,7 @@ _ = PDB_helper_test.load_pdb()
 
 #Getting surface
 
-print("Getting surface residues:")
+print("Getting surface residues...")
 jax.block_until_ready(PDB_helper_test.get_surface())
 print("Done")
 
@@ -248,7 +283,7 @@ Mem_test = ori.MemBrain(data,int_data,args.peripheral,0,args.predict_pg_layer,me
 angs = ori.create_sph_grid(grid_size)
 
 #Getting a starting insertion depth
-print("Getting initial insertion depth:")
+print("Getting initial insertion depth...")
 if(args.dual_membrane):
 	zdist,zs = Mem_test.calc_start_for_ps_imp()
 	start_z = jnp.array([[0,0,zs]])
@@ -258,13 +293,13 @@ else:
 
 
 print("Done")
-print("Starting initial minimisation:")
+print("Starting initial minimisation...")
 
 #Minimising on the grid
 
 Mem_test.minimise_on_grid(grid_size,start_z,zdist,angs,iters)
 print("Done")
-print("Collecting minima information:")
+print("Collecting minima information...")
 
 #Collating minima information
 
@@ -272,40 +307,40 @@ cols,pot_grid = Mem_test.collect_minima_info(grid_size)
 print("Done")
 
 if(not args.dual_membrane and args.rank == "auto"):
-	print("Approximating minima depth:")
+	print("Approximating minima depth...")
 	Mem_test.approx_minima_depth_all(0.8,orient_dir)
 	print("Done")
-	print("Re-ranking minima:")
+	print("Re-ranking minima...")
 	Mem_test.re_rank_minima(orient_dir)
 	print("Done")
 
 
 if(args.membrane_thickness_optimisation):
-	print("Optimising membrane thickness:")
+	print("Optimising membrane thickness...")
 	Mem_test.optimise_memt_all()
 	print("Done")
 	
 	
 if(args.predict_pg_layer):
-	print("Calculating PG cell wall position:")
-	Mem_test.get_all_pg_pos(orient_dir)
+	print("Calculating PG cell wall position...")
+	Mem_test.get_all_pg_pos(orient_dir,pgl_guess)
 	print("Done")
 
 
-print("Writing data:")
+print("Writing data...")
 #Writing to a file
 
 Mem_test.write_oriented(fn,orient_dir," ".join(sys.argv))
 print("Done")
 
 if(build_system >0):
-	print("Building system:")
+	print("Building system...")
 	Mem_test.build_oriented(orient_dir,args.build_arguments)
 	print("Done")
 
 #Displaying the local minima graphs
 
-print("Making graphs:")
+print("Making graphs...")
 ori.create_graphs(orient_dir,cols,pot_grid,angs,int(np.floor((np.sqrt(grid_size)*0.8))))
 print("Done")
 
