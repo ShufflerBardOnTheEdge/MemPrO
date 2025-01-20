@@ -20,9 +20,7 @@ Once the code has finished running, which with ~16 CPUs should take about 90 sec
 In my case MemPrO found two possible orientations. Each orientation has 6 numbers associated with it. The first is its rank. Let us look at the rank 1 orientation. 
 > 1    -71.372    93.75    -71.372    173.346    155273.357
 
-The second number represents the relative potential of the orientation, where 0 would be a protein fully in solvent. So here we can see that rank 1 orientation has lower potential than if the protein were not in the membrane which is a good sign. The third number is the percent of configurations that minimised to this particular orientation, a value of 93.75% indicates a high confidence, though a low value doesn't always mean low confidence. The fourth number should be very close to the second but otherwise can be ignored. The fith number inidcates the calculated depth of the minima, the higher the more stable the orientation is. The sixth and final number is a value calculated from the other values shown by which the orientations are ranked, this value can only be used to compare orientations from the same run of		for i in add_reses:
-			ori.add_Reses(i,args.additional_residues_itp_file)
-			ori.add_AtomToBeads(args.residue_cg_file.lstrip("/")+"/"+i+".pdb") MemPrO.
+The second number represents the relative potential of the orientation, where 0 would be a protein fully in solvent. So here we can see that rank 1 orientation has lower potential than if the protein were not in the membrane which is a good sign. The third number is the percent of configurations that minimised to this particular orientation, a value of 93.75% indicates a high confidence, though a low value doesn't always mean low confidence. The fourth number should be very close to the second but otherwise can be ignored. The fith number inidcates the calculated depth of the minima, the higher the more stable the orientation is. The sixth and final number is a value calculated from the other values shown by which the orientations are ranked, this value can only be used to compare orientations from the same run of MemPrO.
 
 Knowing now what these numbers mean hopefully one can see, in this case, the rank 1 orientation is a very stable and deep minima, while any others are very much not. We can now look at orientations.pdb.
 
@@ -80,6 +78,30 @@ Let us now look in the folder "Rank_1". Looking at "Z_potential_curve.png" we se
 Looking now in the folder "Orient_Curv" we can immidietely see we have fewer final orientations. Looking in "orientations.txt" shows only one orientation with negative potential and a deep minima. This indicates a much more stable prediction. Looking at "oriented_rank_1.pdb" from the folder we can see the protein has been placed in a highly curved membrane. Looking at "curv_potential_curve.png" we can see the minima has actually shifted even further, this is because without curvature prediction there is a much greater error on the placment which affects the curvature calculations.
 
 It is not always possible to see if a membrane should be curved by looking at "curv_potential_curve.png" in a planar orientation, but in many cases it may give an idication if the protein prefers curved enviroments.
+
+## Building CG systems from orientations
+
+In this final tutorial we will used MemPrO to orient 5NIK and automatically build a CG system. For the purpose of this tutorial both membranes will be made up of POPG and POPE even though this is not biologically accurate. Further tutorials for use of Insane4MemPrO are available [here](Insane4MemPrO_tutorials.md). We will start as always by making a folder called "Tutorial5" and then copy across 5nik.pdb or dowload as in [Double membrane systems](#double-membrane-systems).
+
+To build a CG system 5nik must first be coarse grained. For this we will use Martinize2, for install instructions and usage refer to the [GitHub repo](https://github.com/marrink-lab/vermouth-martinize). 
+
+We will run the following to CG 5nik
+>martinize2 -f 5nik.pdb -ff martini3001 -x 5nik-cg.pdb -o 5nik-cg.top -dssp PATH/TO/mkdssp -scfix -elastic -ef 500 -eu 0.9 -el 0.5 -ea 0 -ep 0 -merge A -maxwarn 1000
+
+The details of this are not important for the purpose of this tutorial. For running CG simulations from the CG system build by MemPrO these values will need to be correct for the kind of simulation you wish to run.
+
+Once we have the file 5nik-cg.pdb we can run the following
+>python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -ng 16 -ni 150 -dm -bd 1 -bd_args "-l POPE:8 -l POPG:2 -sol W -negi_c0 CL -posi_c0 NA" 
+
+The flag -bd indicates we want to build a CG system for the top n (in this case n=1) ranks. The flag -bg_args is a string of additional arguments to pass to Insane4MemPrO. MemPrO will handle naming of all output files, the type of system to build (In this case a double membrane system) and the cell size for the simulation. Everthing else msut be put in the string of additional arguments. Here -l is used to indicate the lipid type and relative abundance (In this case POPE and POPG in the ration 8:2) in the lower leaflet of the inner membrane which with -u,-uo,-lo is used for all leaflets in all membranes, -negi_c0 and -posi_c0 are used to indicate the ions used to neutralise the system (In this case CL and NA ie salt) and -sol is used to indicate the solvent (In this case water). For a more detailed explaintion of all the flags and some detailed tutorials refer to [Insane4MemPrO documentation](README.md#insane4mempro).
+
+Looking in the folder "Orient" we should see the now familiar set of files produced by MemPrO. Looking at "orientations.txt" and "orientations.pdb" we can satisfy ourselves that orientation has gone well and the rank 1 orienation looks sensible. Now looking in "Rank_1" we see an additional folder "CG_System_rank_1". This folder will contain 3 files "CG_system.gro", "protein-cg.pdb" and "topol.top". "topol.top" is a basic topology files for the system which may need minor editing, but will contain all the correct numbers of each molecule. "protein-cg.top" is a copy of the oriented protein without any dummy membranes present, and "CG_system.gro" is the full CG system build according to the build arguments passed to MemPrO.
+
+These files can be used together with the output from martinize2/the appropriate files describing the CG protein to run simulation.
+
+## Final comments
+
+Hopefully with the above 5 tutorials you should now be set for using MemPrO to orient proteins and build CG systems ready for simulations. MemPrO has a few more advanced features and may in future have even more which are not covered by the tutorials, some advanced tutorials for these may become available in the future. For now if you run into difficulties or find errors please let me know by emailing m.parrag@warwick.ac.uk and I'll do my best to help.
 
 
 
