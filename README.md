@@ -97,20 +97,19 @@ Where N is replaced by the number of CPU you wish to use, for the examples below
 
 The below will orient input_file.pdb on a grid of 40 starting configurations with 150 minimisation iterations
 
->python MemPrO_Script.py -f input_file.pdb -o "Output_dir/" -ng 40 -ni 150 -itp "PATH/TO/MARTINI"
-
+>python MemPrO_Script.py -f input_file.pdb -o "Output_dir/" -ng 40 -ni 150
 
 
 The below will orient input_file.pdb on a grid of 40 starting configurations. It will preform global curvature minimisation alongside usual for 150 iterations. It will write the potential contibutions of each bead to the b-factors of the final output.
 
->python MemPrO_Script.py -f input_file.pdb -o "Output_dir/" -ng 40 -ni 150 -c -wb -itp "PATH/TO/MARTINI"
+>python MemPrO_Script.py -f input_file.pdb -o "Output_dir/" -ng 40 -ni 150 -c -wb 
 
 
 
 
 The below will orient input_file.pdb on a grid of 40 starting configurations with 150 minimisation interations. It will be minimised with a double membrane system. Once minimised the code will build the top 2 ranks using Insane4MemPrO. The CG system built with insane will have asymentric membranes, one with POPE,POPG and CARD the other with only LIPA. The CG system will have the same charge and salt concentration in each of the seperate compartments created by the presence of two membranes.
 
->python MemPrO_Script.py -f input_file.pdb -o "Output_dir/" -ng 40 -ni 150 -dm -bd 2 -bd_args "-salt 0.15,0.15,0.15 -charge_ratio 1,1,1 -sol W -l POPE:7 -l POPG:2 -l CARD:1 -lo LIPA" -itp "PATH/TO/MARTINI"
+>python MemPrO_Script.py -f input_file.pdb -o "Output_dir/" -ng 40 -ni 150 -dm -bd 2 -bd_args "-negi_c0 CL -posi_c0 NA -sol W -l POPE:7 -l POPG:2 -l CARD:1 -lo LIPA"
 
 A more detailed set of tutorials is avialable [here](MemPrO_tutorials.md)
 
