@@ -79,7 +79,9 @@ We can also build this automatically with MemPrO by running the following comman
 As before MemPrO deals with the double membrane, and we need only worry about defining the composition of the system. Looking in the folder "Orient_build/Rank_1/CG_System_rank_1/" we find both the CG system and the topology file, called "CG-system.gro" and "topol.top" respectively. "topol.top" will need to be modified as always. The system is now ready for energy minimisation and simulation.
 
 
+## Final comments
 
+Hopefully now you feel confident in using Insane4MemPrO to build complex systems with and without the use of MemPrO to automatically apply any structural elements. There are some more advanced features of Insane4MemPrO that were not covered in these tutorials. More tutorials on these advanced topics may become available in the future. For now if you run into any problems/bugs please let me know at m.parrag@warwick.ac.uk and I will do my best to help.
 
 
 
