@@ -31,12 +31,38 @@ And we are ready for simulation! This is where will end each tutorial as there a
 
 ## Building a Curved System
 
-In this tutorial we will build a curved membrane with a more complex lipid composition. We will be building a membrane made up of POPC, DOPS and cholesterol, to be able to build using these lipids, they must be defined in Insane4MemPrO, this is identical to the original Insane. Additionally, to run simulations with these lipids they must be defined in itp files. As this tutorial is for using Insane4MemPrO I will not go over in detail how to add lipids to Insane4MemPrO or how to simulate. For help with this refere to ~this and this~.
+In this tutorial we will build a curved membrane with a more complex lipid composition. We will be building a membrane made up of POPE and POPG, to be able to build using these lipids, they must be defined in Insane4MemPrO, this is identical to the original Insane. Additionally, to run simulations with these lipids they must be defined in itp files. As this tutorial is for using Insane4MemPrO I will not go over in detail how to add lipids to Insane4MemPrO or how to simulate. For help with this refere to ~this and this~.
 
-We start as usual by downloading an appropriate protein from the PDB, in this case we will be downloading a piezo protein with code 7WLT. To download this one can use the fetch commmand in PyMOL followed by saving as a .pdb, further details on this method can be found [here](https://pymolwiki.org/index.php/Fetch). Otherwise go to the [following page on the PDB website](https://www.rcsb.org/structure/7wlt) and download in PDB format. Create a folder called "Tutorial2" and place the downloaded file into it.
+We start as usual by downloading an appropriate protein from the PDB, in this case we will be downloading a mechanosensaitve ion channel with code 7N5E. To download this one can use the fetch commmand in PyMOL followed by saving as a .pdb, further details on this method can be found [here](https://pymolwiki.org/index.php/Fetch). Otherwise go to the [following page on the PDB website](https://www.rcsb.org/structure/7n5e) and download in PDB format. Create a folder called "Tutorial2" and place the downloaded file into it.
 
-Next coarse grain the protein as in [Tutorial 1](#a_basic_example) calling the output 7wlt-cg.pdb. Next we will need to orient the protein in a curved membrane. We can use MemPrO to do this, note that we can also automatically build using MemPrO. We will first build it ourselves after orientation and then build it automatically with MemPrO. 
+Next coarse grain the protein as in [Tutorial 1](#a_basic_example) calling the output 7n5e-cg.pdb. Next we will need to orient the protein in a curved membrane. We can use MemPrO to do this, note that we can also automatically build using MemPrO. We will first build it ourselves after orientation and then build it automatically with MemPrO. 
 
-Run the following to orient 7WLT in a curved membrane.
->python PATH/TO/MemPrO_Script.py -f 7wlt.pdb -ng 16 -ni 150 -c
+Run the following to orient 7N5E in a curved membrane.
+>python PATH/TO/MemPrO_Script.py -f 7n5e-cg.pdb -ng 16 -ni 150 -c
+
+Looking at "Orient/orientation.txt" should show a clear rank 1. Looking at "Rank_1/info_rank_1.txt" we can see that a curvature of roughly -0.013 A^-1 is predicted, we will need to use this value to build the CG system. Follow the procedure in [Tutorial 1](#a_basic_example) to make a copy of the oriented protein. To build the system run the following:
+
+
+>python PATH/TO/Insane4MemPrO.py -f 7n5e-oriented.pdb -p topol.top -o CG-System.gro -x 20 -y 20 -z 30 -curv 0.13,0.1,-1 -sol W -l POPE:4 -l POPG:1 -negi_c0 CL -posi_c0 NA
+
+Here we have made a few changes over tutorial 1. Firstly we have increased the size of the box in the z direction in order to contained the added height from the curved region. Secondly, we have added "-curv 0.13,0.1,-1". The first value, 0.13, is the absolute curvature in nm^-1 which we calculated with MemPrO, the second, 0.1, is the curvature of the membrane as it returns to planar and the final value, -1, is the sign of the curvature. The final change is to -l, we have changed "-l POPE" to "-l POPE:4 -l POPG:1". The numbers represent the relative abundance of the lipid before it, and the second -l simply adds a new lipid type. So "-l POPE:4 -l POPG:1" creates a membrane with POPE and POPG ina ratio of 4:1.
+
+Looking at "CG-System.gro" in PyMOL we can see the simulation box is fairly large, this is needed to allow for the curvature to relax back to a planar membrane and to leave enough space between periodic images. The final step as before is to update the file "topol.top" as described in [Tutorial 1](#a_basic_example).
+
+As promised we will now look at how MemPrO can build this automatically.
+
+>python PATH/TO/MemPrO_Script.py -f 7n5e-cg.pdb -o "Orient_build/" -ng 16 -ni 150 -c -bd 1 -bd_args "-sol W -l POPE:4 -l POPG:1 -negi_c0 CL -posi_c0 NA"
+
+As you can see only some of the flags need to be added as MemPrO deals with all the structural elements of building the CG system. Looking in the folder "Orient_build/Rank_1/CG_System_rank_1/" we find both the CG system and the topology file, called "CG-system.gro" and "topol.top" respectively. "topol.top" will need to be modified as always. The system is now ready for energy minimisation and simulation.
+
+## Double membrane systems
+
+In MemPrO [tutorial 5](MemPrO_tutorials.md#Building_CG_systems_from_orientations) we look at building a double membrane CG system automatically using MemPrO. We will revisit this system in this tutorial. We will be building a more complex version of this system, controlling the ions present in each compartmenet, and the lipid composition of the inner and outer membranes. As before we will look at how to build this system manually, and also automatically using MemPrO. Make a new folder called "Tutorial3" and if you have already done [tutorial 5](MemPrO_tutorials.md#Building_CG_systems_from_orientations) then simply copy over "5nik-cg.pdb" or follow the download instructions in [tutorial 2](MemPrO_tutorials.md#double_membrane_systems).
+
+We start with orienting the protein
+>python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -ng 16 -ni 150 -dm
+
+As in [tutorial 1](#a_basic_example) create a copy without the dummy membrane called "5nik-oriented.pdb"
+
+
 
