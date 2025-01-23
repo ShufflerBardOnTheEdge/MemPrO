@@ -23,7 +23,7 @@ We now run the following to create the full CG system:
 
 >python PATH/TO/Insane4MemPrO.py -f 4g1u-oriented.pdb -p topol.top -o CG-System.gro -x 20 -y 20 -z 20 -sol W -l POPE -negi_c0 CL -posi_c0 NA
 
-Here -p and -o indicate the name of the output files. "CG-System.gro" is the CG system as the name may suggest. "topol.top" is the topolgy file which will be need for running simulations. Load "CG-System.gro" in PyMOL. Make sure all sphere are visible by typing "show spheres", also type "show cell" to show the simulation cell. -x,-y and -z control the size of the system cell, here we inputted 20 nm, and we can verify this by looking at the bottom of "CG-System.gro". -sol defines the solvent used, in this case "W" indicates water. -l is used to define the composition of the bilayer, in this case we are just defining a membrane composed of only POPE. More detail on -l will be in following tutorials. -negi_c0 and -posi_c0 define the (NEG)ative (I)ons and (POS)itive (I)ons. In this case we are setting negative ions to be CL- and positive ions to be NA+. These work in a similar way to -l and more detail will be in further tutorials. All this can be verified by looking at CG beads in the CG system using PyMOL.
+Here -p and -o indicate the name of the output files. "CG-System.gro" is the CG system as the name may suggest. "topol.top" is the topolgy file which will be need for running simulations. Load "CG-System.gro" in PyMOL. Make sure all sphere are visible by typing "show spheres", also type "show cell" to show the simulation cell. -x,-y and -z control the size of the system cell, here we inputted 20 nm, and we can verify this by looking at the bottom of "CG-System.gro". -sol defines the solvent used, in this case "W" indicates water. -l is used to define the composition of the bilayer, in this case we are just defining a membrane composed of only POPE. More detail on -l will be in following tutorials. -negi_c0 and -posi_c0 define the (NEG)ative (I)ons and (POS)itive (I)ons. In this case we are setting negative ions to be Cl- and positive ions to be Na+. These work in a similar way to -l and more detail will be in further tutorials. All this can be verified by looking at CG beads in the CG system using PyMOL.
 
 There is one final step before we can begin simulating the CG system. Open "topol.top" and look at the \[molecules\] section. The first molecule is "Protein", this is a placeholder and will need to be replaced. Open "4g1u-cg.top", copy everything under \[molecules\] and replace the line containing "Protein" in "topol.top" with this. Additionally, replace "include protein-cg.top" with "include molecule_{n}.itp" where {n} is 0,1,2... for each .itp created during the coarse graining process. This process may be automated in future versions of Insane4MemPrO.
 
@@ -47,7 +47,7 @@ Looking at "Orient/orientation.txt" should show a clear rank 1. Looking at "Rank
 
 Here we have made a few changes over tutorial 1. Firstly we have increased the size of the box in the z direction in order to contained the added height from the curved region. Secondly, we have added "-curv 0.13,0.1,-1". The first value, 0.13, is the absolute curvature in nm^-1 which we calculated with MemPrO, the second, 0.1, is the curvature of the membrane as it returns to planar and the final value, -1, is the sign of the curvature. The final change is to -l, we have changed "-l POPE" to "-l POPE:4 -l POPG:1". The numbers represent the relative abundance of the lipid before it, and the second -l simply adds a new lipid type. So "-l POPE:4 -l POPG:1" creates a membrane with POPE and POPG ina ratio of 4:1.
 
-Looking at "CG-System.gro" in PyMOL we can see the simulation box is fairly large, this is needed to allow for the curvature to relax back to a planar membrane and to leave enough space between periodic images. The final step as before is to update the file "topol.top" as described in [Tutorial 1](#a_basic_example).
+Looking at "CG-System.gro" in PyMOL we can see the simulation box is fairly large, this is needed to allow for the curvature to relax back to a planar membrane and to leave enough space between periodic images. The final step as before is to update the file "topol.top" as described in [Tutorial 1](#a-basic-example).
 
 As promised we will now look at how MemPrO can build this automatically.
 
@@ -57,12 +57,30 @@ As you can see only some of the flags need to be added as MemPrO deals with all 
 
 ## Double membrane systems
 
-In MemPrO [tutorial 5](MemPrO_tutorials.md#Building_CG_systems_from_orientations) we look at building a double membrane CG system automatically using MemPrO. We will revisit this system in this tutorial. We will be building a more complex version of this system, controlling the ions present in each compartmenet, and the lipid composition of the inner and outer membranes. As before we will look at how to build this system manually, and also automatically using MemPrO. Make a new folder called "Tutorial3" and if you have already done [tutorial 5](MemPrO_tutorials.md#Building_CG_systems_from_orientations) then simply copy over "5nik-cg.pdb" or follow the download instructions in [tutorial 2](MemPrO_tutorials.md#double_membrane_systems).
+In MemPrO [tutorial 5](MemPrO_tutorials.md#building-cg-systems-from-orientations) we look at building a double membrane CG system automatically using MemPrO. We will revisit this system in this tutorial. We will be building a more complex version of this system, controlling the ions present in each compartmenet, and the lipid composition of the inner and outer membranes. As before we will look at how to build this system manually, and also automatically using MemPrO. Make a new folder called "Tutorial3" and if you have already done [tutorial 5](MemPrO_tutorials.md#building-cg-systems-from-orientations) then simply copy over "5nik-cg.pdb" or follow the download instructions in [tutorial 2](MemPrO_tutorials.md#double-membrane-systems).
 
 We start with orienting the protein
 >python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -ng 16 -ni 150 -dm
 
-As in [tutorial 1](#a_basic_example) create a copy without the dummy membrane called "5nik-oriented.pdb"
+As in [tutorial 1](#a-basic-example) create a copy without the dummy membrane called "5nik-oriented.pdb". Next we will need to look at "Orient/Rank_1/info_rank_1.txt" to find the inter membrane distance, which should be around 272 angstroms. We can now build the CG system with the following command:
+>python PATH/TO/Insane4MemPrO.py -f 5nik-oriented.pdb -p topol.top -o CG-System.gro -x 20 -y 20 -z 50 -ps 13.6 -sol W -l POPE:8 -l POPG:1 -l CARD:1 -uo LIPA -negi_c0 CL -posi_c0 NA -negi_c2 CL -posi_c2 NA:1 -posi_c2 CA:4 -auo 1.2
+
+This command may look complicated but it is actually rather simple. First we have added "-ps 13.6", which tells the code to build two membrane which are at + and - 13.6 nm which corresponds to the intermembrane distance calculated by MemPrO. Next we have added "-uo LIPA" this flag does a similar job as "-l", but it specifies that the (u)pper leaflet of the (o)uter membrane should be composed entirely of LIPA (The code for this may be different depending on what is defined in your copy of Insane4MemPrO). We also have the flag "-auo 1.2" which tells the code that the (a)rea per lipid in the (u)pper leaflet of the (o)uter membrane should be 1.2. Finally we have "-negi_c2 CL" , "-posi_c2 NA:1" and "-posi_c2 CA:4". Before we get into what these flags are doing I will give a quick explaination of disjoint water compartments. 
+
+Each membrane in a system is a barrier to water, when only one membrane is present this doesn't cause any issues as a water/ion bead may leave from the bottom of a cell and reappear at the top, hence every water/ion bead can move to any position in the cell. If we introduce a second membrane then water/ion beads between the two membranes can never move out from between the membranes, hence two distinct comparments of solution are created. If we don't have z periodicity then even more disjoint compartments are created.
+
+Returning to the flags "-negi_c2 CL" , "-posi_c2 NA:1" and "-posi_c2 CA:4" we are telling the code that the compartment labeled "c2" should contain negative ions Cl- and posative ions Ca+2 and Na+ in the ratio 4:1. There are 3 possible compartments "c0, c1, and c2". 
+
+Loading "CG-System.gro" we can inspect the CG system and check everything is as it should be. Before simulation remeber to update the topology file "topol.top"
+
+We can also build this automatically with MemPrO by running the following command:
+>python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -o "Orient_build/" -ng 16 -ni 150 -dm -bd 1 -bd_args "-sol W -l POPE:8 -l POPG:1 -l CARD:1 -uo LIPA -negi_c0 CL -posi_c0 NA -negi_c2 CL -posi_c2 NA:1 -posi_c2 CA:4 -auo 1.2"
+
+As before MemPrO deals with the double membrane, and we need only worry about defining the composition of the system. Looking in the folder "Orient_build/Rank_1/CG_System_rank_1/" we find both the CG system and the topology file, called "CG-system.gro" and "topol.top" respectively. "topol.top" will need to be modified as always. The system is now ready for energy minimisation and simulation.
+
+
+
+
 
 
 
