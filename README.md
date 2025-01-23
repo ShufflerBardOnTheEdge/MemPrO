@@ -244,6 +244,8 @@ Ensure all the membrane relevant values are the same. The template file (-in_t t
     
 The flag -p will create a rudimentary .top file. The Protein related entries will need to be changed but the other values are correct.
 
+More detailed tutorials are available [here](Insane4MemPrO_tutorials.md)
+
 ## FAQ
 There are currently no frequently asked questions. If you do have any questions or encounter errors that you cannot fix please contact me via my email m.parrag@warwick.ac.uk and I will do my best to provide help.
 
