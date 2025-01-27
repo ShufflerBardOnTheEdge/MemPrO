@@ -35,12 +35,12 @@ In this tutorial we will build a curved membrane with a more complex lipid compo
 
 We start as usual by downloading an appropriate protein from the PDB, in this case we will be downloading a mechanosensaitve ion channel with code 7N5E. To download this one can use the fetch commmand in PyMOL followed by saving as a .pdb, further details on this method can be found [here](https://pymolwiki.org/index.php/Fetch). Otherwise go to the [following page on the PDB website](https://www.rcsb.org/structure/7n5e) and download in PDB format. Create a folder called "Tutorial2" and place the downloaded file into it.
 
-Next coarse grain the protein as in [Tutorial 1](#tutorial-1---a_basic_example) calling the output 7n5e-cg.pdb. Next we will need to orient the protein in a curved membrane. We can use MemPrO to do this, note that we can also automatically build using MemPrO. We will first build it ourselves after orientation and then build it automatically with MemPrO. 
+Next coarse grain the protein as in [Tutorial 1](#tutorial-1---a-basic-example) calling the output 7n5e-cg.pdb. Next we will need to orient the protein in a curved membrane. We can use MemPrO to do this, note that we can also automatically build using MemPrO. We will first build it ourselves after orientation and then build it automatically with MemPrO. 
 
 Run the following to orient 7N5E in a curved membrane.
 >python PATH/TO/MemPrO_Script.py -f 7n5e-cg.pdb -ng 16 -ni 150 -c
 
-Looking at "Orient/orientation.txt" should show a clear rank 1. Looking at "Rank_1/info_rank_1.txt" we can see that a curvature of roughly -0.013 A^-1 is predicted, we will need to use this value to build the CG system. Follow the procedure in [Tutorial 1](#tutorial-1---a_basic_example) to make a copy of the oriented protein. To build the system run the following:
+Looking at "Orient/orientation.txt" should show a clear rank 1. Looking at "Rank_1/info_rank_1.txt" we can see that a curvature of roughly -0.013 A^-1 is predicted, we will need to use this value to build the CG system. Follow the procedure in [Tutorial 1](#tutorial-1---a-basic-example) to make a copy of the oriented protein. To build the system run the following:
 
 
 >python PATH/TO/Insane4MemPrO.py -f 7n5e-oriented.pdb -p topol.top -o CG-System.gro -x 20 -y 20 -z 30 -curv 0.13,0.1,-1 -sol W -l POPE:4 -l POPG:1 -negi_c0 CL -posi_c0 NA
