@@ -2,7 +2,7 @@
 
 Note that these tutorials assume a Linux OS, however as MemPrO is a python script it should also work on any other OS so long as you can run python. Additionally, PyMOL will be used as the molecular visualisation programm throughout this tutorial, however VMD or any other such program can be used.
 
-## A Basic Example
+## Tutorial 1 - A Basic Example
 
 
 This first tutorial will run through how to use MemPrO for the most basic usecase, the orientation of a integral membrane protein in a planar membrane. The first step will be to download an exmaple integral membrane protein, let us choose 4G1U from the protein data bank. To download this one can use the fetch commmand in PyMOL followed by saving as a .pdb, further details on this method can be found [here](https://pymolwiki.org/index.php/Fetch). Otherwise go to the [following page on the PDB website](https://www.rcsb.org/structure/4g1u) and download in PDB format.
@@ -32,7 +32,7 @@ The first of the images Z_potential_curve.png shows the potential as the protein
 
 Hopefully, one can see that MemPrO is very easy to use and also provides lots of information about the orientation. The next few tutorials will focus on a few of the more advanced features.
 
-## Double membrane systems
+## Tutorial 2 - Double membrane systems
 We will now look at the double membrane orientation in MemPrO. We will need to download a double membrane protein PDB, let us choose 5NIK from the protein data bank. To download this one can use the fetch commmand in PyMOL followed by saving as a .pdb, further details on this method can be found [here](https://pymolwiki.org/index.php/Fetch). Otherwise go to the [following page on the PDB website](https://www.rcsb.org/structure/5nik) and download in PDB format.
 
 Now create a folder called "Tutorial2" to contain all the files for this tutorial, and place the downloaded pdb file in there as before. Now in a termail navigate to the folder you just created and run the follwoing:
@@ -44,7 +44,7 @@ Once the code has finished running, which with ~16 CPUs should take about 140 se
 
 Within "Rank_1" we no longer see the two images, but we still have "info_rank_1.txt" and "oriented_rank_1.pdb". Looking at "info_rank_1.txt" we find on the first line "Inter-Membrane distance" with the value 272.556 angstroms inidicating the distance between the inner and outer membranes.
 
-## Predicting the PG layer
+## Tutorial 3 - Predicting the PG layer
 
 5NIK is a periplasm spanning protein so the peptidoglycan (PG) layer would reside within the inner and outer membranes. We can use MemPrO to predict the placement of this. First copy 5nik.pdb across to a new folder called "Tutorial3" and run the following in a termial in Tutorial3
 >python PATH/TO/MemPrO_Script.py -f 5nik.pdb -ng 16 -ni 150 -dm -pg
@@ -61,7 +61,7 @@ This will output to a folder called "Orient_PG_Guess" as specified by the -o fla
 
 Looking at the file "Rank_1/oriented_rank_1.pdb" in Orient_PG_Guess, we should now see the PG layer placed higher up the protein.
 
-## Global curvature predictions
+## Tutorial 4 - Global curvature predictions
 
 We will now move onto predicting global curvature of proteins.  We will need to download a PDB file for a protein that causes membrane curvature, let us choose 6BPZ from the protein data bank. To download this one can use the fetch commmand in PyMOL followed by saving as a .pdb, further details on this method can be found [here](https://pymolwiki.org/index.php/Fetch). Otherwise go to the [following page on the PDB website](https://www.rcsb.org/structure/6bpz) and download in PDB format.
 
@@ -79,9 +79,9 @@ Looking now in the folder "Orient_Curv" we can immidietely see we have fewer fin
 
 It is not always possible to see if a membrane should be curved by looking at "curv_potential_curve.png" in a planar orientation, but in many cases it may give an idication if the protein prefers curved enviroments.
 
-## Building CG systems from orientations
+## Tutorial 5 - Building CG systems from orientations
 
-In this final tutorial we will used MemPrO to orient 5NIK and automatically build a CG system. For the purpose of this tutorial both membranes will be made up of POPG and POPE even though this is not biologically accurate. Further tutorials for use of Insane4MemPrO are available [here](Insane4MemPrO_tutorials.md). We will start as always by making a folder called "Tutorial5" and then copy across 5nik.pdb or dowload as in [Double membrane systems](#double-membrane-systems).
+In this final tutorial we will used MemPrO to orient 5NIK and automatically build a CG system. For the purpose of this tutorial both membranes will be made up of POPG and POPE even though this is not biologically accurate. Further tutorials for use of Insane4MemPrO are available [here](Insane4MemPrO_tutorials.md). We will start as always by making a folder called "Tutorial5" and then copy across 5nik.pdb or dowload as in [Double membrane systems](#tutorial-2--double-membrane-systems).
 
 To build a CG system 5nik must first be coarse grained. For this we will use Martinize2, for install instructions and usage refer to the [GitHub repo](https://github.com/marrink-lab/vermouth-martinize). 
 
