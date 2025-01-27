@@ -81,7 +81,7 @@ It is not always possible to see if a membrane should be curved by looking at "c
 
 ## Tutorial 5 - Building CG systems from orientations
 
-In this final tutorial we will used MemPrO to orient 5NIK and automatically build a CG system. For the purpose of this tutorial both membranes will be made up of POPG and POPE even though this is not biologically accurate. Further tutorials for use of Insane4MemPrO are available [here](Insane4MemPrO_tutorials.md). We will start as always by making a folder called "Tutorial5" and then copy across 5nik.pdb or dowload as in [Double membrane systems](#tutorial-2--double-membrane-systems).
+In this final tutorial we will used MemPrO to orient 5NIK and automatically build a CG system. For the purpose of this tutorial both membranes will be made up of POPG and POPE even though this is not biologically accurate. Further tutorials for use of Insane4MemPrO are available [here](Insane4MemPrO_tutorials.md). We will start as always by making a folder called "Tutorial5" and then copy across 5nik.pdb or dowload as in [Double membrane systems](#tutorial-2---double-membrane-systems).
 
 To build a CG system 5nik must first be coarse grained. For this we will use Martinize2, for install instructions and usage refer to the [GitHub repo](https://github.com/marrink-lab/vermouth-martinize). 
 
