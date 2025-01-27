@@ -7,7 +7,7 @@ Note that these tutorials assume a Linux OS, however as MemPrO is a python scrip
 
 This first tutorial will run through how to use MemPrO for the most basic use-case, the orientation of a integral membrane protein in a planar membrane. The first step will be to download an exmaple integral membrane protein, let us choose 4G1U from the protein data bank. To download this one can use the fetch commmand in PyMOL followed by saving as a .pdb, further details on this method can be found [here](https://pymolwiki.org/index.php/Fetch). Otherwise go to the [following page on the PDB website](https://www.rcsb.org/structure/4g1u) and download in PDB format.
 
-Now create a folder called "Tutorial1" to contain all the files for this tutorial, and place the downloaded pdb file in there. This structure will include some ligands, these can either be removed or, as it does not affect orientation, ignored. Now in a termail navigate to the folder you just created.
+Now create a folder called "Tutorial1" to contain all the files for this tutorial, and place the downloaded pdb file in there. This structure will include some ligands, these can either be removed or, as it does not affect orientation, ignored. Now in a terminal navigate to the folder you just created.
 
 We will now run MemPrO:
 
