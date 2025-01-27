@@ -19,8 +19,12 @@ Here we are using an initial grid of 16 starting configurations (The higher to b
 
 Once the code has finished running, which with ~16 CPUs should take about 90 seconds, you should find a folder called "Orient" in the Tutorial1 folder. Opening this folder you should find several files and folders. First we will look at orientations.txt, in here we will find all the orientations found by MemPrO. MemPrO can be a little random so your results may differ from what is shown here, but it should be very similar. 
 
+![Alt text](Tutorial_pics/Fig2.svg)
+
 In my case MemPrO found two possible orientations. Each orientation has 6 numbers associated with it. The first is its rank. Let us look at the rank 1 orientation. 
 > 1    -71.372    93.75    -71.372    173.346    155273.357
+
+![Alt text](Tutorial_pics/Fig3.svg)
 
 The second number represents the relative potential of the orientation, where 0 would be a protein fully in solvent. So here we can see that rank 1 orientation has lower potential than if the protein were not in the membrane which is a good sign. The third number is the percent of configurations that minimised to this particular orientation, a value of 93.75% indicates a high confidence, though a low value doesn't always mean low confidence. The fourth number should be very close to the second but otherwise can be ignored. The fifth number indicates the calculated depth of the minima, the higher the more stable the orientation is. The sixth and final number is a value calculated from the other values shown by which the orientations are ranked, this value can only be used to compare orientations from the same run of MemPrO.
 
@@ -44,6 +48,8 @@ The only difference here is the addition of the flag -dm, this tells MemPrO to u
 
 Once the code has finished running, which with ~16 CPUs should take about 140 seconds, you should find a folder called "Orient" in the Tutorial2 folder. The structure of the Orient folder is very similar to previously. We will look at a few differences. The ranking method is different in the case of double membrane proteins which is reflected in "oreintations.txt" in which the final 3 values for each rank should be 0. Double membranes are ranked on relative potential only due to the different nature of such orientations.
 
+![Alt text](Tutorial_pics/Fig4.svg)
+
 Within "Rank_1" we no longer see the two images, but we still have "info_rank_1.txt" and "oriented_rank_1.pdb". Looking at "info_rank_1.txt" we find on the first line "Inter-Membrane distance" with the value 272.556 angstroms indicating the distance between the inner and outer membranes.
 
 ## Tutorial 3 - Predicting the PG layer
@@ -55,11 +61,15 @@ As before after the code has finished running (Which should take 150 seconds wit
 
 In the folder "Orient/Rank_1" we will now find two graphs. We will focus only on "PG_potential_curve.png". This graph shows the potential associated with placing the PG layer at that position. One should be able to see the potential is lowest around 0-30 angstroms from the centre. In this region there are two minima that are reasonable deep at around ~10 and ~30 angstroms. The first of these is at the lowest potential and is added to "oriented_rank_1.pdb" as another set of dummy beads. The second is also a valid placement, as external factors can have an effect on the placement which may easily tip the balance between the two minima. In "info_rank_1.txt" we will find the exact position and the cross-sectional area of the protein at that positions alongside the other information.
 
+![Alt text](Tutorial_pics/Fig5.svg)
+
 If additional information is known about where the PG layer may be, such as the length of LPP in the particular bacteria, then -pg_guess can be used to bias the potential. The value of pg_guess is the distance from the outer membrane to the PG layer. For E-coli LPP is about 75 angstroms long (corresponding to 30 A from the centre which was our second minima) so we can run the following
 
 >python PATH/TO/MemPrO_Script.py -f 5nik.pdb -ng 16 -ni 150 -dm -pg -pg_guess 75 -o "Orient_PG_Guess/"
 
 This will output to a folder called "Orient_PG_Guess" as specified by the -o flag. 
+
+![Alt text](Tutorial_pics/Fig6.svg)
 
 Looking at the file "Rank_1/oriented_rank_1.pdb" in Orient_PG_Guess, we should now see the PG layer placed higher up the protein.
 
@@ -73,11 +83,19 @@ As before let us make a folder called "Tutorial4" and place 6bpz.pdb in this fol
 
 Looking in the folder "Orient_NoCurv" we find there are many more ranks than in previous examples. Let us look at "orientations.txt" and "orientations.pdb" to investigate. We see from orientations.txt none of the orientations have a negative potential, which doesn't necessarily mean there is an issue but can be indicative of an orientation where something is not quite right. We find that of the many ranks the first few have a final value much higher than the others. In my case these are around ~280000 with the others < 80000. Looking at the orientations in orientations.pdb we see for these the transmembrane regions are placed roughly within the membrane but there is a lot of variance in the position. This indicates either a highly mobile orientation or a unstable orientation. 
 
+![Alt text](Tutorial_pics/Fig7.svg)
+
 Let us now look in the folder "Rank_1". Looking at "Z_potential_curve.png" we see a extremely deep minima suggesting the orientation is perhaps not mobile (In Z at least), looking at "curv_potential_curve.png" reveals the issue. We find this graph shows a minima at -0.005 meaning a fairly significant negative curvature has lower potential than a planar membrane. Let us now run the following to include global curvature prediction
+
+![Alt text](Tutorial_pics/Fig8.svg)
 
 >python PATH/TO/MemPrO_Script.py -f 6bpz.pdb -ng 16 -ni 150 -o "Orient_Curv/" -c
 
 Looking now in the folder "Orient_Curv" we can immediately see we have fewer final orientations. Looking in "orientations.txt" shows only one orientation with negative potential and a deep minima. This indicates a much more stable prediction. Looking at "oriented_rank_1.pdb" from the folder we can see the protein has been placed in a highly curved membrane. Looking at "curv_potential_curve.png" we can see the minima has actually shifted even further, this is because without curvature prediction there is a much greater error on the placement which affects the curvature calculations.
+
+![Alt text](Tutorial_pics/Fig9.svg)
+
+![Alt text](Tutorial_pics/Fig10.svg)
 
 It is not always possible to see if a membrane should be curved by looking at "curv_potential_curve.png" in a planar orientation, but in many cases it may give an indication if the protein prefers curved environments.
 
@@ -98,6 +116,8 @@ Once we have the file 5nik-cg.pdb we can run the following
 The flag -bd indicates we want to build a CG system for the top n (in this case n=1) ranks. The flag -bg_args is a string of additional arguments to pass to Insane4MemPrO. MemPrO will handle naming of all output files, the type of system to build (In this case a double membrane system) and the cell size for the simulation. Everthing else msut be put in the string of additional arguments. Here -l is used to indicate the lipid type and relative abundance (In this case POPE and POPG in the ration 8:2) in the lower leaflet of the inner membrane which with -u,-uo,-lo is used for all leaflets in all membranes, -negi_c0 and -posi_c0 are used to indicate the ions used to neutralise the system (In this case CL and NA ie salt) and -sol is used to indicate the solvent (In this case water). For a more detailed explaintion of all the flags and some detailed tutorials refer to [Insane4MemPrO documentation](README.md#insane4mempro).
 
 Looking in the folder "Orient" we should see the now familiar set of files produced by MemPrO. Looking at "orientations.txt" and "orientations.pdb" we can satisfy ourselves that orientation has gone well and the rank 1 orienation looks sensible. Now looking in "Rank_1" we see an additional folder "CG_System_rank_1". This folder will contain 3 files "CG_system.gro", "protein-cg.pdb" and "topol.top". "topol.top" is a basic topology files for the system which may need minor editing, but will contain all the correct numbers of each molecule. "protein-cg.top" is a copy of the oriented protein without any dummy membranes present, and "CG_system.gro" is the full CG system build according to the build arguments passed to MemPrO.
+
+![Alt text](Tutorial_pics/Fig11.svg)
 
 These files can be used together with the output from martinize2/the appropriate files describing the CG protein to run simulation.
 
