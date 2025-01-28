@@ -11,9 +11,14 @@ We will be using Martinize2 for coarse graining, for install instructions and us
 
 Provided this runs without errors several files will be generated. The first of these will be "4g1u-cg.pdb", which will be the coarse grained copy of 4g1u. One can look at this in PyMOL by first loading the file, then running "show spheres" to check everything has run correctly. Next we have "4g1u-cg.top" which contains the topology information for the coarse grained protein. We will need this when amending the topology files after the creation of the CG system. Finally, we have the ".itp" files, these will be used in the topolgy file later.
 
+![Alt text](Tutorial_pics/Fig12.svg)
+
+
 We now want to orient the protein so that it will be in the correct place when building the CG system. Note that we can build this system automatically after orientation using MemPrO, but as this tutorial is for the use of Insane4MemPrO we will not be doing this. To orient to protein run the following:
 
 >python PATH/TO/MemPrO_Script.py -f 4g1u-cg.pdb -ng 16 -ni 150
+
+![Alt text](Tutorial_pics/Fig13.svg)
 
 For more details on the use of MemPrO refer to these [tutorials](MemPrO_tutorials.md#). Once the code has finished running look at the file "Oreint/Rank_1/oriented_rank_1.pdb" in PyMOL to check orientation has proceeded correctly. We will now create a copy of this without the dummy membrane by running to following:
 
@@ -25,7 +30,13 @@ We now run the following to create the full CG system:
 
 Here -p and -o indicate the name of the output files. "CG-System.gro" is the CG system as the name may suggest. "topol.top" is the topology file which will be need for running simulations. Load "CG-System.gro" in PyMOL. Make sure all sphere are visible by typing "show spheres", also type "show cell" to show the simulation cell. -x,-y and -z control the size of the system cell, here we inputted 20 nm, and we can verify this by looking at the bottom of "CG-System.gro". -sol defines the solvent used, in this case "W" indicates water. -l is used to define the composition of the bilayer, in this case we are just defining a membrane composed of only POPE. More detail on -l will be in following tutorials. -negi_c0 and -posi_c0 define the (NEG)ative (I)ons and (POS)itive (I)ons. In this case we are setting negative ions to be Cl- and positive ions to be Na+. These work in a similar way to -l and more detail will be in further tutorials. All this can be verified by looking at CG beads in the CG system using PyMOL.
 
+
+![Alt text](Tutorial_pics/Fig14.svg)
+
 There is one final step before we can begin simulating the CG system. Open "topol.top" and look at the \[molecules\] section. The first molecule is "Protein", this is a placeholder and will need to be replaced. Open "4g1u-cg.top", copy everything under \[molecules\] and replace the line containing "Protein" in "topol.top" with this. Additionally, replace "include protein-cg.top" with "include molecule_{n}.itp" where {n} is 0,1,2... for each .itp created during the coarse graining process. This process may be automated in future versions of Insane4MemPrO.
+
+
+![Alt text](Tutorial_pics/Fig15.svg)
 
 And we are ready for simulation! This is where will end each tutorial as there are already many good tutorials for running coarse grained molecular dynamics simulation, all I will say is remember to energy minimise!
 
@@ -40,12 +51,19 @@ Next coarse grain the protein as in [Tutorial 1](#tutorial-1---a-basic-example) 
 Run the following to orient 7N5E in a curved membrane.
 >python PATH/TO/MemPrO_Script.py -f 7n5e-cg.pdb -ng 16 -ni 150 -c
 
+
+![Alt text](Tutorial_pics/Fig16.svg)
+
 Looking at "Orient/orientation.txt" should show a clear rank 1. Looking at "Rank_1/info_rank_1.txt" we can see that a curvature of roughly -0.013 A^-1 is predicted, we will need to use this value to build the CG system. Follow the procedure in [Tutorial 1](#tutorial-1---a-basic-example) to make a copy of the oriented protein. To build the system run the following:
 
 
 >python PATH/TO/Insane4MemPrO.py -f 7n5e-oriented.pdb -p topol.top -o CG-System.gro -x 20 -y 20 -z 30 -curv 0.13,0.1,-1 -sol W -l POPE:4 -l POPG:1 -negi_c0 CL -posi_c0 NA
 
 Here we have made a few changes over tutorial 1. Firstly we have increased the size of the box in the z direction in order to contained the added height from the curved region. Secondly, we have added "-curv 0.13,0.1,-1". The first value, 0.13, is the absolute curvature in nm^-1 which we calculated with MemPrO, the second, 0.1, is the curvature of the membrane as it returns to planar and the final value, -1, is the sign of the curvature. The final change is to -l, we have changed "-l POPE" to "-l POPE:4 -l POPG:1". The numbers represent the relative abundance of the lipid before it, and the second -l simply adds a new lipid type. So "-l POPE:4 -l POPG:1" creates a membrane with POPE and POPG ina ratio of 4:1.
+
+
+
+![Alt text](Tutorial_pics/Fig17.svg)
 
 Looking at "CG-System.gro" in PyMOL we can see the simulation box is fairly large, this is needed to allow for the curvature to relax back to a planar membrane and to leave enough space between periodic images. The final step as before is to update the file "topol.top" as described in [Tutorial 1](#tutorial-1---a-basic-example).
 
@@ -70,6 +88,10 @@ This command may look complicated but it is actually rather simple. First we hav
 Each membrane in a system is a barrier to water, when only one membrane is present this doesn't cause any issues as a water/ion bead may leave from the bottom of a cell and reappear at the top, hence every water/ion bead can move to any position in the cell. If we introduce a second membrane then water/ion beads between the two membranes can never move out from between the membranes, hence two distinct comparments of solution are created. If we don't have z periodicity then even more disjoint compartments are created.
 
 Returning to the flags "-negi_c2 CL" , "-posi_c2 NA:1" and "-posi_c2 CA:4" we are telling the code that the compartment labeled "c2" should contain negative ions Cl- and posative ions Ca+2 and Na+ in the ratio 4:1. There are 3 possible compartments "c0, c1, and c2". 
+
+
+
+![Alt text](Tutorial_pics/Fig18.svg)
 
 Loading "CG-System.gro" we can inspect the CG system and check everything is as it should be. Before simulation remeber to update the topology file "topol.top"
 
