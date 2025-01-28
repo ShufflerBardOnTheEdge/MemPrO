@@ -22,7 +22,6 @@ Once the code has finished running, which with ~16 CPUs should take about 90 sec
 ![Alt text](Tutorial_pics/Fig2.svg)
 
 In my case MemPrO found two possible orientations. Each orientation has 6 numbers associated with it. The first is its rank. Let us look at the rank 1 orientation. 
-> 1    -71.372    93.75    -71.372    173.346    155273.357
 
 ![Alt text](Tutorial_pics/Fig3.svg)
 
