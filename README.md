@@ -11,7 +11,11 @@ Otherwise, clone the GitHub repository. Python 3.11.5 or better is required, and
 * Matplotlib 3.8.0
 >pip install matplotlib~=3.8.0
 
+A Martini3 forcefield is also required, this can be downloaded from [here](https://cgmartini.nl/docs/downloads/force-field-parameters/martini3/particle-definitions.html) 
+
 MemPrO is also accessible on Google Colab via the link [ADD LINK]. The Colab will contain instructions for use. (Currently the Colab in WIP and this will be updated)
+
+
 
 ## Outputs
 
