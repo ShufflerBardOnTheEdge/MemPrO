@@ -5,13 +5,11 @@ Membrane Protein Orientation in Lipid Bilayers
 To install MemPrO run the following (Not yet on PyPi, this will work once the code has been published):
 >pip install MemPrO
 
-Otherwise, clone the GitHub repository. The following python packages are required:
-* Jax
->pip install jax\["cpu"\]
-* Numpy
->pip install numpy
-* Matplotlib
->pip install matplotlib
+Otherwise, clone the GitHub repository. Python 3.11.5 or better is required, and the following packages need to be installed
+* Jax 0.4.14
+>pip install jax\["cpu"\]~=0.4.14
+* Matplotlib 3.8.0
+>pip install matplotlib~=3.8.0
 
 MemPrO is also accessible on Google Colab via the link [ADD LINK]. The Colab will contain instructions for use. (Currently the Colab in WIP and this will be updated)
 
