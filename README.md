@@ -7,9 +7,9 @@ To install MemPrO run the following (Not yet on PyPi, this will work once the co
 
 Otherwise, clone the GitHub repository. Python 3.11.5 or better is required, and the following packages need to be installed
 * Jax 0.4.18
->pip install jax\["cpu"\]~=0.4.18
+>pip install jax\["cpu"\]==0.4.18
 * Matplotlib 3.9.2
->pip install matplotlib~=3.9.2
+>pip install matplotlib==3.9.2
 
 A Martini3 forcefield is also required, this can be downloaded from [here](https://cgmartini.nl/docs/downloads/force-field-parameters/martini3/particle-definitions.html) 
 
