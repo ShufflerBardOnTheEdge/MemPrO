@@ -2,7 +2,7 @@ import os
 import sys
 import warnings
 import jax.numpy as jnp
-from jax.config import config
+from jax import config
 from jax import tree_util
 import jax
 import jax.profiler

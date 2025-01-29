@@ -1959,7 +1959,7 @@ def leaflet_function(x,y,curv_A,curv_B,ch_ang,pore,leng):
 #Get the minimum dimensions required to fit all the curvature   
 def get_box_size(curv_A,curv_B,ch_ang,pore):
     if(curv_A < 1e-5 or curv_B < 1e-5):
-        return 0
+        return 0,0
     if(pore):  
         ch_ang=np.pi/2    
     
@@ -1972,7 +1972,8 @@ def get_box_size(curv_A,curv_B,ch_ang,pore):
     rad_B = 1.0/curv_B 
     
     in_rad = rad_A*s1+rad_B*(c2-1)
-    return in_rad+rad_B
+    height = rad_A*(1-c1)+rad_B*(1-c1)
+    return in_rad+rad_B,height
    
 #A function for binning points into a fixed grid
 def put_into_grid(x,r,n,s):
@@ -2512,7 +2513,7 @@ if not tm or options["-ct"].value != None or using_temp:
  
     ang_exts = np.array([np.arcsin(curvs_mid[0]*extent),np.arcsin(curvs_mid[1]*extent)]) 
     resi = 0
-    bsize = get_box_size(curvs_mid[0],rcurvs_mid[0],ang_exts[0],add_pore)
+    bsize,bheight = get_box_size(curvs_mid[0],rcurvs_mid[0],ang_exts[0],add_pore)
     
    
     if(pbcSetX[0] < bsize*2+2):
@@ -2626,11 +2627,15 @@ if(using_temp or tm):
         extent = rang
         ang_exts = np.array([np.arcsin(curvs_mid[0]*extent),np.arcsin(curvs_mid[1]*extent)])
         
-        bsize = get_box_size(curvs_mid[0],rcurvs_mid[0],ang_exts[0],add_pore)
+        bsize,bheight = get_box_size(curvs_mid[0],rcurvs_mid[0],ang_exts[0],add_pore)
         if(pbcSetX[0] < bsize*2+2):
             pbcSetX[0] = bsize*2+2
         if(pbcSetY[1] < bsize*2+2):
             pbcSetY[1] = bsize*2+2
+        if(pbcSetZ[2] < bheight*2+10):
+            pbcSetZ[2] = bheight*2+10
+        
+        print(bheight*2+2)
             
         pbcx = pbcSetX and pbcSetX[0]
         pbcy = pbcSetY and pbcSetY[1]

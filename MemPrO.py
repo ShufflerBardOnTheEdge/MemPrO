@@ -3,7 +3,7 @@
 import os
 import warnings
 import jax.numpy as jnp
-from jax.config import config
+from jax import config
 import jax
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,7 +14,6 @@ import datetime
 from jax import tree_util
 from jax.sharding import PositionalSharding
 from jax.experimental import mesh_utils
-from jax.experimental.maps import xmap
 import shutil
 
 
@@ -2674,7 +2673,7 @@ class MemBrain:
 			y_range = (80+y_max-y_min)/10.0
 			z_range = (100+z_max-z_min)/10.0
 			curv_str = " -curv "+str(10*np.abs(min_curvs[i]))+",0.1,"+str(np.sign(min_curvs[i]-1e-9))
-			print("Building rank "+str(i+1)+" with insane:")
+			print("Building rank "+str(i+1)+" with Insane4MemPrO:")
 			cg_sys_dir = rank_dir+"CG_System_rank_"+str(i+1)+"/"
 			run_str = "python "+PATH_TO_INSANE+" "+build_args.strip()+" -o "+cg_sys_dir+"CG-system.gro -p "+cg_sys_dir+"topol.top -f "+cg_sys_dir+"protein-cg.pdb "+"-x "+str(x_range)+" -y "+str(y_range)+" -z "+str(z_range)+curv_str
 			if(zdist > 1e-6):
