@@ -245,7 +245,7 @@ It is important to increase the b-factors by 1 as this will indicated the order 
     
 Next run the following command in terminal:
     
->python PATH/TO/Insane4MemBrain_V2.py -l POPE -sol W -x 10 -y 10 -z 50 -o test.gro -p topol.top -curv 0.1,0.15,1 -fudge 0.3 -curv_ext 6 -in_t template.pdb -fs prots.txt -negi_c0 CL -posi_c0 NA
+>python PATH/TO/Insane4MemPrO.py -l POPE -sol W -x 10 -y 10 -z 50 -o test.gro -p topol.top -curv 0.1,0.15,1 -fudge 0.3 -curv_ext 6 -in_t template.pdb -fs prots.txt -negi_c0 CL -posi_c0 NA
     
 Ensure all the membrane relevant values are the same. The template file (-in_t template.pdb) should be the one with altered b-factors. -fs takes the .txt mentioned earlier, this should contain the same number of proteins as altered b-facs. This will then build the system.
     
