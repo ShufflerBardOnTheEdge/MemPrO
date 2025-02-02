@@ -140,7 +140,7 @@ MemPrO comes with Insane4MemPrO a CG system builder based on Insane. Insane4MemP
 
 -fs : (Optional) A text file with an ordered list of proteins for use in multiple protein placements.
 
-Options relating to system size:
+#### Options relating to system size:
 
 -x : (Required) Indicates size of box in x dimention
 
@@ -148,7 +148,7 @@ Options relating to system size:
 
 -z : (Required) Indicates size of box in z dimention
 
-Membrane/lipid related options:
+#### Membrane/lipid related options:
 
 -l : (Optional) Lipid type and relative abundance (NAME\[:N\]) in membrane (or just lower leaflet if -u used)
 
@@ -178,11 +178,11 @@ Membrane/lipid related options:
 
 -micelle: (Optional) Builds a micelle around a protein instead of a bilayer.
 
-Protein related options:
+#### Protein related options:
 
 -fudge : (Default 0.3) Fudge factor for allowing lipid-protein overlap
 
-Solvent related options:
+#### Solvent related options:
 
 -sol : (Required) indicates the solvent used.
 
@@ -190,7 +190,7 @@ Solvent related options:
 
 -solr : (Default 0.1) Magnitude of random deviations to solvent positions.
 
-Charge related optiond:
+#### Charge related optiond:
 
 -posi_c0 : (Requried) Positive ion type and relative abundance (NAME\[:N\]) in system (Or compartment 0 if -posi_c1/-posi_c2 used) When using multiple membranes disjoint compartments of water may form, these flags allow for each compartment to be neutralised independantly and with different ions.
 
