@@ -126,7 +126,7 @@ MemPrO comes with Insane4MemPrO a CG system builder based on Insane. Insane4MemP
 
 ### Flags:
 
-I/O related flags:
+#### I/O related flags:
 
 -f : (Optional) Input protein to build CG system around.
 
