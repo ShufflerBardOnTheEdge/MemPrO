@@ -178,22 +178,6 @@ Membrane/lipid related options:
 
 -micelle: (Optional) Builds a micelle around a protein instead of a bilayer.
 
-PG cell wall related options:
-
--pgl : (Optional) Number of PG layers to place at -pgl_z.
-
--pgl_z : (Optional) Z position of PG layer relative to center of periplasmic space.
-
--cper : (Default 0.4) Percentage of crosslinks.
-
--lper : (Default 0.1) Percentage of crosslinks that are between layers.
-
--oper : (Default 1) Percentage change of a monomer linking with a oligomer. (Apllied after initial chance for a crosslink to form hence true change is cper\*oper).
-
--per33 : (Default 0.03) Percentage of crosslinks that are of type 3-3.
-
--gdist : (Default 0.75,4,8.9,0.25,10,45) Distribution of glycan strand lengths. Format as weight 1,standard deviation 1,mean 1,weight 2..., were each triple describes a gaussian. The sum of these forms the distribution. The default value corresponds to E-coli.
-
 Protein related options:
 
 -fudge : (Default 0.3) Fudge factor for allowing lipid-protein overlap
