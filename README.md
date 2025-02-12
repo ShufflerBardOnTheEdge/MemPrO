@@ -1,5 +1,5 @@
 # MemPrO
-Membrane Protein Orientation in Lipid Bilayers
+Membrane Protein Orientation in Lipid Bilayers. The paper assocciated with this code can be found here \[link to be added soon\].
 
 ## Installation
 To install MemPrO run the following (Not yet on PyPi, this will work once the code has been published):
