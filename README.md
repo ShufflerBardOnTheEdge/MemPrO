@@ -41,7 +41,7 @@ MemPrO is intended to be run on PDB files, and will output the following files:
 
     * info_rank_{n}.txt : This contains some information about the orientation.
 
-    * CG_System_rank_{n} : This folder contains a CG-system built using insane and the rank N config. It also contains a topology file. This is ouputted when using flags -bg and -bg_args, see the section of flags for syntax.
+    * CG_System_rank_{n} : This folder contains a CG-system built using Insane4MemPrO and the rank N config. It also contains a topology file. This is ouputted when using flags -bg and -bg_args, see the section of flags for syntax.
 	
     * PG_potential_curve.png : This is the potential curve for the position of the PG cell wall. This is only outputted when you use flag -pg.
    
