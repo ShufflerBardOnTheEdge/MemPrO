@@ -121,7 +121,7 @@ The below will orient input_file.pdb on a grid of 40 starting configurations wit
 A more detailed set of tutorials is avialable [here](MemPrO_tutorials.md)
 
 ## Insane4MemPrO
-MemPrO comes with Insane4MemPrO a CG system builder based on Insane. Insane4MemPrO allows the user to build more complex systems with upto 2 membranes, curvature, multiple proteins and more. When used with MemPrO directly via the -bd flag the system will be automatically built.
+MemPrO comes with Insane4MemPrO a CG system builder based on Insane. A link to the original Insane code can be found [here](https://github.com/Tsjerk/Insane). Insane4MemPrO allows the user to build more complex systems with upto 2 membranes, curvature, multiple proteins and more. When used with MemPrO directly via the -bd flag the system will be automatically built.
 
 
 ### Flags:
