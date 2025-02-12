@@ -58,7 +58,7 @@ MemPro will takes the following flags as input:
 
 -ng, --grid_size : This is the number of initial starting configurations from which to minimise. It defaults to 20. For maximum efficiency this should be a multiple of the number of CPUs being used. Having a greater number of starting configurations will sample the space of minima better, however there is diminishing returns and generally no more than 40 will be needed.
 
--rank, --rank : This can be either "h", "p" or "auto". "h" ranks the minima by % hits, "p" ranks by potential and "auto" ranks by a value depending on approximate minima depth and potential.
+-rank, --rank : This can be either "h", "p" or "auto". "h" ranks the minima by % hits, "p" ranks by potential and "auto" ranks by a value depending on approximate minima depth and potential. It is highly reccomended to use "auto" unless you are having trouble orienting a protein. When using "h" or "p" the potential curves are not calculated and so not outputted.
 
 -dm, --dual_membrane : This toggles dual membrane minimisations. This allows the code to split the membrane into a inner and outer membrane and minimise the distance between them. Only use this is you know your protein will span the periplasm or is a gap junction etc.
 
@@ -236,6 +236,16 @@ Ensure all the membrane relevant values are the same. The template file (-in_t t
 The flag -p will create a rudimentary .top file. The Protein related entries will need to be changed but the other values are correct.
 
 More detailed tutorials are available [here](Insane4MemPrO_tutorials.md)
+
+## My protein didn't orient correctly
+If your protein hasn't oriented correctly then there are a number of things you can try:
+* Check all orientations, by loading "orientations.pdb" and looking at "orientations.txt". The correct orientation may not have been rank 1.
+* Check "curv_potential_curve.png" to see if your protein prefers a curved membrane. If so using the flag "-c" will help.
+* Check the pdb file is correct, missing atoms or residues can cause the surface to be incorrectly evaluated. Missing atoms should be fixed before orientation.
+* Using the flag "-wb" can sometimes be helpful in determining if atoms are missing. "-wb" will add the potential contribution of each resisdue as a b-factor which can be viewed in PyMOL.
+* If your protein is a peripheral membrane protein using the flag "-pr" will help greatly. In some cases "-pr" will help integral membrane proteins as well.
+* MemPrO runs with a membrane charge of 0 by default. Some proteins which accosiate with the membrane through charge interactions will not orient correctly with 0 charge, for these using the flag "-ch" ("-ch_o" for outer membrane) will set the charge. Values around "-0.005" are a good starting point.
+
 
 ## FAQ
 There are currently no frequently asked questions. If you do have any questions or encounter errors that you cannot fix please contact me via my email m.parrag@warwick.ac.uk and I will do my best to provide help.
