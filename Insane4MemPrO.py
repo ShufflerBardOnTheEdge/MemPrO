@@ -7,17 +7,17 @@ import scipy as sp
 import jax
 import jax.numpy as jnp
 
-version   = "---"
-previous  = "20140603.11.TAW"
+#This is a heavily modified version of Insane, called Insane4MemPrO, written to work with the orientation software MemPrO. 
+#Modifications were made by Matyas Parrag.
+
 
 # Modify insane to take in arbitary lipid definition strings and use them as a template for lipids
 # Also take in lipid name 
 # Edits: by Helgi I. Ingolfsson (all edits are marked with: # HII edit - lipid definition )
 
-#Modified by Matyas Parrag to build double membrane systems with additional flags -ps,-lo,-uo
-#Also updated to run with python 3
-#Heavy modification to include building of curved membranes, pores and micelles
-#Continued heavy modification to add PG layer
+
+
+
 
 # PROTOLIPID (diacylglycerol), 18 beads
 #
@@ -31,35 +31,16 @@ lipidsy = {}
 lipidsz = {}
 lipidsa = {}
 
-#For building of PG layers in CG, This is a test and currently uses M2 beads
-moltype = "type_PEP"
-lipidsy[moltype] = (-0.03, 0.39, -0.03, -0.03, -0.03, -0.61, -0.93, -0.03, 0.40, -0.03, -0.45, -0.04, -0.41, -0.04, -0.03, -0.03, -0.03, -0.03, -0.66, -0.79)
-lipidsz[moltype] = (0.02, 0.15, 0.02, 0.03, 0.04, -0.12, 0.12, 0.05, 0.12, 0.06, -0.12, 0.10, -0.13, 0.10, 0.09, 0.08, 0.07, 0.06, -0.11, -0.14)
-lipidsx[moltype] = (4.41, 4.41, 3.64, 2.93, 2.23, 2.17, 2.65, 1.44, 1.32, 0.57, 0.69, -3.69, -3.71, -2.91, -2.21, -1.50, -0.77, -0.02, -1.60, -2.02)
-lipidsa.update({ "PEP":(moltype, "B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20")})
-lipidsa.update({ "SPEP":(moltype, "B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 - - - - - - - - -")})
-lipidsa.update({ "UPEP":(moltype, "B1 B2 B3 B4 B5 B6 B7 B8 B9 - - - - - - - - - - -")})
-lipidsa.update({ "UUPEP":(moltype, "B1 B2 B3 B4 B5 B6 B7 - - - - - - - - - - - - -")})
 
 
+#Detergent
 
-moltype = "type_NAM"
-lipidsx[moltype] = (-0.00, 0.60, -0.58, 0.01, -0.52)
-lipidsz[moltype] = (0.03, -0.00, 0.04, 0.03, 0.05)
-lipidsy[moltype] = (4.70, 4.44, 4.74, 4.07, 3.81)
-lipidsa.update({ "NAM":(moltype, "B1 B2 B3 B4 B5")})
+moltype = "type_DDM"
+lipidsx[moltype] = (0.27, -0.18, 0.43, 0.17, -0.48, -0.03, 0.42, -0.03, 0.09, 0.03, 0.01)
+lipidsy[moltype] = (-0.32, -0.53, -0.29, -0.34, -0.04, 0.29, 0.46, 0.21, 0.21, 0.06, 0.02)
+lipidsz[moltype] = (3.58, 3.07, 2.68, 3.10, 3.68, 3.05, 3.78, 3.50, 2.04, 1.06, 0.06)
+lipidsa.update({ "DDM":(moltype, "A1 B1 C1 VS1 A2 B2 C2 VS2 L1 L2 L3")})
 
-
-moltype = "type_NAG"
-lipidsx[moltype] = (0.06, 0.65, -0.51, 0.02)
-lipidsz[moltype] = (0.00, -0.02, 0.00, 0.00)
-lipidsy[moltype] = (3.04, 2.74, 3.22, 2.42)
-lipidsa.update({ "NAG":(moltype, "B1 B2 B3 B4")})
-
-
-
-
-#
 ## Diacyl glycerols
 moltype = "lipid"
 lipidsx[moltype] = (    0, .5,  0,  0, .5,  0,  0, .5,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1)
@@ -152,50 +133,6 @@ lipidsa.update({      # 1     2    3    4    5   6   7   8    9    10    11    1
 ## Templates using the old lipid names and definitions
   "PI.o"  : (moltype, " C1   C2   C3    CP   -   -   -  GL1  GL2  C1A  C2A  C3A  C4A   -    -   CU1  CU2  CU3  CU4  CU5   - "),
   "PI34.o": (moltype, " C1   C2   C3    CP PO1 PO2   -  GL1  GL2  C1A  C2A  C3A  C4A   -    -   CU1  CU2  CU3  CU4  CU5   - "),
-})
-
-#        5  33   36-37 38-39  43
-#       /|  | \  | /   | /    | \
-#      6-4-32-34-35----40----41-42
-#      |
-#     -|----27-28-29-30-31
-#    / |
-#    7-8
-#    |/   
-#    9-10-11-12-13-14-15 
-#    |     \
-#    |      16-17-18-19-20-21
-#    | 
-#    3-1-22-23-24-25-26
-#     \|
-#      2
-# CHELSEA EDIT
-moltype = "PIMs"
-lipidsx[moltype] = (   0.5, 0.5,    0,  1,   1,   0,  1,  0,   0,   0,   0,    0,   0,     0,   0,    1,    1,    1,    1,   1,   1,  0,    0,   0,    0,    0,    2,    2,    2,    2,    2,   1,   1,    1,   1,    1,   1,   1,    1,    1,    1,    1,  1,    1, 0.5, 0.5)
-lipidsy[moltype] = (    1,   2,    1,  2,   0,   1,  0,  1, 0.5,   0,   0,    0,   0,     0,   0,    0,    0,    0,    0,   0,   0,  1,    1,   1,    1,    1,    0,    0,    0,    0,    0, 2.5, 2.5,    2,   2,  2.5, 2.5, 2.5,    2,  2.5,  2.5,  2.5,  3, 1.5,   1, 0.5)
-lipidsz[moltype] = (    6,   6,    7,8.5, 9.5,   9, 7.5, 8, 6.75,  6,   5,    4,   3,     2,   1,    5,    4,    3,    2,   1,   0,  5,    4,   3,    2,    1,    6,    5,    4,    3,    2,   7,   7,    8,   9,    9,  10,  11,   11,   10,   11,   12, 11, 6.5,   9, 7.25)
-lipidsa.update({      # 1     2    3    4    5   6   7   8    9    10   11    12   13    14    15    16    17    18   19   20    21  22    23   24    25    26    27    28    29    30    31   32   33    34   35    36   37   38   39    40    41    42   43   44   45  46 
-    "APM2": (moltype, " B1   B2   B3   B4   B5  B6  B7  B8   B9   B10  B11   B12  B13   B14   B15   B16   B17   B18  B19  B20   B21 B22   B23  B24   B25   B26    -     -     -     -     -    -    -     -    -     -    -    -     -     -     -    -    -   B27  B28  B29"),
-    "A2P2": (moltype, " B1   B2   B3   B4   B5  B6  B7  B8   B9   B10  B11   B12  B13   B14   B15   B16   B17   B18  B19  B20   B21 B22   B23  B24   B25   B26   B27   B28   B29   B30   B31   -    -     -    -     -    -    -     -     -     -    -    -   B32  B33  B34"),
-    "APM6": (moltype, " B1   B2   B3   B4   B5  B6  B7  B8   B9   B10  B11   B12  B13   B14   B15   B16   B17   B18  B19  B20   B21 B22   B23  B24   B25   B26    -     -     -     -     -   B27  B28   B29  B30   B31  B32  B33   B34   B35   B36  B37  B38  B39  B40  B41"),
-})
-
-# TMM (trehalose monomycolate) and acylated TMM
-#           30
-#           |
-# 1-3-4-6-7-8-9-10-11-12-13-14-15-16-17-18-19-20-21-22-23
-#  \| |/  |
-#   2 5   24-25-26-27-28-29
-# CB EDIT
-#
-## TMM
-moltype = "TMMs"
-lipidsx[moltype] = (    1,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, .5,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0)
-lipidsy[moltype] = (   .5,  0,  0,  0, .5,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  1)
-lipidsz[moltype] = (    9, 10,  9,  8,  7,  7,  6,  6,  5,  4,  3,  2,1.5,  2,  3,  4,  5,  6,  5,  4,  3,  2,  1,  6,  5,  4,  3,  2,  1,  6)
-lipidsa.update({      # 1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30
-     "TMM": (moltype,  "GC1 GC2 GC3 GC4 GC5 GC6 COO COH C1A C2A C3A C4A C5A C6A C7A C8A C9A C10A C11A C12A C13A C14A C15A C1B C2B C3B C4B C5B C6B  - "),
-    "TMMA": (moltype,  "GC1 GC2 GC3 GC4 GC5 GC6 COO COH C1A C2A C3A C4A C5A C6A C7A C8A C9A C10A C11A C12A C13A C14A C15A C1B C2B C3B C4B C5B C6B OOH"),
 })
 
 
@@ -292,32 +229,6 @@ lipidsa.update({      #  1    2   3   4   5   6   7   8   9  10  11  12  13  14 
   "CL4O.o": (moltype, "GL5 PO41 GL1 GL2 C1A C2A D3A C4A C5A   - C1B C2B D3B C4B C5B   - PO42 GL3 GL4 C1C C2C D3C C4C C5C   - C1D C2D D3D C4D C5D   -"),
 })
 
-# Prototopology for LPS
-#            
-#           
-#              7--25-26-27-28
-#              | \
-#   41         8-5  29-30-31-32
-#   |          |      
-#   40-42      6  10-11-12-13 
-#   | /        |   | 
-#   38-39  33  3---9-14-15-16
-#    |     /   | \  
-#   36-35-34-4-2  17-22-23-24
-#       |      |   |
-#      37      1  18-19-20-21
-#
-#moltype = "LPS"
-#lipidsx[moltype] = (     0,   0,  1,  0,  2,  1,  2,  2,  1,  1,  1,  1,  1,  1,  1,  1,   0,  0,  0,  0,  0,  0,  0,  0,  2,  2,  2,  2,  2,  2,  2,  2,  1,  0,  0,  0,  0,  1,  1,  1,  2,  1,  0,  0,  0, 0,  0,   0,  1,  0,  0,  1,  2,  2,  2,  2,  0,  1,  0,  0,  1,  1,  1,  1,  2,  1,  1,  1,  0,  0,  0,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2 )
-#lipidsy[moltype] = (     0,   1,  0,  1,  1,  1,  0,  1,  0,  1,  1,  1,  1,  0,  0,  0,   0,  1,  1,  1,  1,  0,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0,  0,  1,  1,  1,  0,  0,  0,  1,  1,  1,  1,  0,  1, 0,  1,   1,  0,  1,  0,  1,  1,  0,  0,  0,  1,  0,  1,  1,  0,  0,  1,  1,  1,  0,  0,  1,  1,  1,  0,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1 )
-#lipidsz[moltype] = (     5,   5,  5,  6,  5,  5,  5,  6,  4,  4,  3,  2,  1,  3,  2,  1,   4,  4,  3,  2,  1,  3,  2,  1,  4,  3,  2,  1,  4,  3,  2,  1,  6,  7,  8,  9,  8,  9,  8,  9,  9,  8, 10, 11, 11, 12, 11, 12, 12, 13, 13, 13, 13, 13, 12, 14, 14, 14, 15, 16, 16, 15, 15, 16, 16, 17, 18, 17, 17, 18, 17, 21, 21, 21, 20, 20, 20, 20, 20, 20, 19, 19, 19, 19, 19, 19, 21, 21, 21, 22, 22, 22, 22, 22, 22, 23, 23, 23, 23, 23, 23, 24, 24, 24, 24, 24, 24, 25, 25, 25, 25, 25, 25, 26, 26, 26, 26, 26, 26, 27, 27, 27, 27, 27, 27, 28, 28, 28, 29, 29, 29 )
-#lipidsa.update({      #  1    2   3   4   5   6   7   8   9  10  11  12  13  14  15  16   17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47  48  49  50  51  52  53  54  55  56  57  58  59  60  61  62  63  64  65  66  67  68  69  70  71  72  73  74  75  76  77  78  79  80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98  99  100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127 128 129 120 121
-#    "LIPA": (moltype, " PO1  GM1 GM2 GM3 GM4 GM5 GM6 PO2 GL1 GL2 C1A C2A C3A C1B C2B C3B  GL3 GL4 C1C C2C C3C C1D C2D C3D GL5 GL6 C1E C2E GL7 GL8 C1F C2F  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   - "), 
-#    "REMP": (moltype, " PO1  GM1 GM2 GM3 GM4 GM5 GM6 PO2 GL1 GL2 C1A C2A C3A C1B C2B C3B  GL3 GL4 C1C C2C C3C C1D C2D C3D GL5 GL6 C1E C2E GL7 GL8 C1F C2F SO1 SO2 SO3 SO4 SO5 SO6 SO7 SO8 SO9 S10  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   - "), 
-#    "RAMP": (moltype, " PO1  GM1 GM2 GM3 GM4 GM5 GM6 PO2 GL1 GL2 C1A C2A C3A C1B C2B C3B  GL3 GL4 C1C C2C C3C C1D C2D C3D GL5 GL6 C1E C2E GL7 GL8 C1F C2F SO1 SO2 SO3 SO4 SO5 SO6 SO7 SO8 SO9 S10 S11 S12 S13 S14 S15 S16 S17 S18 S19 S20 S21 S22 S23 S24 S25 S26 S27 S28 S29 S30 S31 S32 S33 S34 S35 S36 S37 S38 S39  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   - "), 
-#    "OANT": (moltype, " PO1  GM1 GM2 GM3 GM4 GM5 GM6 PO2 GL1 GL2 C1A C2A C3A C1B C2B C3B  GL3 GL4 C1C C2C C3C C1D C2D C3D GL5 GL6 C1E C2E GL7 GL8 C1F C2F SO1 SO2 SO3 SO4 SO5 SO6 SO7 SO8 SO9 S10 S11 S12 S13 S14 S15 S16 S17 S18 S19 S20 S21 S22 S23 S24 S25 S26 S27 S28 S29 S30 S31 S32 S33 S34 S35 S36 S37 S38 S39 O40 O41 O42 O43 O44 O45 O46 O47 O48 O49 O50 O51 O52 O53 O54 O55 O56 O57 O58 O59 O60 O61 O62 O63 O64 O65 O66 O67 O68 O69 O70 O71 O72 O73 O74 O75 O76 O77 O78 O79 O80 O81 O82 O83 O84 O85 O86 O87 O88 O89 O90 O91 O92 O93 O94 O95 O96 O97 O98 O99"), 
-#})
-
 
 moltype = "LPS"
 lipidsx[moltype] = (-7.97, -8.52, -7.94, -8.14, -8.52, -7.87, -8.75, -8.77, -8.61, -8.58, -8.58, -7.69, -7.53, -7.47, -7.58, -7.45, -7.46, -7.37, -7.42, -6.88, -7.56, -7.11, -7.53, -7.26, -7.32, -7.42, -7.54, -8.07, -8.19, -8.44, -7.19, -6.72, -6.82, -6.81, -7.53, -7.74, -7.88, -7.67, -7.41, -7.86, -7.65, -7.51, -7.25, -7.68, -7.39, -7.84, -7.63, -7.18, -7.29)
@@ -386,26 +297,6 @@ lipidsa.update({
     "HBHT": (moltype, " -   -   -   R1   R2   R3   R4   R5   R6   R7   R8   C1   C2   C3   -   -   -   - "),
 })
 
-# UDP (Robin)
-moltype = "Isoprenyls"
-lipidsx[moltype] = (    1,  1,  0,  0,  0,  1,  0,  1,  2,  1,  2,  2,  2,   1,  1,  2,  2,  0,0.5,  0,  0,  0,  0,  0, 0.5,  1,  1,  1,  1,  1)
-lipidsy[moltype] = (    1,  0,  1,  0,  0,  0,  1,  1,  1,  2,  2,  2,  1,   2,  2,  1,  2,  0,  0,  0,  0,  0,  0,  0,   0,  0,  0,  0,  0,  0)
-lipidsz[moltype] = (   10, 10, 10, 10,  9,  9,  9,  9,  9,  9,  9, 10, 10,  10, 11, 11, 11,  8,  7,  6,  5,  4,  3,  2,   1,  2,  3,  4,  5,  6)
-lipidsa.update({
-    "UDP1": (moltype," -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -  PO2 CP1 CP2 CP3 CP4 CP5 CP6 CP7 CP8 CP9 CP10 CP11"),
-    "UDP2": (moltype," -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -  PO1 PO2 CP1 CP2 CP3 CP4 CP5 CP6 CP7 CP8 CP9 CP10 CP11"),
-#    "LIP2": (moltype,"GB1 GB2 GB3 GB4 MB1 MB2 MB3 MB4 MB5 B1P B2P B3P B4P B5P B6P B7P B8P PO1 PO2 CP1 CP2 CP3 CP4 CP5 CP6 CP7 CP8 CP9 CP10 CP11"),
-#    "LIP1": (moltype,"-   -   -   -   MB1 MB2 MB3 MB4 MB5 B1P B2P B3P B4P B5P B6P B7P B8P PO1 PO2 CP1 CP2 CP3 CP4 CP5 CP6 CP7 CP8 CP9 CP10 CP11"),
-})
-
-# UDP (Robin) and lipids I-XII (Chelsea)
-moltype = "Isoprenyls-m3"
-lipidsx[moltype] = (    1,  1,  0,  0,  0,  1,  0,  1,  2,  1,1.5,  2,  2,  2,  1,  1,  2,2.5,  2,2.5,  0,0.5,  0,  0,  0,  0,  0,0.5,  1,  1,  1,  1,  1)
-lipidsy[moltype] = (    1,  0,  1,  0,  0,  0,  1,  1,  1,  2,1.5,  2,  2,  1,  2,  2,  1,1.5,  2,2.5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0)
-lipidsz[moltype] = (   10, 10, 10, 10,  9,  9,  9,  9,  9,  9,  9,  9, 10, 10, 10, 11, 11, 11, 11, 11,  8,  7,  6,  5,  4,  3,  2,  1,  2,  3,  4,  5,  6)
-lipidsa.update({      
-    "LIP2": (moltype,"  B1  B2  B3  B4  B5  B6  B7  B8  B9 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20 PO1 PO2 CP1 CP2 CP3 CP4 CP5 CP6 CP7 CP8 CP9 CP10 CP11"),
-})
 
 #Higher lipids in a different order
 moltype = "Isoprenyls-m3-further"
@@ -426,17 +317,6 @@ lipidsa.update({    # 1    2   3   4   5   6   7   8   9   10  11  12  13   14  
     "LI22": (moltype,"PO1 PO2 CP1 CP2 CP3 CP4 CP5 CP6 CP7 CP8 CP9 CP10 CP11 B1  B2  B3  B4  B5  B6  B7  B8  B9 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20 B21 B22 B23 B24 B25 B26 B27 B28 B29 B30 B31 B32 B33 B34 B35 B36 B37 B38 B39 B40 B41 B42 B43 B44 B45 B46 B47 B48 B49 B50 B51 B52 B53 B54 B55 B56 B57 B58 B59 B60 B61 B62 B63 B64 B65 B66 B67 B68 B69 B70 B71 B72 B73 B74 B75 B76 B77 B78 B79 B80 B81 B82 B83 B84 B85 B86 B87 B88 B89 B90 B91 B92 B93 B94 B95 B96 B97 B98 B99 B00 B01 B02 B03 B04 B05 B06 B07 B08 B09 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20 B21 B22 B23 B24 B25 B26 B27 B28 B29 B30 B31 B32 B33 B34 B35 B36 B37 B38 B39 B40 B41 B42 B43 B44 B45 B46 B47 B48 B49 B50 B51 B52 B53 B54 B55 B56 B57 B58 B59 B60 B61 B62 B63 B64 B65 B66 B67 B68 B69 B70 B71 B72 B73 B74 B75 B76 B77 B78 B79 B80 B81 B82 B83 B84 B85 B86 B87 B88 B89 B90 B91 B92 B93 B94 B95 B96 B97 B98 B99 B00 B01 B02 B03 B04 B05 B06 B07 B08 B09 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20"),
 })
 
-# Bacitracin - UDP2 complex (Martin)
-# Build needs improvement, run steep em prior to cgem after insane
-moltype = "Antibiotics"
-lipidsx[moltype] = (  0,0.5,-1,-0.5,-1.5,-1,-1.5,-1,-1,-1.5,-1,-1.5,-1.5,-0.5,0,0,0,0,0.5,1,0.5,1,0.5,1.5,2,1.5, 0,-0.5,-0.5, 0, 0, 0.5, 0,  0,  0,  0,  0, 0.5,  1,  1,  1,  1,  1,   0,  0)
-lipidsy[moltype] = (  2,1.5, 2,2.5, 1,0.5, 0, 1, -1,-1, -2,-1.5,-1,-2.5,-3,-3.5,-1.6,-2,-1,-0.5,0,-1,-1,0,-0.5,0.5,-1,-1.5, 0, 1, 0,  0,  0,  0,  0,  0,  0,   0,  0,  0,  0,  0,  0,    1,-1)
-lipidsz[moltype] = (  7.5,6.5,7, 7, 7, 6, 7.5,8.5,7.5,6.5,8, 9,10,7.5,8.5,8.5,7.5,6.5,8,7.5, 7,6.5,9.5,9.5, 9,8.5,10.5,10,10,10, 8,  7,  6,  5,  4,  3,  2,  1,  2,  3,  4,   5,   6,   8, 8)
-lipidsa.update({#     ILE    CYS    LEU    GLU    ILE    LYS        ORN        ILE    PHE            HIS            ASP    ASN 
-    "BACU": (moltype,"BB SC1 BB SC1 BB SC1 BB SC1 BB SC1 BB SC1 SC2 BB SC1 SC2 BB SC1 BB SC1 SC2 SC3 BB SC1 SC2 SC3 BB SC1 BB SC1 PO1 PO2 CP1 CP2 CP3 CP4 CP5 CP6 CP7 CP8 CP9 CP10 CP11 ZN NA"),
-    "BACZ": (moltype,"BB SC1 BB SC1 BB SC1 BB SC1 BB SC1 BB SC1 SC2 BB SC1 SC2 BB SC1 BB SC1 SC2 SC3 BB SC1 SC2 SC3 BB SC1 BB SC1  -   -   -   -   -   -   -   -   -   -   -    -    -   - NA"),
-     "BAC": (moltype,"BB SC1 BB SC1 BB SC1 BB SC1 BB SC1 BB SC1 SC2 BB SC1 SC2 BB SC1 BB SC1 SC2 SC3 BB SC1 SC2 SC3 BB SC1 BB SC1"),
-})
 
 # Lists for automatic charge determination
 charges = {"HPPA":-1,"4HPA":-1,"UDP2":-2,"UDP1":-1, "GLYP":-1, "GLYM":-1, "ARG":1, "LYS":1, "ASP":-1, "GLU":-1, "DOPG":-1, "POPG":-1, "DOPS":-1, "POPS":-1, "DSSQ":-1, "KPG":+1, "LIPA":-2, "PGIN":-1, "REMP":-6, "RAMP":-10, "OANT":-10, "CARD":-2, "A2P2":-1, "APM2":-1, "APM6":-1, "LIP2":-4, "LIP4":-6, "LIP6":-8, "LIP8":-10, "LI10":-12, "LI12":-14, "LI14":-16, "LI16":-18, "LI18":-20, "LI20":-22, "LI22":-24,"UPEP":-1,"SPEP":-2,"UUPEP":-1,"KLA":-6}
@@ -939,8 +819,8 @@ def gaussian_grid(points,xstart,ystart,xend,yend,xnum,ynum):
 
 
 #This takes a grid of values and draws along a contour at value coff, points are places along this with a given spacing
-#This contour can be draw further a constant width out from coff. This is the main part of building a micelle
-#This works by taking a step defined by (df/dy,-df/dx )*ds which by definition os along the contour
+#This contour can be drawn further out by a constant width from coff. This is the main part of building a micelle
+#This works by taking a step defined by (df/dy,-df/dx )*ds which by definition is along the contour
 def draw_along(spacing,all_cens,grid,grid_vals,coff,rad_plus,z):
     max_iter = 100000
     tol = 0.1
@@ -991,9 +871,22 @@ def draw_along(spacing,all_cens,grid,grid_vals,coff,rad_plus,z):
     return path,normals
 
 
+#gets the average length of lipids for building an accurate micelle.
+def get_avlip_len(lipids):
+    liplens = 0
+    for lipid in lipids:
+        atoms    = list(zip(lipidsa[lipid][1].split(),lipidsx[lipidsa[lipid][0]],lipidsy[lipidsa[lipid][0]],lipidsz[lipidsa[lipid][0]]))
+        at,ax,ay,az = list(zip(*[i for i in atoms if i[0] != "-"]))
+        az       = [(0.5+(i-min(az)))*options["-bd"].value for i in az ]
+        
+        lipLen = max(az)-min(az)
+        liplens += lipLen
+    return liplens/len(lipids)
+
 #This uses all the above to build the micelle. Using contours with radius and height varing as a semi circle
 #Additionally the center is filled with a disc of lipids
-def build_micelle(area_l,all_cens,grid,grid_vals,coff,pbcx,pbcy):
+def build_micelle(area_l,all_cens,grid,grid_vals,coff,pbcx,pbcy,avlip_len):
+    dims = np.array([pbcx,pbcy,0])
     orad = 2.2    
     end_ang = np.pi
     den = np.pi/2*np.sqrt(1/area_l)
@@ -1001,14 +894,20 @@ def build_micelle(area_l,all_cens,grid,grid_vals,coff,pbcx,pbcy):
     rings = np.linspace(0,end_ang,frden)
     gpoints = np.zeros((0,3))
     normals = np.zeros((0,3))
-    sp = 0.5
+    #print(avlip_len)
+    sp = (0.5*(1.15-avlip_len)/(-0.65))+(0.15*(1.8-avlip_len)/0.65)
+    if sp < 0.15:
+        sp = 0.15
+    zpush = 2.0-avlip_len
     for xr,r in enumerate(rings):
         rad = np.sin(r)*orad
         rad_a = sp*(frden/2)-np.abs(sp*(frden/2)-sp*xr)
+        rad_z = zpush*np.cos(r)
+        znorm = np.array([0,0,1])
         z = np.cos(r)*orad
         r1,nms = draw_along(np.sqrt(area_l),all_cens,grid,grid_vals,coff,rad,z)
         nms_a = np.pad(nms,((0,0),(0,1)),"constant",constant_values=(0,0))
-        gpoints = np.concatenate((gpoints,np.array(r1+nms_a*rad_a)))
+        gpoints = np.concatenate((gpoints,np.array(r1+nms_a*rad_a+znorm*rad_z)))
         norms = nms*np.sin(r)
         norms = np.pad(norms,((0,0),(0,1)),"constant",constant_values=(np.cos(r),np.cos(r)))
         normals = np.concatenate((normals,norms))
@@ -1021,17 +920,21 @@ def build_micelle(area_l,all_cens,grid,grid_vals,coff,pbcx,pbcy):
     for i,d in enumerate(disk_grid):
         val = eval_gaussianj(jnp.array(d[:2]),jnp.array(all_cens),stand,1)
         if(val > coff+5):
-            disk_lips.append(d-np.array([0,0,2]))
+            disk_lips.append(d-np.array([0,0,2+zpush]))
             disk_dirs.append(-disc_direcs[i])
-            disk_lips.append(d+np.array([0,0,2]))
+            disk_lips.append(d+np.array([0,0,2+zpush]))
             disk_dirs.append(disc_direcs[i])
     disk_lips = np.array(disk_lips)
     disk_dirs = np.array(disk_dirs)
     gpoints = np.concatenate((gpoints,disk_lips))
     normals = np.concatenate((normals,disk_dirs))
+    
+    gpoints_max_rad = np.max(np.linalg.norm(disk_lips[:,:2]-dims[:2]/2,axis=1))
+    #print(disk_lips[:,:2]-dims[:2]/2)
+    #print(np.linalg.norm(disk_lips[:,:2]-dims[:2]/2,axis=1))
 
 
-    return gpoints,normals
+    return gpoints,normals,gpoints_max_rad+1.5
 
 #This is an implementation of the KL divergence
 def kl_d(a,b):
@@ -1078,238 +981,8 @@ def load_itp(fn):
             if(data_ind > -1):
                 data[data_ind].append(lines.split())
     return data
-            
-#flattens glycan strand data into 2d array
-def lines_to_coords(all_lines):
-    old_shape = all_lines.shape
-    all_lines = all_lines.reshape(int(all_lines.size/14),14)
-    #sind = np.argsort(all_lines[:,4])
-    return all_lines,old_shape
-            
-#Writes the itp file for PG          
-def write_PGL_itp(all_lines,nam_itp,nag_itp,spep_itp,upep_itp,uupep_itp,prev_str,prev_nos):  
-    nam_data = load_itp(nam_itp)
-    nag_data = load_itp(nag_itp)
-    upep_data = load_itp(upep_itp)
-    uupep_data = load_itp(uupep_itp)
-    spep_data = load_itp(spep_itp)
-    
-        
-    data = [nam_data,nag_data]
-    atoms_str = prev_str[0]#"[ atoms ]\n"
-    bonds_str = prev_str[1]#"[ bonds ]\n"
-    constraints_str = prev_str[2]#"[ constraints ]\n"
-    angles_str = prev_str[3]#"[ angles ]\n"
-    dihedrals_str = prev_str[4]#"[ dihedrals ]\n"
-    
-    resno = prev_nos[0]
-    atm_no = prev_nos[1]
-    #x y z dir type place linked
-    #0 1 2 3    4    5     6
-    ang_link1=[
-    [2,     1,     8,     2,      90.000,      130.00],
-    [3,     1,     8,     2,     118.000,      100.00],
-    [4,     1,     8,    10,     151.000,      170.00],
-    [1,     8,     6,    10,      70.000,      600.00],
-    [1,     8,     9,    10,      93.000,      180.00],
-    [1,     8,     5,    10,     160.000,      555.00]]
-    a_link_add1 = [[0,0,-1],[0,0,-1],[0,0,-1],[0,-1,-1],[0,-1,-1],[0,-1,-1]]
-    dihedral_link1=[
-    [2,     1,     8,     5,     9,       0.000,        3.50,     1],
-    [2,     1,     8,     5,     9,       0.000,        3.00,     2],
-    [2,     1,     8,     6,     9,       0.000,        3.50,     1],
-    [2,     1,     8,     6,     9,       0.000,        3.00,     2],
-    [3,     1,     8,     9,     9,       0.000,        8.00,     1],
-    [3,     1,     8,     9,     9,       0.000,        2.00,     2],
-    [4,     1,     8,     6,     9,       0.000,        7.00,     1],
-    [4,     1,     8,     6,     9,       0.000,        3.00,     2],
-    [4,     1,     8,     9,     9,     180.000,        2.00,     2],
-    [4,     1,     8,     9,     9,     180.000,        3.00,     3]]
-    ang_link2=[
-    [2,     1,    9,    10,     113.000,       90.00],
-    [3,     1,    9,    10,      99.000,      100.00],
-    [4,     1,    9,    10,     145.000,      250.00],
-    [1,    9,    7,    10,      76.000,      400.00],
-    [1,    9,    6,    10,     135.000,      970.00]]
-    
-    a_link_add2 = [[0,0,-1],[0,0,-1],[0,0,-1],[0,-1,-1],[0,-1,-1]]
-    
-    dihedral_link2=[
-    [4,     1,    9,    6,     9,       0.000,        8.00,     1],
-    [4,     1,    9,    6,     9,       0.000,        2.00,     2],
-    [4,     1,    9,    7,     9,       0.000,        7.00,     1],
-    [4,     1,    9,    7,     9,       0.000,        3.00,     2],
-    [2,     1,    9,    6,     9,     180.000,        6.00,     1],
-    [2,     1,    9,    6,     9,       0.000,        4.00,     2]]
-    
-    atm_start = []
-    for layer in all_lines:
-        atm_start_p1 = []
-        for line in layer:
-            atm_start_p2 = []
-            prev_p = 0
-            for res in line:
-                atm_start_p2.append(atm_no)
-                if(res[5] == 1):
-                    r4 = int(res[4])
-                    
-                    if(prev_p == 1):
-                        if(r4 == 0):
-                            bonds_str += "\t"+str(1+atm_no-4)+"\t"+str(8+atm_no-4)+"\t"+str(1)+"\t"+str(0.316)+"\t"+str(28500.00)+"\n"       
-                            for ang in ang_link1:
-                                angles_str += "\t"+str(ang[0]+atm_no-4)+"\t"+str(ang[1]+atm_no-4)+"\t"+str(ang[2]+atm_no-4)+"\t"+str(ang[3])+"\t"+str(ang[4])+"\t"+str(ang[5])+"\n"
-                            for dih in dihedral_link1:
-                                dihedrals_str += "\t"+str(dih[0]+atm_no-4)+"\t"+str(dih[1]+atm_no-4)+"\t"+str(dih[2]+atm_no-4)+"\t"+str(dih[3]+atm_no-4)+"\t"+str(dih[4])+"\t"+str(dih[5])+"\t"+str(dih[6])+"\t"+str(dih[7])+"\n"                
-                        else:
-                            bonds_str += "\t"+str(1+atm_no-5)+"\t"+str(9+atm_no-5)+"\t"+str(1)+"\t"+str(0.288)+"\t"+str(32000.00)+"\n"      
-                            for ang in ang_link2:
-                                angles_str += "\t"+str(ang[0]+atm_no-5)+"\t"+str(ang[1]+atm_no-5)+"\t"+str(ang[2]+atm_no-5)+"\t"+str(ang[3])+"\t"+str(ang[4])+"\t"+str(ang[5])+"\n"
-                            for dih in dihedral_link2:
-                                dihedrals_str += "\t"+str(dih[0]+atm_no-5)+"\t"+str(dih[1]+atm_no-5)+"\t"+str(dih[2]+atm_no-5)+"\t"+str(dih[3]+atm_no-5)+"\t"+str(dih[4])+"\t"+str(dih[5])+"\t"+str(dih[6])+"\t"+str(dih[7])+"\n"                
-                            
-                        
-                    for bd in data[r4][1]:
-                        bonds_str += "\t"+str(int(bd[0])+atm_no)+"\t"+str(int(bd[1])+atm_no)+"\t"+bd[2]+"\t"+bd[3]+"\t"+bd[4]+"\n"                
 
-                        
-                    for cd in data[r4][2]:
-                        constraints_str += "\t"+str(int(cd[0])+atm_no)+"\t"+str(int(cd[1])+atm_no)+"\t"+cd[2]+"\t"+cd[3]+"\t"+cd[4]+"\n"                
-                    for ad in data[r4][3]:
-                        angles_str += "\t"+str(int(ad[0])+atm_no)+"\t"+str(int(ad[1])+atm_no)+"\t"+str(int(ad[2])+atm_no)+"\t"+ad[3]+"\t"+ad[4]+"\t"+ad[5]+"\n"
-                    for dd in data[r4][4]:
-                        dihedrals_str += "\t"+str(int(dd[0])+atm_no)+"\t"+str(int(dd[1])+atm_no)+"\t"+str(int(dd[2])+atm_no)+"\t"+str(int(dd[3])+atm_no)+"\t"+dd[4]+"\t"+dd[5]+"\t"+dd[6]+"\t"+dd[7]+"\n"
-                    
-                    for ad in data[r4][0]:
-                        atoms_str += "\t"+str(atm_no+1)+"\t"+ad[1]+"\t"+str(resno)+"\t"+ad[3]+"\t"+ad[4]+"\t"+str(atm_no+1)+"\t"+ad[6]+"\t"+ad[7]+"\n"
-                        atm_no += 1
-                    
-                        
-                    
-                    resno += 1
-                prev_p = res[5]
-            
-            if(line[0][5] == 1 and line[-1][5] == 1):
-                if(int(line[0][4]) == 0):
-                    bonds_str += "\t"+str(1+atm_start_p2[0])+"\t"+str(8+atm_start_p2[-1]-4)+"\t"+str(1)+"\t"+str(0.316)+"\t"+str(28500.00)+"\n"       
-                    for nn,ang in enumerate(ang_link1):
-                        angles_str += "\t"+str(ang[0]+atm_start_p2[a_link_add1[nn][0]]+4*a_link_add1[nn][0])+"\t"+str(ang[1]+atm_start_p2[a_link_add1[nn][1]]+4*a_link_add1[nn][1])+"\t"+str(ang[2]+atm_start_p2[a_link_add1[nn][2]]+4*a_link_add1[nn][2])+"\t"+str(ang[3])+"\t"+str(ang[4])+"\t"+str(ang[5])+"\n"
-                    for dih in dihedral_link1:
-                        dihedrals_str += "\t"+str(dih[0]+atm_start_p2[0])+"\t"+str(dih[1]+atm_start_p2[0])+"\t"+str(dih[2]+atm_start_p2[-1]-4)+"\t"+str(dih[3]+atm_start_p2[-1]-4)+"\t"+str(dih[4])+"\t"+str(dih[5])+"\t"+str(dih[6])+"\t"+str(dih[7])+"\n"                
-                else:
-                    bonds_str += "\t"+str(1+atm_start_p2[0])+"\t"+str(9+atm_start_p2[-1]-5)+"\t"+str(1)+"\t"+str(0.288)+"\t"+str(32000.00)+"\n"      
-                    for nn,ang in enumerate(ang_link2):
-                        angles_str += "\t"+str(ang[0]+atm_start_p2[a_link_add2[nn][0]]+5*a_link_add1[nn][0])+"\t"+str(ang[1]+atm_start_p2[a_link_add2[nn][1]]+5*a_link_add1[nn][1])+"\t"+str(ang[2]+atm_start_p2[a_link_add2[nn][2]]+5*a_link_add1[nn][2])+"\t"+str(ang[3])+"\t"+str(ang[4])+"\t"+str(ang[5])+"\n"
-                    for dih in dihedral_link2:
-                        dihedrals_str += "\t"+str(dih[0]+atm_start_p2[0])+"\t"+str(dih[1]+atm_start_p2[0])+"\t"+str(dih[2]+atm_start_p2[-1]-5)+"\t"+str(dih[3]+atm_start_p2[-1]-5)+"\t"+str(dih[4])+"\t"+str(dih[5])+"\t"+str(dih[6])+"\t"+str(dih[7])+"\n"                
-                
-                 
-            atm_start_p1.append(atm_start_p2)
-        atm_start.append(atm_start_p1)
-            
-      
-    blink3 = [[5,    1,     1,       0.319,    14800.00]]   
-    
-    ang_link3 =[[ 4,     5,   1,    10,     104.000,       80.00],
-    [5,    1,   3,    10,     107.000,       60.00],
-    [5,    1,    2,     2,     100.000,       25.00]]
-    
-    dih_link3 = [[4,     5,    1,    3,     9,      60.000,        3.00,     2],
-    [5,    1,    3,    4,     9,     140.000,        3.00,     2]]
-
-    iplink = [8, 7, 1, 0.350, 1100.00]
-    ang_iplink = [[5,8,7,10,114,75],[8,7,6,10,95,75]]
-    
-    cl_atm_start = []
-    
-    for lyind,layer in enumerate(all_lines):
-        cl_atm_start_p1 = []
-        for lind,line in enumerate(layer):
-            cl_atm_start_p2 = []
-            for bind,res in enumerate(line):
-                cl_atm_start_p2.append(atm_no)
-                if(res[5] == 1):
-                    r4 = int(res[4])
-                    if(r4 == 0):
-                        if(res[13] == 1):
-                            data = uupep_data
-                        else:
-                            if(res[6] != -1 or res[13] == 2):
-                                data = upep_data
-                            else:
-                                data = spep_data
-                        
-                        b1_s = atm_start[lyind][lind][bind]
-                        for bd in blink3:
-                            bonds_str += "\t"+str(bd[0]+b1_s)+"\t"+str(bd[1]+atm_no)+"\t"+str(bd[2])+"\t"+str(bd[3])+"\t"+str(bd[4])+"\n"
-                        
-                        angles_str += "\t"+str(ang_link3[0][0]+b1_s)+"\t"+str(ang_link3[0][1]+b1_s)+"\t"+str(ang_link3[0][2]+atm_no)+"\t"+str(ang_link3[0][3])+"\t"+str(ang_link3[0][4])+"\t"+str(ang_link3[0][5])+"\n"
-                        angles_str += "\t"+str(ang_link3[1][0]+b1_s)+"\t"+str(ang_link3[1][1]+atm_no)+"\t"+str(ang_link3[1][2]+atm_no)+"\t"+str(ang_link3[1][3])+"\t"+str(ang_link3[1][4])+"\t"+str(ang_link3[1][5])+"\n"
-                        angles_str += "\t"+str(ang_link3[2][0]+b1_s)+"\t"+str(ang_link3[2][1]+atm_no)+"\t"+str(ang_link3[2][2]+atm_no)+"\t"+str(ang_link3[2][3])+"\t"+str(ang_link3[2][4])+"\t"+str(ang_link3[2][5])+"\n"
-                                        
-                        dihedrals_str += "\t"+str(dih_link3[0][0]+b1_s)+"\t"+str(dih_link3[0][1]+b1_s)+"\t"+str(dih_link3[0][2]+atm_no)+"\t"+str(dih_link3[0][3]+atm_no)+"\t"+str(dih_link3[0][4])+"\t"+str(dih_link3[0][5])+"\t"+str(dih_link3[0][6])+"\t"+str(dih_link3[0][7])+"\n"                
-                        dihedrals_str += "\t"+str(dih_link3[0][0]+b1_s)+"\t"+str(dih_link3[0][1]+atm_no)+"\t"+str(dih_link3[0][2]+atm_no)+"\t"+str(dih_link3[0][3]+atm_no)+"\t"+str(dih_link3[0][4])+"\t"+str(dih_link3[0][5])+"\t"+str(dih_link3[0][6])+"\t"+str(dih_link3[0][7])+"\n"                
-                        
-                        for bd in data[1]:
-                            bonds_str += "\t"+str(int(bd[0])+atm_no)+"\t"+str(int(bd[1])+atm_no)+"\t"+bd[2]+"\t"+bd[3]+"\t"+bd[4]+"\n"                
-                        for cd in data[2]:
-                            constraints_str += "\t"+str(int(cd[0])+atm_no)+"\t"+str(int(cd[1])+atm_no)+"\t"+cd[2]+"\t"+cd[3]+"\t"+cd[4]+"\n"                
-                        for ad in data[3]:
-                            angles_str += "\t"+str(int(ad[0])+atm_no)+"\t"+str(int(ad[1])+atm_no)+"\t"+str(int(ad[2])+atm_no)+"\t"+ad[3]+"\t"+ad[4]+"\t"+ad[5]+"\n"
-                        for dd in data[4]:
-                            dihedrals_str += "\t"+str(int(dd[0])+atm_no)+"\t"+str(int(dd[1])+atm_no)+"\t"+str(int(dd[2])+atm_no)+"\t"+str(int(dd[3])+atm_no)+"\t"+dd[4]+"\t"+dd[5]+"\t"+dd[6]+"\t"+dd[7]+"\n"
-                        
-                        for ad in data[0]:
-                            atoms_str += "\t"+str(atm_no+1)+"\t"+ad[1]+"\t"+str(resno)+"\t"+ad[3]+"\t"+ad[4]+"\t"+str(atm_no+1)+"\t"+ad[6]+"\t"+ad[7]+"\n"
-                            atm_no += 1
-                        resno += 1
-            cl_atm_start_p1.append(cl_atm_start_p2)
-        cl_atm_start.append(cl_atm_start_p1)
-    
-    for lyind,layer in enumerate(all_lines):
-        for lind,line in enumerate(layer):
-            for bind,res in enumerate(line):
-                c_atm1 = cl_atm_start[lyind][lind][bind]
-                ly2ind = int(res[8])
-                l2ind = int(res[6])
-                b2ind = int(res[7])
-                if(l2ind != -1):
-                    c_atm2 = cl_atm_start[ly2ind][l2ind][b2ind]
-                    if(all_lines[lyind][lind][bind][13] == 1 or all_lines[ly2ind][l2ind][b2ind][13] == 1):
-                        iplink[0] = 7
-                    else:
-                        pass
-                        #angles_str += "\t"+str(ang_iplink[0][0]+c_atm1)+"\t"+str(ang_iplink[0][1]+c_atm1)+"\t"+str(ang_iplink[0][2]+c_atm2)+"\t"+str(ang_iplink[0][3])+"\t"+str(ang_iplink[0][4])+"\t"+str(ang_iplink[0][5])+"\n"
-                        angles_str += "\t"+str(ang_iplink[1][0]+c_atm1)+"\t"+str(ang_iplink[1][1]+c_atm2)+"\t"+str(ang_iplink[1][2]+c_atm2)+"\t"+str(ang_iplink[1][3])+"\t"+str(ang_iplink[1][4])+"\t"+str(ang_iplink[1][5])+"\n"
-                        
-                    bonds_str += "\t"+str(iplink[0]+c_atm1)+"\t"+str(iplink[1]+c_atm2)+"\t"+str(iplink[2])+"\t"+str(iplink[3])+"\t"+str(iplink[4])+"\n"
-    
-    return [atoms_str,bonds_str,constraints_str,angles_str,dihedrals_str],[resno,atm_no]        
-        
-    
-    
-    
-                    
-#write the PG itp     
-def write_all_itp(itp_str):
-    pgl_file = open("PGL.itp","w")    
-    pgl_file.write("[ moleculetype ]\n")
-    pgl_file.write("PGL    1\n\n")
-    pgl_file.write(itp_str[0]+"\n")
-    pgl_file.write(itp_str[1]+"\n")
-    pgl_file.write(itp_str[2]+"\n")
-    pgl_file.write(itp_str[3]+"\n")
-    pgl_file.write(itp_str[4]+"\n")
-    pgl_file.close()
-            
-    
-    
-    
-    
-    
-    
-    
-        
-    
+          
 #Function that creates a leaflet using all of the above
 def create_leaflet(den,xbox,ybox,curv_A,curv_B,ch_ang,pore,leng,keep_end,mem_outer_red): 
     if(curv_A < 1e-5 or curv_B < 1e-5):
@@ -1981,7 +1654,7 @@ if not tm or options["-ct"].value != None or using_temp:
 
 
     if(using_temp):
-        #WHen a template is present it used to build membrane
+        #WHen a template is present it is used to build membrane
         in_prots = options["-fs"].value
         prot_file = open(in_prots,"r")
         lines = prot_file.read().split("\n")
@@ -2197,7 +1870,7 @@ rx, ry, rz = pbcx+1e-8, pbcy+1e-8, pbcz+1e-8
 #################
 
 membrane = Structure()
-
+mi_rad = 0
 if lipL:
     #reading inputs
     area_l = float(options["-a"].value)
@@ -2232,7 +1905,7 @@ if lipL:
     direcss = []
     direcs2s = []
     
-    
+    lipU = lipU or lipL
     trufal = [True,False]
     #building membrae grid points and normals based on inputs
     for i in range(2):
@@ -2252,9 +1925,8 @@ if lipL:
 
 
                 ret_val,grid_vals = gaussian_grid(prot_points,-pbcx/2,-pbcx/2,pbcx/2,pbcx/2,300,300)
-
-                up_grid,direcs = build_micelle(area_ls[i],prot_points,ret_val,grid_vals,8,pbcx,pbcy)
-
+                av_liplen = get_avlip_len(lipU)
+                up_grid,direcs,mi_rad = build_micelle(area_ls[i],prot_points,ret_val,grid_vals,8,pbcx,pbcy,av_liplen)
 
                 lo_grid = np.zeros((0,3))
                 direcs2 = np.zeros((0,3))
@@ -2296,16 +1968,26 @@ if lipL:
     random.seed()
     
     
-    lipU = lipU or lipL
+    #lipU = lipU or lipL
     lipU_loc = lipU_loc or lipL_loc
     lipLO = lipLO or lipL
     lipUO = lipUO or lipLO
     lipUs = [lipU,lipUO]
     lipLs = [lipL,lipLO]
     
+    av_liplenU = get_avlip_len(lipU)
+    av_liplenUO = get_avlip_len(lipUO)
+    av_liplenL = get_avlip_len(lipL)
+    av_liplenLO = get_avlip_len(lipLO)
+    
     #removing lipids within -fudge of protein
     prot_coords = np.array(protein_lip.coord)
-    tails = np.linspace(0,3,10)
+    tailsU = np.linspace(0,av_liplenU,10)
+    tailsUO = np.linspace(0,av_liplenUO,10)
+    tailsL = np.linspace(0,av_liplenL,10)
+    tailsLO = np.linspace(0,av_liplenLO,10)
+    tailUs = [tailsU,tailsUO]
+    tailsLs = [tailsL,tailsLO]
     exprot = float(options["-fudge"].value)
     zdist = float(options["-ps"].value)
     for gi in range(2):
@@ -2318,7 +2000,7 @@ if lipL:
                 direc = np.array([direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2]])
                 coll = False
                 if tm:
-                    for dr in tails:
+                    for dr in tailUs[gi]:
                         prot_slice = get_box_slice(prot_coords,poser-dr*direc,[exprot,exprot,exprot])
                         for pp in prot_slice:
                             if(np.linalg.norm(poser-dr*direc-pp)<exprot):
@@ -2334,7 +2016,7 @@ if lipL:
                 direc = np.array([direcs2s[gi][i][0],direcs2s[gi][i][1],direcs2s[gi][i][2]])
                 coll = False
                 if tm:
-                    for dr in tails:
+                    for dr in tailsLs[gi]:
                         prot_slice = get_box_slice(prot_coords,poser+dr*direc,[exprot,exprot,exprot])
                         for pp in prot_slice:
                             if(np.linalg.norm(poser+dr*direc-pp)<exprot):
@@ -2517,7 +2199,7 @@ if solv:
         zshift = (hz+0.5)*nz - midz # Shift of membrane middle to center of grid layer
     # Initialize a grid of solvent, spanning the whole cell
     # Exclude all cells within specified distance from membrane center
-    if(not is_micelle and lipL and mem_outer_red<0):
+    if(lipL):
         if(options["-ps"].value > 1e-5):
             grids = []      
             for gk in range(2):
@@ -2531,11 +2213,18 @@ if solv:
             grid = grids[0]*grids[1]
         
         else:            
+            if is_micelle:
+                rad = mi_rad
+            else:
+                if mem_outer_red>0:
+                    rad = mem_outer_red    
+                else:
+                    rad = 1000
             if(cdirs[0] < 0):
-                grid   = [[[(pbcz*i)/nz < -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]-2+mz or (pbcz*i)/nz > -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]+2+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
+                grid   = [[[((pbcx*k)/nx-pbcx/2)*((pbcx*k)/nx-pbcx/2)+((pbcy*j)/ny-pbcy/2)*((pbcy*j)/ny-pbcy/2) > rad*rad or (pbcz*i)/nz < -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]-2+mz or (pbcz*i)/nz > -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]+2+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
 
             else:  
-                grid   = [[[(pbcz*i)/nz > leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]+2+mz or (pbcz*i)/nz < leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]-2+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
+                grid   = [[[((pbcx*k)/nx-pbcx/2)*((pbcx*k)/nx-pbcx/2)+((pbcy*j)/ny-pbcy/2)*((pbcy*j)/ny-pbcy/2) > rad*rad or (pbcz*i)/nz > leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]+2+mz or (pbcz*i)/nz < leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]-2+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
     else:
         grid   =   [[[True for i in range(nz)] for j in range(ny)] for k in range(nx)]
     # Flag all cells occupied by protein or membrane

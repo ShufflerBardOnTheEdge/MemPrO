@@ -306,10 +306,11 @@ print("Collecting minima information...")
 cols,pot_grid = Mem_test.collect_minima_info(grid_size)
 print("Done")
 
+print("Approximating minima depth...")
+Mem_test.approx_minima_depth_all(0.8,orient_dir)
+print("Done")
+
 if(not args.dual_membrane and args.rank == "auto"):
-	print("Approximating minima depth...")
-	Mem_test.approx_minima_depth_all(0.8,orient_dir)
-	print("Done")
 	print("Re-ranking minima...")
 	Mem_test.re_rank_minima(orient_dir)
 	print("Done")
