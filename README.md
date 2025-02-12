@@ -58,7 +58,7 @@ MemPro will takes the following flags as input:
 
 -ng, --grid_size : This is the number of initial starting configurations from which to minimise. It defaults to 20. For maximum efficiency this should be a multiple of the number of CPUs being used. Having a greater number of starting configurations will sample the space of minima better, however there is diminishing returns and generally no more than 40 will be needed.
 
--rank, --rank : This can be either "h", "p" or "auto". "h" ranks the minima by % hits, "p" ranks by potential and "auto" ranks by a value depending on approximate minima depth and potential. It is highly reccomended to use "auto" unless you are having trouble orienting a protein. When using "h" or "p" the potential curves are not calculated and so not outputted.
+-rank, --rank : This can be either "h", "p" or "auto". "h" ranks the minima by % hits, "p" ranks by potential and "auto" ranks by a value depending on approximate minima depth and potential.
 
 -dm, --dual_membrane : This toggles dual membrane minimisations. This allows the code to split the membrane into a inner and outer membrane and minimise the distance between them. Only use this is you know your protein will span the periplasm or is a gap junction etc.
 
