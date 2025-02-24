@@ -182,9 +182,9 @@ MemPrO comes with Insane4MemPrO a CG system builder based on Insane. A link to t
 
 -curv_ext: (Default 3) Extent of curved region in the absence of a protein, this also controls the size of the pore if -pore is used.
 
--pore : (Optional) Create a pore, with inner radius equal to -curv_ext and length equal to -ps.
-
 -micelle: (Optional) Builds a micelle around a protein instead of a bilayer.
+
+-radius: (Optional) Builds a membrane disk with given radius, this can be usefull for simulating nano-disks.
 
 #### Protein related options:
 
