@@ -875,7 +875,8 @@ def draw_along(spacing,all_cens,grid,grid_vals,coff,rad_plus,z):
 def get_avlip_len(lipids):
     liplens = 0
     for lipid in lipids:
-        atoms    = list(zip(lipidsa[lipid][1].split(),lipidsx[lipidsa[lipid][0]],lipidsy[lipidsa[lipid][0]],lipidsz[lipidsa[lipid][0]]))
+        lipidsplit = lipid.split(":")[0]
+        atoms    = list(zip(lipidsa[lipidsplit][1].split(),lipidsx[lipidsa[lipidsplit][0]],lipidsy[lipidsa[lipidsplit][0]],lipidsz[lipidsa[lipidsplit][0]]))
         at,ax,ay,az = list(zip(*[i for i in atoms if i[0] != "-"]))
         az       = [(0.5+(i-min(az)))*options["-bd"].value for i in az ]
         
@@ -1295,6 +1296,7 @@ added using -pore.
     ("-u_loc",      Option(lipU_loc.append, 1,   None, "Currently WIP do not use. Lipid type for localisation")),
     ("-micelle",        Option(bool,        0,          None, "Builds a micelle around a protein instead of a bilayer")),
     ("-radius",        Option(float,        1,          -1, "Radius of membrane outer disk. This is by default the whole cell")),
+    ("-no_lipids",        Option(int,        1,          -1, "Number of lipids that make up a micelle, this will override area per lipid. Only for use with -micelle")),
     """
 Protein related options. -fudge gives the exclusion radius around the protein.
 """,
@@ -1927,7 +1929,12 @@ if lipL:
                 ret_val,grid_vals = gaussian_grid(prot_points,-pbcx/2,-pbcx/2,pbcx/2,pbcx/2,300,300)
                 av_liplen = get_avlip_len(lipU)
                 up_grid,direcs,mi_rad = build_micelle(area_ls[i],prot_points,ret_val,grid_vals,8,pbcx,pbcy,av_liplen)
-
+                if(options["-no_lipids"].value != -1):
+                    no_lips = int(options["-no_lipids"].value)
+                    acc_lips  = len(direcs)  
+                    new_area = area_ls[i]*acc_lips/no_lips
+                    up_grid,direcs,mi_rad = build_micelle(new_area,prot_points,ret_val,grid_vals,8,pbcx,pbcy,av_liplen)
+                    
                 lo_grid = np.zeros((0,3))
                 direcs2 = np.zeros((0,3))
             else:
