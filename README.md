@@ -184,21 +184,21 @@ MemPrO comes with Insane4MemPrO a CG system builder based on Insane. A link to t
 
 -micelle: (Optional) Builds a micelle around a protein instead of a bilayer.
 
--radius: (Optional) Builds a membrane disk with given radius, this can be usefull for simulating nano-disks.
+-radius: (Optional) Builds a membrane disk with given radius, this can be useful for simulating nano-disks.
 
 #### Peptidoglycan layer related options.
 
 -pgl: (Optional) Number of PG layers to place at -pgl_z.
 
--pgl_z: (Optional) Z position of PG layer relative to center of periplasmic space.
+-pgl_z: (Optional) Z position of PG layer relative to centre of periplasmic space.
 
--cper: (Optional) Percentage of crosslinks.
+-cper: (Optional) Percentage of cross-links.
 
--lper: (Optional) Percentage of crosslinks that are between layers.
+-lper: (Optional) Percentage of cross-links that are between layers.
 
--per33: (Optional) Percentage of 3-3 crosslinks, all other crosslinks will be 3-4.
+-per33: (Optional) Percentage of 3-3 cross-links, all other cross-links will be 3-4.
 
--oper: (Optional) Percentage chance of a monomer linking with a oligomer. (Actual change of link is cper*oper)
+-oper: (Optional) Percentage chance of a monomer linking with a oligomer. (Actual chance of link is cper*oper)
 
 -gdist: (Default 0.75,4,8.9,0.25,10,45) Distribution of glycan strand lengths. Format as weight 1,standard deviation 1,mean 1,weight 2..., were each triple describes a gaussian. The sum of these forms the distribution
 
