@@ -113,6 +113,9 @@ As in [tutorial 1](#tutorial-1---a-basic-example) create a copy without the dumm
 
 Here we have a few more flags to go through. The first of these "-pgl" specifies the number of PG layers to add, in this case we are adding 3 layers. The next is "-pgl_z" which indicates the position at which to place the PG layer. The position is specified as the distance from the center and we can find this information from the MemPrO prediction. The next flags "-oper" and "-lper" control the fine detail of the layer. There are many such flags which are explained in detail [here]. 
 
+
+![Alt text](Tutorial_pics/Fig19.svg)
+
 This command will output additionally a file called "PGL.itp". This is an itp file containing the bond and angle information for the whole PG layer. Looking at "CG-System.gro" we should see a PG layer has been added at the location predicted by MemPrO.
 
 As with all tutorials above we can also build this automatically with MemPrO using the following.
