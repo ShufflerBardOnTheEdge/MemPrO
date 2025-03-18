@@ -98,8 +98,27 @@ Loading "CG-System.gro" we can inspect the CG system and check everything is as 
 We can also build this automatically with MemPrO by running the following command:
 >python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -o "Orient_build/" -ng 16 -ni 150 -dm -bd 1 -bd_args "-sol W -l POPE:8 -l POPG:1 -l CARD:1 -uo LIPA -negi_c0 CL -posi_c0 NA -negi_c2 CL -posi_c2 NA:1 -posi_c2 CA:4 -auo 1.2"
 
-As before MemPrO deals with the double membrane, and we need only worry about defining the composition of the system. Looking in the folder "Orient_build/Rank_1/CG_System_rank_1/" we find both the CG system and the topology file, called "CG-system.gro" and "topol.top" respectively. "topol.top" will need to be modified as always. The system is now ready for energy minimisation and simulation.
+As before MemPrO deals with the double membrane, and we need only worry about defining the composition of the system. Looking in the folder "Orient_build/Rank_1/CG_System_rank_1/" we find both the CG system and the topology file, called "CG-system.gro" and "topol.top" respectively. "topol.top" will need to be modified as always. The system is now ready for energy minimisation and simulation. In this case it is recommended to use position restrains during equilibritaion to allow water to fill out the inside of the protein correctly.
 
+
+## Tutorial 4 - Building with peptidoglycan layers
+
+In tutorial 3 we looked at building a more accurate double membrane system. We can however still improve on the accuracy of this system by adding a peptidoglycan (PG) cell wall. In this tutorial we will build a system much like before but this time we will include the PG cell wall. Make a new folder called "Tutorial4" and if you have already done [tutorial 5](MemPrO_tutorials.md#tutorial-5---building-cg-systems-from-orientations) then simply copy over "5nik-cg.pdb" or follow the download instructions in [tutorial 2](MemPrO_tutorials.md#tutorial-2---double-membrane-systems).
+
+As always we start by orienting the protein.
+>python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -ng 16 -ni 150 -dm -pg
+
+As in [tutorial 1](#tutorial-1---a-basic-example) create a copy without the dummy membrane called "5nik-oriented.pdb". Next we will need to look at "Orient/Rank_1/info_rank_1.txt" to find the inter membrane distance and the position of the PG layer, which should be around 272 and "" angstroms respectively. We can now build the CG system with the following command:
+>python PATH/TO/Insane4MemPrO.py -f 5nik-oriented.pdb -p topol.top -o CG-System.gro -x 20 -y 20 -z 50 -ps 13.6 -sol W -l POPE:8 -l POPG:1 -l CARD:1 -uo LIPA -negi_c0 CL -posi_c0 NA -negi_c2 CL -posi_c2 NA:1 -posi_c2 CA:4 -auo 1.2 -pgl 3 -pgl_z "" -oper 0 -lper 0.2
+
+Here we have a few more flags to go through. The first of these "-pgl" specifies the number of PG layers to add, in this case we are adding 3 layers. The next is "-pgl_z" which indicates the position at which to place the PG layer. The position is specified as the distance from the center and we can find this information from the MemPrO prediction. The next flags "-oper" and "-lper" control the fine detail of the layer. There are many such flags which are explained in detail [here]. 
+
+This command will output additionally a file called "PGL.itp". This is an itp file containing the bond and angle information for the whole PG layer. Looking at "CG-System.gro" we should see a PG layer has been added at the location predicted by MemPrO.
+
+As with all tutorials above we can also build this automatically with MemPrO using the following.
+>python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -o "Orient_build/" -ng 16 -ni 150 -dm -bd 1 -bd_args -pg "-sol W -l POPE:8 -l POPG:1 -l CARD:1 -uo LIPA -negi_c0 CL -posi_c0 NA -negi_c2 CL -posi_c2 NA:1 -posi_c2 CA:4 -auo 1.2 -pgl 3 -oper 0 -lper 0.2"
+
+We no longer need to specifiy the Z position of the PG layer with "-pgl_z" as MemPrO deals with this as with all such structrual information. Looking in the folder "Orient_build/Rank_1/CG_System_rank_1/" we find both the CG system and the topology file, called "CG-system.gro" and "topol.top" respectively. "topol.top" will need to be modified as always. The system is now ready for energy minimisation and simulation. As with the above it is recommended to use position restrains during equilibritaion to allow water to fill out the inside of the protein correctly.
 
 ## Final comments
 
