@@ -1761,7 +1761,7 @@ class MemBrain:
 		def is_pgguess(pguess):
 			xval = xs-(-ranger-self.mem_structure[0]+pg_guess)
 			def pgloop(pguess,ind):
-				pguess = pguess.at[ind].set(1*((0.2*xval[ind]*xval[ind]-50))*sj(-xval[ind]*xval[ind],0.03))
+				pguess = pguess.at[ind].set(1.5*((0.2*xval[ind]*xval[ind]-50))*sj(-xval[ind]*xval[ind],0.03))
 				return pguess,ind
 			pguess,_ = jax.lax.scan(pgloop,pguess,jnp.arange(xs.shape[0]))		
 			return pguess
@@ -2602,16 +2602,18 @@ class MemBrain:
 		start_xydir =  position_point_jit(0,min_poses[min_ind][2],0.0,jnp.array([[0.0,-1.0,0.0]]))[0,:2]	
 		in_depth = min_poses[min_ind][1]
 		pot_graph,zs,in_depth_ind = self.z_pot_graph(150,150,start_zdir,start_xydir,in_depth,curv)
-		pots_cs,cs= self.c_pot_plot(150,start_zdir,start_xydir,in_depth)
-		
-		
-		plt.plot(cs/10,pots_cs)
-		plt.ylabel("Potential energy")
-		plt.xlabel("Z")
-		plt.title("Potential energy against curvature")
-		plt.tight_layout()
-		plt.savefig(rank_dir+"curv_potential_curve.png")
-		plt.clf()
+
+		if not self.dbmem:
+			pots_cs,cs= self.c_pot_plot(150,start_zdir,start_xydir,in_depth)
+			
+			
+			plt.plot(cs/10,pots_cs)
+			plt.ylabel("Potential energy")
+			plt.xlabel("Z")
+			plt.title("Potential energy against curvature")
+			plt.tight_layout()
+			plt.savefig(rank_dir+"curv_potential_curve.png")
+			plt.clf()
 		
 		plt.plot(zs,pot_graph)
 		plt.ylabel("Potential energy")
@@ -2677,7 +2679,13 @@ class MemBrain:
 			cg_sys_dir = rank_dir+"CG_System_rank_"+str(i+1)+"/"
 			run_str = "python "+PATH_TO_INSANE+" "+build_args.strip()+" -o "+cg_sys_dir+"CG-system.gro -p "+cg_sys_dir+"topol.top -f "+cg_sys_dir+"protein-cg.pdb "+"-x "+str(x_range)+" -y "+str(y_range)+" -z "+str(z_range)+curv_str
 			if(zdist > 1e-6):
-				run_str += " -ps "+str(zdist) 
+				run_str += " -ps "+str(zdist)
+			if(self.pg_layer_pred):
+				ps = self.pg_poses[i][0]
+				xs_pg = self.pg_poses[i][1]
+				pg_pos = -xs_pg[jnp.argmin(ps)]
+				run_str += " -pgl_z "+str(pg_pos/10.0)+" -o_f "+cg_sys_dir
+				#print()
 			err_val = os.system(run_str)
 			if(err_val != 0):
 				print("WARNING: There was an error when trying to build the system. Check -bd_args are correct.")
