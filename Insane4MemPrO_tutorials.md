@@ -116,7 +116,7 @@ Here we have a few more flags to go through. The first of these "-pgl" specifies
 
 ![Alt text](Tutorial_pics/Fig19.svg)
 
-This command will output additionally a file called "PGL.itp". This is an itp file containing the bond and angle information for the whole PG layer. Looking at "CG-System.gro" we should see a PG layer has been added at the location predicted by MemPrO. In the figure shown, we can see the top PG layer on the left and the whole PG layer on the right.
+This command will output additionally a file called "PGL.itp". This is an itp file containing the bond and angle information for the whole PG layer. Looking at "CG-System.gro" we should see a PG layer has been added at the location predicted by MemPrO.
 
 As with all tutorials above we can also build this automatically with MemPrO using the following.
 >python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -o "Orient_build/" -ng 16 -ni 150 -dm -bd 1 -pg -pg_guess 75 -bd_args "-sol W -l POPE:8 -l POPG:1 -l CARD:1 -uo LIPA -negi_c0 CL -posi_c0 NA -negi_c2 CL -posi_c2 NA:1 -posi_c2 CA:4 -auo 1.8 -pgl 3 -oper 0 -lper 0.2"
