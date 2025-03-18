@@ -2608,6 +2608,13 @@ added using -pore.
     ("-loc",      Option(str,         1,        None, "Currently WIP do not use. Input .npz for localisation data to bias lipid arangment.")),
     ("-l_loc",      Option(lipL_loc.append, 1,   None, "Currently WIP do not use. Lipid type for localisation")),
     ("-u_loc",      Option(lipU_loc.append, 1,   None, "Currently WIP do not use. Lipid type for localisation")),
+    ("-micelle",        Option(bool,        0,          None, "Builds a micelle around a protein instead of a bilayer")),
+    ("-radius",        Option(float,        1,          -1, "Radius of membrane outer disk. This is by default the whole cell")),
+    ("-no_lipids",        Option(int,        1,          -1, "Number of lipids that make up a micelle, this will override area per lipid. Only for use with -micelle")),
+    """
+Peptidoglycan layer related options.
+""",
+   
     ("-pgl",        Option(int,        1,          0, "Number of PG layers to place at -pgl_z.")),
     ("-pgl_z",        Option(float,        1,          0, "Z position of PG layer relative to center of periplasmic space.")),
     ("-cper",        Option(float,        1,          0.4, "Percentage of crosslinks.")),
@@ -2615,9 +2622,6 @@ added using -pore.
     ("-per33",        Option(float,        1,          0.03, "Percentage of 3-3 crosslinks, all other crosslinks will be 3-4.")),
     ("-oper",        Option(float,        1,          1, "Percentage chance of a monomer linking with a oligomer. (Actual change of link is cper*oper)")),
     ("-gdist",        Option(str,        1,          "0.75,4,8.9,0.25,10,45", "Distribution of glycan strand lengths. Format as weight 1,standard deviation 1,mean 1,weight 2..., were each triple describes a gaussian. The sum of these forms the distribution.")),
-    ("-micelle",        Option(bool,        0,          None, "Builds a micelle around a protein instead of a bilayer")),
-    ("-radius",        Option(float,        1,          -1, "Radius of membrane outer disk. This is by default the whole cell")),
-    ("-no_lipids",        Option(int,        1,          -1, "Number of lipids that make up a micelle, this will override area per lipid. Only for use with -micelle")),
     """
 Protein related options. -fudge gives the exclusion radius around the protein.
 """,
