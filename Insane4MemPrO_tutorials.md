@@ -81,9 +81,9 @@ We start with orienting the protein
 >python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -ng 16 -ni 150 -dm
 
 As in [tutorial 1](#tutorial-1---a-basic-example) create a copy without the dummy membrane called "5nik-oriented.pdb". Next we will need to look at "Orient/Rank_1/info_rank_1.txt" to find the inter membrane distance, which should be around 272 angstroms. We can now build the CG system with the following command:
->python PATH/TO/Insane4MemPrO.py -f 5nik-oriented.pdb -p topol.top -o CG-System.gro -x 20 -y 20 -z 50 -ps 13.6 -sol W -l POPE:8 -l POPG:1 -l CARD:1 -uo LIPA -negi_c0 CL -posi_c0 NA -negi_c2 CL -posi_c2 NA:1 -posi_c2 CA:4 -auo 1.2
+>python PATH/TO/Insane4MemPrO.py -f 5nik-oriented.pdb -p topol.top -o CG-System.gro -x 20 -y 20 -z 50 -ps 13.6 -sol W -l POPE:8 -l POPG:1 -l CARD:1 -uo LIPA -negi_c0 CL -posi_c0 NA -negi_c2 CL -posi_c2 NA:1 -posi_c2 CA:4 -auo 1.8
 
-This command may look complicated but it is actually rather simple. First we have added "-ps 13.6", which tells the code to build two membrane which are at + and - 13.6 nm which corresponds to the intermembrane distance calculated by MemPrO. Next we have added "-uo LIPA" this flag does a similar job as "-l", but it specifies that the (u)pper leaflet of the (o)uter membrane should be composed entirely of LIPA (The code for this may be different depending on what is defined in your copy of Insane4MemPrO). We also have the flag "-auo 1.2" which tells the code that the (a)rea per lipid in the (u)pper leaflet of the (o)uter membrane should be 1.2. Finally we have "-negi_c2 CL" , "-posi_c2 NA:1" and "-posi_c2 CA:4". Before we get into what these flags are doing I will give a quick explaination of disjoint water compartments. 
+This command may look complicated but it is actually rather simple. First we have added "-ps 13.6", which tells the code to build two membrane which are at + and - 13.6 nm which corresponds to the intermembrane distance calculated by MemPrO. Next we have added "-uo LIPA" this flag does a similar job as "-l", but it specifies that the (u)pper leaflet of the (o)uter membrane should be composed entirely of LIPA (The code for this may be different depending on what is defined in your copy of Insane4MemPrO). We also have the flag "-auo 1.8" which tells the code that the (a)rea per lipid in the (u)pper leaflet of the (o)uter membrane should be 1.8. Finally we have "-negi_c2 CL" , "-posi_c2 NA:1" and "-posi_c2 CA:4". Before we get into what these flags are doing I will give a quick explaination of disjoint water compartments. 
 
 Each membrane in a system is a barrier to water, when only one membrane is present this doesn't cause any issues as a water/ion bead may leave from the bottom of a cell and reappear at the top, hence every water/ion bead can move to any position in the cell. If we introduce a second membrane then water/ion beads between the two membranes can never move out from between the membranes, hence two distinct comparments of solution are created. If we don't have z periodicity then even more disjoint compartments are created.
 
@@ -96,7 +96,7 @@ Returning to the flags "-negi_c2 CL" , "-posi_c2 NA:1" and "-posi_c2 CA:4" we ar
 Loading "CG-System.gro" we can inspect the CG system and check everything is as it should be. Before simulation remeber to update the topology file "topol.top"
 
 We can also build this automatically with MemPrO by running the following command:
->python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -o "Orient_build/" -ng 16 -ni 150 -dm -bd 1 -bd_args "-sol W -l POPE:8 -l POPG:1 -l CARD:1 -uo LIPA -negi_c0 CL -posi_c0 NA -negi_c2 CL -posi_c2 NA:1 -posi_c2 CA:4 -auo 1.2"
+>python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -o "Orient_build/" -ng 16 -ni 150 -dm -bd 1 -bd_args "-sol W -l POPE:8 -l POPG:1 -l CARD:1 -uo LIPA -negi_c0 CL -posi_c0 NA -negi_c2 CL -posi_c2 NA:1 -posi_c2 CA:4 -auo 1.8"
 
 As before MemPrO deals with the double membrane, and we need only worry about defining the composition of the system. Looking in the folder "Orient_build/Rank_1/CG_System_rank_1/" we find both the CG system and the topology file, called "CG-system.gro" and "topol.top" respectively. "topol.top" will need to be modified as always. The system is now ready for energy minimisation and simulation. In this case it is recommended to use position restrains during equilibritaion to allow water to fill out the inside of the protein correctly.
 
@@ -109,14 +109,14 @@ As always we start by orienting the protein.
 >python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -ng 16 -ni 150 -dm -pg
 
 As in [tutorial 1](#tutorial-1---a-basic-example) create a copy without the dummy membrane called "5nik-oriented.pdb". Next we will need to look at "Orient/Rank_1/info_rank_1.txt" to find the inter membrane distance and the position of the PG layer, which should be around 272 and "" angstroms respectively. We can now build the CG system with the following command:
->python PATH/TO/Insane4MemPrO.py -f 5nik-oriented.pdb -p topol.top -o CG-System.gro -x 20 -y 20 -z 50 -ps 13.6 -sol W -l POPE:8 -l POPG:1 -l CARD:1 -uo LIPA -negi_c0 CL -posi_c0 NA -negi_c2 CL -posi_c2 NA:1 -posi_c2 CA:4 -auo 1.2 -pgl 3 -pgl_z "" -oper 0 -lper 0.2
+>python PATH/TO/Insane4MemPrO.py -f 5nik-oriented.pdb -p topol.top -o CG-System.gro -x 20 -y 20 -z 50 -ps 13.6 -sol W -l POPE:8 -l POPG:1 -l CARD:1 -uo LIPA -negi_c0 CL -posi_c0 NA -negi_c2 CL -posi_c2 NA:1 -posi_c2 CA:4 -auo 1.8 -pgl 3 -pgl_z "" -oper 0 -lper 0.2
 
 Here we have a few more flags to go through. The first of these "-pgl" specifies the number of PG layers to add, in this case we are adding 3 layers. The next is "-pgl_z" which indicates the position at which to place the PG layer. The position is specified as the distance from the center and we can find this information from the MemPrO prediction. The next flags "-oper" and "-lper" control the fine detail of the layer. There are many such flags which are explained in detail [here]. 
 
 This command will output additionally a file called "PGL.itp". This is an itp file containing the bond and angle information for the whole PG layer. Looking at "CG-System.gro" we should see a PG layer has been added at the location predicted by MemPrO.
 
 As with all tutorials above we can also build this automatically with MemPrO using the following.
->python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -o "Orient_build/" -ng 16 -ni 150 -dm -bd 1 -bd_args -pg "-sol W -l POPE:8 -l POPG:1 -l CARD:1 -uo LIPA -negi_c0 CL -posi_c0 NA -negi_c2 CL -posi_c2 NA:1 -posi_c2 CA:4 -auo 1.2 -pgl 3 -oper 0 -lper 0.2"
+>python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -o "Orient_build/" -ng 16 -ni 150 -dm -bd 1 -bd_args -pg "-sol W -l POPE:8 -l POPG:1 -l CARD:1 -uo LIPA -negi_c0 CL -posi_c0 NA -negi_c2 CL -posi_c2 NA:1 -posi_c2 CA:4 -auo 1.8 -pgl 3 -oper 0 -lper 0.2"
 
 We no longer need to specifiy the Z position of the PG layer with "-pgl_z" as MemPrO deals with this as with all such structrual information. Looking in the folder "Orient_build/Rank_1/CG_System_rank_1/" we find both the CG system and the topology file, called "CG-system.gro" and "topol.top" respectively. "topol.top" will need to be modified as always. The system is now ready for energy minimisation and simulation. As with the above it is recommended to use position restrains during equilibritaion to allow water to fill out the inside of the protein correctly.
 
