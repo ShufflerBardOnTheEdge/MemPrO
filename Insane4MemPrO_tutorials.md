@@ -119,7 +119,7 @@ Here we have a few more flags to go through. The first of these "-pgl" specifies
 This command will output additionally a file called "PGL.itp". This is an itp file containing the bond and angle information for the whole PG layer. Looking at "CG-System.gro" we should see a PG layer has been added at the location predicted by MemPrO.
 
 As with all tutorials above we can also build this automatically with MemPrO using the following.
->python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -o "Orient_build/" -ng 16 -ni 150 -dm -bd 1 -bd_args -pg "-sol W -l POPE:8 -l POPG:1 -l CARD:1 -uo LIPA -negi_c0 CL -posi_c0 NA -negi_c2 CL -posi_c2 NA:1 -posi_c2 CA:4 -auo 1.8 -pgl 3 -oper 0 -lper 0.2"
+>python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -o "Orient_build/" -ng 16 -ni 150 -dm -bd 1 -pg -pg_guess 75 -bd_args "-sol W -l POPE:8 -l POPG:1 -l CARD:1 -uo LIPA -negi_c0 CL -posi_c0 NA -negi_c2 CL -posi_c2 NA:1 -posi_c2 CA:4 -auo 1.8 -pgl 3 -oper 0 -lper 0.2"
 
 We no longer need to specifiy the Z position of the PG layer with "-pgl_z" as MemPrO deals with this as with all such structrual information. Looking in the folder "Orient_build/Rank_1/CG_System_rank_1/" we find both the CG system and the topology file, called "CG-system.gro" and "topol.top" respectively. "topol.top" will need to be modified as always. The system is now ready for energy minimisation and simulation. As with the above it is recommended to use position restrains during equilibritaion to allow water to fill out the inside of the protein correctly.
 
