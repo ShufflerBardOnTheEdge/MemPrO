@@ -11,9 +11,6 @@ from functools import partial
 jax.config.update("jax_enable_x64",True)
 jax.config.update("jax_platform_name","cpu")
 
-version   = "---"
-previous  = "20140603.11.TAW"
-
 # Modify insane to take in arbitary lipid definition strings and use them as a template for lipids
 # Also take in lipid name 
 # Edits: by Helgi I. Ingolfsson (all edits are marked with: # HII edit - lipid definition )
