@@ -180,7 +180,7 @@ MemPrO comes with Insane4MemPrO a CG system builder based on Insane. A link to t
 
 -curv_o: (Default 0,0,1) Curvature of outer membrane. see -curv.
 
--curv_ext: (Default 3) Extent of curved region in the absence of a protein, this also controls the size of the pore if -pore is used.
+-curv_ext: (Default 3) Extent of curved region in the absence of a protein.
 
 -micelle: (Optional) Builds a micelle around a protein instead of a bilayer.
 
