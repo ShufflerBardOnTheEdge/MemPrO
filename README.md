@@ -1,6 +1,17 @@
 # MemPrO
 Membrane Protein Orientation in Lipid Bilayers. The paper associated with this code can be found here \[link to be added soon\].
 
+Code and parameters from the following were used to help write this code:
+
+**Insane:**
+Tsjerk A. Wassenaar et al. “Computational lipidomics with insane: A versatile tool for generating custom membranes for molecular simulations”. In: Journal of Chemical Theory and Computation 11 (5 May 2015), pp. 2144–2155. issn: 15499626. [GitHub](https://github.com/Tsjerk/Insane) and [paper](https://pubs.acs.org/doi/abs/10.1021/acs.jctc.5b00209) 
+
+**Matini forcefield:**
+Siewert J ; Marrink et al. “The MARTINI force field The MARTINI Force Field: Coarse Grained Model for Biomolecular Simulations”. In: (2007). [Paper](https://pubs.acs.org/doi/10.1021/jp071097f)
+
+**Peptidoglycan parameters:**
+Rakesh Vaiwala et al. “Developing a Coarse-Grained Model for Bacterial Cell Walls: Evaluating Mechanical Properties and Free Energy Barriers”. In: Journal of Chemical Theory and Computation 16 (8 Aug. 2020), pp. 5369–5384. issn: 15499626. [Paper](https://pubs.acs.org/doi/abs/10.1021/acs.jctc.0c00539)
+
 ## Installation
 To install MemPrO run the following (Not yet on PyPi, this will work once the code has been published):
 >pip install MemPrO
