@@ -2589,8 +2589,7 @@ used to set the lipid type and abundance for the upper leaflet. Option
 -l sets the type and abundance for the lower leaflet if option -u is
 also given, or for both leaflets if option -u is not given. -lo and -uo
 behave as -l and -u except -l can set abundance for -lo and -uo is these
-are not specified. Curvature can be specified using -curv and pores can be
-added using -pore.
+are not specified. Curvature can be specified using -curv.
 """,
     ("-l",      Option(lipL.append, 1,   None, "Lipid type and relative abundance (NAME[:#])")),
     ("-u",      Option(lipU.append, 1,   None, "Lipid type and relative abundance (NAME[:#])")),
@@ -2606,8 +2605,8 @@ added using -pore.
     ("-ps",        Option(float,        1,          0, "Specifies the distance (nm) between inner and outer membrane, when set to 0 only a single membrane is built")),
     ("-curv",        Option(str,        1,          "0,0,1", "Curvature of the membrane, consists of 3 comma separated values. The curvature at the middle the curvature as it relaxes back to planar and the direction of the curvature.")),
     ("-curv_o",        Option(str,        1,          "0,0,1", "Curvature of the outer membrane, see -curv")),
-    ("-curv_ext",        Option(float,        1,          3, "Extent of curved region in the absence of a protein, this also controls the size of the pore if -pore is used")),
-    ("-pore",        Option(bool,        0,          None, "Create a pore, with inner radius equal to -curv_ext and length equal to -ps")),
+    ("-curv_ext",        Option(float,        1,          3, "Extent of curved region in the absence of a protein.")),
+    #("-pore",        Option(bool,        0,          None, "Create a pore, with inner radius equal to -curv_ext and length equal to -ps")),
     ("-loc",      Option(str,         1,        None, "Currently WIP do not use. Input .npz for localisation data to bias lipid arangment.")),
     ("-l_loc",      Option(lipL_loc.append, 1,   None, "Currently WIP do not use. Lipid type for localisation")),
     ("-u_loc",      Option(lipU_loc.append, 1,   None, "Currently WIP do not use. Lipid type for localisation")),
@@ -2846,12 +2845,12 @@ if(options["-zpbc"].value is not None):
     zpbc = True
 
 
-add_pore = options["-pore"].value
-if(add_pore is not None):
-    add_pore = True
-else:
-    add_pore = False
-
+#add_pore = options["-pore"].value
+#if(add_pore is not None):
+#    add_pore = True
+#else:
+#    add_pore = False
+add_pore = False
 
 zdist = float(options["-ps"].value)
 
