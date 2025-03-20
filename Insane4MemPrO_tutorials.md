@@ -103,7 +103,7 @@ As before MemPrO deals with the double membrane, and we need only worry about de
 
 ## Tutorial 4 - Building with peptidoglycan layers
 
-In tutorial 3 we looked at building a more accurate double membrane system. We can however still improve on the accuracy of this system by adding a peptidoglycan (PG) cell wall. In this tutorial we will build a system much like before but this time we will include the PG cell wall. Make a new folder called "Tutorial4" and if you have already done [tutorial 5](MemPrO_tutorials.md#tutorial-5---building-cg-systems-from-orientations) then simply copy over "5nik-cg.pdb" or follow the download instructions in [tutorial 2](MemPrO_tutorials.md#tutorial-2---double-membrane-systems).
+In tutorial 3 we looked at building a more accurate double membrane system. We can however still improve on the accuracy of this system by adding a peptidoglycan (PG) cell wall. In this tutorial we will build a system much like before but this time we will include the PG cell wall. Make a new folder called "Tutorial4" and if you have already done [tutorial 5](MemPrO_tutorials.md#tutorial-5---building-cg-systems-from-orientations) then simply copy over "5nik-cg.pdb" or follow the download instructions in [tutorial 2](MemPrO_tutorials.md#tutorial-2---double-membrane-systems). We will also need the following files "NAM.itp", "NAG.itp", "SNPEP.itp", "UNPEP.itp" and "UUNPEP.itp". These are the components used to build the PG layer, and can be found in the folder "PG_Components".
 
 As always we start by orienting the protein.
 >python PATH/TO/MemPrO_Script.py -f 5nik-cg.pdb -ng 16 -ni 150 -dm -pg
