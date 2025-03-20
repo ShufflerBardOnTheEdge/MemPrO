@@ -1108,6 +1108,8 @@ def Create_Glycan_strands2(pgl_no,pbcy,pbcx,z_poses,xoff,yoff,pcoords, gdist):
     no_lines = int(pbcx/2.8)-1
     all_lines = np.zeros((pgl_no,no_lines,no_gly*2,14))
     all_pc_slices = []
+    if pcoords.shape[0] == 0:
+        pcoords = np.zeros((1,3))
     for pn in range(pgl_no):
         z = pbcz/2+z_poses[pn]+Pos_PGL
         chain_lens,pc_zslice = MC_Glycan_Strands(pbcy,pbcx,z,1.25*(pn%2)+xoff,yoff,pcoords+np.array([0,0,pbcz/2]),gdist,pn) 
@@ -2218,7 +2220,7 @@ def calc_acc_jax(ppos,bonds,box_size):
     pacc,_ = jax.lax.scan(bond_loop,pacc,jnp.arange(bonds.shape[0]))
     return pacc
 
-#some minor self repulsion to avoid major clashes
+#some minor protein repulsion to avoid major clashes
 @jax.jit
 def prot_repul_jax(all_p_pad,ppos,plys,all_p_lens):
     pacc = jnp.zeros_like(ppos)
@@ -2227,7 +2229,7 @@ def prot_repul_jax(all_p_pad,ppos,plys,all_p_lens):
         ls = ls.at[ind].set(jnp.sum(all_p_pad[ind,:,2])/all_p_lens[ind])
         return ls,ind
     ls,_ = jax.lax.scan(loop1,ls,jnp.arange(all_p_lens.shape[0]))
-
+    
     def loop2(pacc,ind1):
         def loop3(layer,ind2):
             def close(layer):
@@ -2443,7 +2445,8 @@ def relax_pg(gposes,box_size,tol,all_p):
         all_p[ap] = np.pad(all_p[ap],((0,max_len-all_p[ap].shape[0]),(0,0)),"constant",constant_values=((0,0),(0,0)))
     all_p_pad = jnp.array(all_p)
     all_p_lens = jnp.array(all_p_lens,dtype=int)
-
+    if all_p_pad.shape[1] == 0:
+        all_p_pad = jnp.zeros((all_p_pad.shape[0],1,3))
 
     while np.linalg.norm(tcheck) > tol:
         try:
@@ -3230,7 +3233,6 @@ if(Num_PGL > 0):
     Gposes,pc_zslice = Create_Glycan_strands2(Num_PGL,pbcy,pbcx,z_poses,0,0,np.array(protein.coord),gdist)
     print("Cross-linking...")
     Gposes = cross_link(Gposes,pbcy,cper,per33,lper,oper)
-    np.savez("PG_Gposes.npz",Gposes,pc_zslice[0],pc_zslice[1],pc_zslice[2])
     print("Counting resulting oligomers...")
     olig_lens = count_all_olig(Gposes)
     total_clink = olig_lens.shape[0]
