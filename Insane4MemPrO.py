@@ -1,22 +1,22 @@
 #!/usr/bin/env python
 
-import sys,math,random
+import sys,math,random,os
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy as sp
 import jax
 import jax.numpy as jnp
+from functools import partial
 
-#This is a heavily modified version of Insane, called Insane4MemPrO, written to work with the orientation software MemPrO. 
-#Modifications were made by Matyas Parrag.
-
+jax.config.update("jax_enable_x64",True)
+jax.config.update("jax_platform_name","cpu")
 
 # Modify insane to take in arbitary lipid definition strings and use them as a template for lipids
 # Also take in lipid name 
 # Edits: by Helgi I. Ingolfsson (all edits are marked with: # HII edit - lipid definition )
 
-
-
+#This is a heavily modified version of Insane, called Insane4MemPrO, written to work with the orientation software MemPrO. 
+#Modifications were made by Matyas Parrag.
 
 
 # PROTOLIPID (diacylglycerol), 18 beads
@@ -32,7 +32,6 @@ lipidsz = {}
 lipidsa = {}
 
 
-
 #Detergent
 
 moltype = "type_DDM"
@@ -41,6 +40,37 @@ lipidsy[moltype] = (-0.32, -0.53, -0.29, -0.34, -0.04, 0.29, 0.46, 0.21, 0.21, 0
 lipidsz[moltype] = (3.58, 3.07, 2.68, 3.10, 3.68, 3.05, 3.78, 3.50, 2.04, 1.06, 0.06)
 lipidsa.update({ "DDM":(moltype, "A1 B1 C1 VS1 A2 B2 C2 VS2 L1 L2 L3")})
 
+
+
+#For building of PG layers in CG, This is a test and currently uses M2 beads
+moltype = "type_PEP"
+lipidsy[moltype] = (-0.03, 0.39, -0.03, -0.03, -0.03, -0.61, -0.93, -0.03, 0.40, -0.03, -0.45, -0.04, -0.41, -0.04, -0.03, -0.03, -0.03, -0.03, -0.66, -0.79)
+lipidsz[moltype] = (0.02, 0.15, 0.02, 0.03, 0.04, -0.12, 0.12, 0.05, 0.12, 0.06, -0.12, 0.10, -0.13, 0.10, 0.09, 0.08, 0.07, 0.06, -0.11, -0.14)
+lipidsx[moltype] = (4.41, 4.41, 3.64, 2.93, 2.23, 2.17, 2.65, 1.44, 1.32, 0.57, 0.69, -3.69, -3.71, -2.91, -2.21, -1.50, -0.77, -0.02, -1.60, -2.02)
+lipidsa.update({ "PEP":(moltype, "B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20")})
+lipidsa.update({ "SPEP":(moltype, "B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 - - - - - - - - -")})
+lipidsa.update({ "UPEP":(moltype, "B1 B2 B3 B4 B5 B6 B7 B8 B9 - - - - - - - - - - -")})
+lipidsa.update({ "UUPEP":(moltype, "B1 B2 B3 B4 B5 B6 B7 - - - - - - - - - - - - -")})
+
+
+
+moltype = "type_NAM"
+lipidsx[moltype] = (-0.00, 0.60, -0.58, 0.01, -0.52)
+lipidsz[moltype] = (0.03, -0.00, 0.04, 0.03, 0.05)
+lipidsy[moltype] = (4.70, 4.44, 4.74, 4.07, 3.81)
+lipidsa.update({ "NAM":(moltype, "B1 B2 B3 B4 B5")})
+
+
+moltype = "type_NAG"
+lipidsx[moltype] = (0.06, 0.65, -0.51, 0.02)
+lipidsz[moltype] = (0.00, -0.02, 0.00, 0.00)
+lipidsy[moltype] = (3.04, 2.74, 3.22, 2.42)
+lipidsa.update({ "NAG":(moltype, "B1 B2 B3 B4")})
+
+
+
+
+#
 ## Diacyl glycerols
 moltype = "lipid"
 lipidsx[moltype] = (    0, .5,  0,  0, .5,  0,  0, .5,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1)
@@ -230,6 +260,7 @@ lipidsa.update({      #  1    2   3   4   5   6   7   8   9  10  11  12  13  14 
 })
 
 
+
 moltype = "LPS"
 lipidsx[moltype] = (-7.97, -8.52, -7.94, -8.14, -8.52, -7.87, -8.75, -8.77, -8.61, -8.58, -8.58, -7.69, -7.53, -7.47, -7.58, -7.45, -7.46, -7.37, -7.42, -6.88, -7.56, -7.11, -7.53, -7.26, -7.32, -7.42, -7.54, -8.07, -8.19, -8.44, -7.19, -6.72, -6.82, -6.81, -7.53, -7.74, -7.88, -7.67, -7.41, -7.86, -7.65, -7.51, -7.25, -7.68, -7.39, -7.84, -7.63, -7.18, -7.29)
 lipidsy[moltype] = (0.73, 0.52, 0.60, 0.62, 0.07, 0.51, 0.27, 0.54, 0.70, 0.96, 1.25, 0.51, 0.52, 0.58, 0.76, 0.49, 0.22, 0.10, 0.27, -0.31, -0.04, 0.72, -0.20, -0.29, -0.41, -0.51, -0.60, -0.35, -0.32, -0.13, 1.00, 1.26, 1.42, 1.75, 1.32, 1.56, 1.78, 0.33, 0.52, 0.52, 0.45, 0.85, 0.02, 0.31, -0.05, 0.19, 0.15, 0.58, -0.14)
@@ -250,6 +281,7 @@ lipidsa.update({      #  1    2   3   4   5   6   7   8   9  10  11  12  13  14 
     "NMEN": (moltype, " GM1  GM2 GM3 GM4 PO1 PO2 QD1 GM6 GM7 GM8 GM9 PO3 PO4 QD2 GL1 C1A C2A C3A  -  C1B C2B C3B  -  GL2  C1C C2C C3C  -  GL3 C1D C2D C3D  -   -  C1E C2E C3E  -  GL4  -  C1F C2F C3F  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   - "), 
     "SMIN": (moltype, " GM1  GM2 GM3 GM4 PO1  -   -  GM6 GM7 GM8 GM9 PO2  -   -  GL1 GL2 C1A C2A  -  C1B C2B C3B C4B GL3  C1C C2C C3C  -  GL4 C1D C2D C3D  -   -  C1E C2E C3E  -  GL5 GL6 C1F C2F C3F C1G C2G C3G  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   - "), 
 })
+
 
 # Prototopology for mycolic acid(s)
 #
@@ -729,11 +761,9 @@ def DiskGridFB(den,outer_rad):
     N = int((outer_rad*outer_rad*np.pi)*den)
     for i in range(N):
         ang1 = 2*np.pi*np.fmod((i/gr),1)
-        #print(ang1)
         rad = np.sqrt(i/(N-1))*outer_rad
         grid_points.append([np.cos(ang1)*rad,np.sin(ang1)*rad,0])
         direcs.append([0,0,1])
-    #print(len(grid_points))
     return grid_points,direcs
 
 #Same as above two but for a disk
@@ -758,7 +788,6 @@ def DiskGrid(den,inner_rad,xbox,ybox,outer_rad):
             if(-xbox <np.cos(ang1)*rad < xbox-0.2 and -ybox < np.sin(ang1)*rad < ybox-0.2):
                 grid_points.append([np.cos(ang1)*rad,np.sin(ang1)*rad,0])
                 direcs.append([0,0,1])
-    #print(len(grid_points))
     return grid_points,direcs
 
 
@@ -819,8 +848,8 @@ def gaussian_grid(points,xstart,ystart,xend,yend,xnum,ynum):
 
 
 #This takes a grid of values and draws along a contour at value coff, points are places along this with a given spacing
-#This contour can be drawn further out by a constant width from coff. This is the main part of building a micelle
-#This works by taking a step defined by (df/dy,-df/dx )*ds which by definition is along the contour
+#This contour can be draw further a constant width out from coff. This is the main part of building a micelle
+#This works by taking a step defined by (df/dy,-df/dx )*ds which by definition os along the contour
 def draw_along(spacing,all_cens,grid,grid_vals,coff,rad_plus,z):
     max_iter = 100000
     tol = 0.1
@@ -884,6 +913,7 @@ def get_avlip_len(lipids):
         liplens += lipLen
     return liplens/len(lipids)
 
+
 #This uses all the above to build the micelle. Using contours with radius and height varing as a semi circle
 #Additionally the center is filled with a disc of lipids
 def build_micelle(area_l,all_cens,grid,grid_vals,coff,pbcx,pbcy,avlip_len):
@@ -895,11 +925,10 @@ def build_micelle(area_l,all_cens,grid,grid_vals,coff,pbcx,pbcy,avlip_len):
     rings = np.linspace(0,end_ang,frden)
     gpoints = np.zeros((0,3))
     normals = np.zeros((0,3))
-    #print(avlip_len)
     sp = (0.5*(1.15-avlip_len)/(-0.65))+(0.15*(1.8-avlip_len)/0.65)
     if sp < 0.15:
         sp = 0.15
-    zpush = 2.0-avlip_len
+    zpush = 1.8-avlip_len
     for xr,r in enumerate(rings):
         rad = np.sin(r)*orad
         rad_a = sp*(frden/2)-np.abs(sp*(frden/2)-sp*xr)
@@ -931,9 +960,6 @@ def build_micelle(area_l,all_cens,grid,grid_vals,coff,pbcx,pbcy,avlip_len):
     normals = np.concatenate((normals,disk_dirs))
     
     gpoints_max_rad = np.max(np.linalg.norm(disk_lips[:,:2]-dims[:2]/2,axis=1))
-    #print(disk_lips[:,:2]-dims[:2]/2)
-    #print(np.linalg.norm(disk_lips[:,:2]-dims[:2]/2,axis=1))
-
 
     return gpoints,normals,gpoints_max_rad+1.5
 
@@ -948,13 +974,604 @@ def gaussian(x,sig,mu):
 #The distribution of glycan strands in ecoli
 def ecoli_gdist(x):
     return 0.75*gaussian(x,4,8.9)+0.25*gaussian(x,10,45)
+    
+#a function that evalualtes a custom glycan distribution
+def glycan_dist(x,gdist):
+    total = 0
+    for gd in gdist:
+        total += gd[0]*gaussian(x,gd[1],gd[2])
+    return total
 
+#a function that gets the KDE for a given set of glycan lengths
+def eval_kde(all_linesT):
+    lengs = []
+    leng = 0
+    zero = False
+    prev = 2
+    for line in all_linesT:   
+        pos_start = np.where(line == 0)[0]
+        if(len(list(pos_start)) < 1):
+            start = 0
+        else:
+            start = pos_start[0]
+        for ind in range(line.shape[0]):
+            sind = (ind+start)%(line.shape[0])
+            if(line[sind] == 1):
+                leng += 1
+                zero = False
+            elif(line[sind] == 0):
+                lengs.append(leng)
+                leng = 0
+                zero = True
+            else:
+                if(prev != 2):
+                    lengs.append(leng)
+                leng = 0
+                zero = True
+            prev = line[sind]
+        if(not zero):
+            lengs.append(leng)
+    return sp.stats.gaussian_kde(lengs)
+                
+#MCMC to obtain a glycan strand distribution close to the target
+def MC_Glycan_Strands(pbcy,pbcx,zpos,xoff,yoff,prot_coords,gdist,num):
+    no_gly = int(pbcy/0.9)-2 
+    no_lines = int(pbcx/2.8)
+    all_linesT = np.zeros((no_lines-1,no_gly-1))+1
+    prot_block = np.zeros((no_lines-1,no_gly-1))
 
+    yspace = np.linspace(0,pbcy,all_linesT.shape[1]+1)[:-1]
+    xspace = np.linspace(0,pbcx,all_linesT.shape[0]+1)[:-1]
+    
+    if(prot_coords.size > 0):
+        prot_coords_zslice = prot_coords[prot_coords[:,2] > zpos-0.5]
+        prot_coords_zslice = prot_coords_zslice[prot_coords_zslice[:,2] < zpos+0.5]
+
+        
+        
+        for l in range(prot_block.shape[0]):
+            for g in range(prot_block[l].shape[0]):
+                for pc in prot_coords_zslice:
+                    pos = np.array([xspace[l]+xoff,yspace[g]+yoff+0.5,zpos])
+                    if(np.linalg.norm(pc-pos) < 1):
+                        prot_block[l,g] = 1
+    for l in range(prot_block.shape[0]):
+        ones = False
+        ones_end = False
+        indg = 0
+        for g in range(prot_block[l].shape[0]):
+            if prot_block[l,g] == 1:
+                if ones_end:
+                    prot_block[l,indg:g] = 1
+                    ones = True
+                    ones_end = False
+                else:
+                    ones = True
+            if ones:
+                if prot_block[l,g] != 1:
+                    indg = g
+                    ones_end = True
+
+        
+    
+    #plt.imshow(prot_block)
+    #plt.show()
+    
+    line_index = np.arange(no_gly-1)
+
+    all_linesT += prot_block
+
+    test_kde = eval_kde(all_linesT)
+    testx = np.linspace(0,65,100)
+    prev_kld = kl_d(glycan_dist(testx,gdist),test_kde(testx)) 
+    for i in range(30000):
+        rlind = random.randint(0,no_lines-2)
+
+        line_block = prot_block[rlind]
+        none_blocked = line_block[line_block==0]
+        nb_ind = random.randint(0,none_blocked.shape[0]-1)
+        glind = line_index[line_block==0][nb_ind]
+
+        all_linesT[rlind][glind] = (all_linesT[rlind][glind]+1)%2
+        
+        test_kde = eval_kde(all_linesT)
+        testx = np.linspace(0,65,100)
+        kld = kl_d(glycan_dist(testx,gdist),test_kde(testx))
+        
+        kT = 0.0025            
+        
+        accept = 1-np.exp(-(kld-prev_kld)/kT)
+
+        if(np.random.random() < accept):
+            all_linesT[rlind][glind] = (all_linesT[rlind][glind]+1)%2
+        else:
+            prev_kld = kld
+    test_kde = eval_kde(all_linesT)
+    testx = np.linspace(0,65,100)
+    plt.plot(test_kde(testx))
+    plt.plot(glycan_dist(testx,gdist))
+    plt.savefig(out_folder+"Dist"+str(num)+".png")
+    plt.clf()
+
+    for l in all_linesT:
+        l[l==2] = 0
+        if(np.sum(l) == l.shape[0]):
+            l[random.randint(0,l.shape[0]-1)] = 0
+
+    return all_linesT,prot_coords_zslice
+    
+    
+#This function uses data from the above to generate the coordinates for glycan strands
+def Create_Glycan_strands2(pgl_no,pbcy,pbcx,z_poses,xoff,yoff,pcoords, gdist):
+    #x y z dir type place linked 3-3
+    no_gly = int(pbcy/0.9)-2-1
+    no_lines = int(pbcx/2.8)-1
+    all_lines = np.zeros((pgl_no,no_lines,no_gly*2,14))
+    all_pc_slices = []
+    if pcoords.shape[0] == 0:
+        pcoords = np.zeros((1,3))
+    for pn in range(pgl_no):
+        z = pbcz/2+z_poses[pn]+Pos_PGL
+        chain_lens,pc_zslice = MC_Glycan_Strands(pbcy,pbcx,z,1.25*(pn%2)+xoff,yoff,pcoords+np.array([0,0,pbcz/2]),gdist,pn) 
+        all_pc_slices.append(pc_zslice)
+        yspace = np.linspace(0,pbcy,chain_lens.shape[1]*2+1)[:-1]
+        xspace = np.linspace(0,pbcx,chain_lens.shape[0]+1)[:-1]
+        
+        for l in range(chain_lens.shape[0]):
+            y_shift = 0#np.random.random()*0.5
+            for g in range(chain_lens[l].shape[0]):
+                direc = random.randint(0,1)*2-1
+                x = xspace[l]+1.25*(pn%2)
+                y2 = yspace[2*g+1]+y_shift
+                y1 = yspace[2*g]+y_shift
+                all_lines[pn,l,2*g] = np.array([x+xoff,y1+yoff,z,direc,1,chain_lens[l,g],-1,-1,-1,-1,-1,-1,0,0])
+                all_lines[pn,l,2*g+1] = np.array([x+xoff,y2+yoff,z,direc,0,chain_lens[l,g],-1,-1,-1,-1,-1,-1,0,0])
+    return all_lines,all_pc_slices
+
+   
+    
 #enforces pbc   
 def enforce_pbc(pbcv,points):
     points = np.where(points >= pbcv, points-pbcv, points)
     points = np.where(points <0, points+pbcv, points)
     return points
+
+#This function joins cross-links that are already cross-linked. (This flips that way they are linked)
+def flip_link(all_lines,lyind,lind,bind):
+    done = False
+    all_linesT = all_lines.copy()
+    if(all_linesT[lyind][lind][bind][13] == 1):
+        return all_lines, False
+    tmp = all_linesT[lyind,lind,bind,6:9].copy()
+    all_linesT[lyind,lind,bind,6:9] = all_linesT[lyind,lind,bind,9:12].copy()
+    all_linesT[lyind,lind,bind,9:12] = tmp.copy()
+    if(all_linesT[lyind,lind,bind,6] > -0.5):
+        tnlind = int(all_linesT[lyind,lind,bind,6])
+        tnbind = int(all_linesT[lyind,lind,bind,7])
+        tnlyind = int(all_linesT[lyind,lind,bind,8])
+        nlind = tnlind
+        nbind = tnbind
+        nlyind = tnlyind
+        switcher = 6
+    elif(all_linesT[lyind,lind,bind,9] > -0.5):
+        tnlind = int(all_linesT[lyind,lind,bind,9])
+        tnbind = int(all_linesT[lyind,lind,bind,10])
+        tnlyind = int(all_linesT[lyind,lind,bind,11])
+        nlind = tnlind
+        nbind = tnbind
+        nlyind = tnlyind
+        switcher = 9
+    while not done:
+        if(all_linesT[nlyind,nlind,nbind,13] == 1):
+            return all_lines,False
+        tmp = all_linesT[nlyind,nlind,nbind,6:9].copy()
+        all_linesT[nlyind,nlind,nbind,6:9] = all_linesT[nlyind,nlind,nbind,9:12].copy()
+        all_linesT[nlyind,nlind,nbind,9:12] = tmp.copy() 
+        tnlind = int(all_linesT[nlyind,nlind,nbind,switcher])
+        tnbind = int(all_linesT[nlyind,nlind,nbind,switcher+1])
+        tnlyind = int(all_linesT[nlyind,nlind,nbind,switcher+2])
+        nlind = tnlind
+        nbind = tnbind
+        nlyind = tnlyind
+        if(nlind < 0):
+            done = True
+            break
+    return all_linesT, True
+             
+#Similar algo to above, but doesn't flip. This is used to determin the length of oligomers
+def count_olig(all_lines,lyind,lind,bind):
+    done = False
+    count = 1
+    all_linesT = all_lines.copy()
+    if(all_linesT[lyind][lind][bind][13] == 1):
+        return 2, False
+    if(all_linesT[lyind,lind,bind,6] > -0.5):
+        tnlind = int(all_linesT[lyind,lind,bind,6])
+        tnbind = int(all_linesT[lyind,lind,bind,7])
+        tnlyind = int(all_linesT[lyind,lind,bind,8])
+        nlind = tnlind
+        nbind = tnbind
+        nlyind = tnlyind
+        switcher = 6
+    elif(all_linesT[lyind,lind,bind,9] > -0.5):
+        tnlind = int(all_linesT[lyind,lind,bind,9])
+        tnbind = int(all_linesT[lyind,lind,bind,10])
+        tnlyind = int(all_linesT[lyind,lind,bind,11])
+        nlind = tnlind
+        nbind = tnbind
+        nlyind = tnlyind
+        switcher = 9
+    else:
+        return 1,False
+    while not done:
+        count += 1
+        if(all_linesT[nlyind,nlind,nbind,13] == 1):
+            return count,False
+
+        tnlind = int(all_linesT[nlyind,nlind,nbind,switcher])
+        tnbind = int(all_linesT[nlyind,nlind,nbind,switcher+1])
+        tnlyind = int(all_linesT[nlyind,nlind,nbind,switcher+2])
+        nlind = tnlind
+        nbind = tnbind
+        nlyind = tnlyind
+        if(nlind < 0):
+            done = True
+            break
+    return count, True
+       
+
+#This function prevents knotting of the cross-links
+def get_allowed_beads(cind,clinks_np,bead,inder,no_gly):
+    eq = np.where(clinks_np[cind][:,inder] == bead)[0]
+    greater = np.where(clinks_np[cind][:,inder] > bead)[0]
+    less = np.where(clinks_np[cind][:,inder] < bead)[0]
+    if(len(greater) == 0):
+        urange = 0
+    else:
+        urange = greater[0]
+    if(len(less) == 0):
+        lrange = -1
+    else:
+        lrange = less[-1]
+    if(clinks_np[cind].size > 0):
+        if(clinks_np[cind].shape[0] == 1):
+            other_bead = clinks_np[cind][0,(inder+1)%2]
+            if(bead > clinks_np[cind][0,inder]):
+                if(other_bead > no_gly-2):
+                    allowed_beads = np.arange(0,int(no_gly/2))
+                else:
+                    allowed_beads = np.arange(other_bead,no_gly)
+            elif(bead < clinks_np[cind][0,inder]):
+                if(other_bead < 3):
+                    allowed_beads = np.arange(int(no_gly/2),no_gly)
+                else:
+                    allowed_beads = np.arange(0,other_bead)
+            else:
+                allowed_beads = np.arange(0,no_gly)
+            return allowed_beads
+        else:
+            
+
+            lrange_b2 = clinks_np[cind][lrange,inder]
+            urange_b2 = clinks_np[cind][urange,inder]
+
+            db_l = np.where(clinks_np[cind][:,inder] == lrange_b2)[0]
+            db_u = np.where(clinks_np[cind][:,inder] == urange_b2)[0]
+
+            poss_lrb = clinks_np[cind][db_l,(inder+1)%2]
+            poss_urb = clinks_np[cind][db_u,(inder+1)%2]
+
+            if(np.min(poss_lrb) == 1):
+                lrange_b = no_gly+1
+            else:
+                lrange_b = np.max(poss_lrb)
+
+        
+
+
+            if(np.max(poss_urb) == no_gly-1):
+                urange_b = 0
+            else:
+                urange_b = np.min(poss_urb)
+
+            inc_l = np.where(clinks_np[cind][:,(inder+1)%2] == lrange_b)[0]
+            inc_u = np.where(clinks_np[cind][:,(inder+1)%2] == urange_b)[0]
+
+            
+            if(len(inc_l) == 2):
+                lrange_b_adj = (lrange_b + 1)%no_gly
+            else:
+                lrange_b_adj = lrange_b
+            if(len(inc_u) == 2):
+                urange_b_adj = (urange_b - 1)%no_gly
+            else:
+                urange_b_adj = urange_b
+            if(lrange_b != urange_b):
+                if(lrange_b_adj < urange_b_adj):
+                    allowed_beads = np.arange(lrange_b_adj,urange_b_adj+1)
+                elif(lrange_b_adj > urange_b_adj):
+                    allowed_beads = np.concatenate([np.arange(0,urange_b_adj+1),np.arange(lrange_b_adj,no_gly)])
+                else:
+                    allowed_beads = np.array([lrange_b_adj])
+            else:
+                if((len(greater) >= 1 and len(less) > 0) or (len(greater) > 0 and len(less) >= 1)):
+                    allowed_beads =  np.array([2])
+                else:
+                    allowed_beads = np.arange(0,no_gly)
+            if(len(eq) > 0):
+                not_allow = clinks_np[cind][eq[0],(inder+1)%2]
+                delind = np.where(allowed_beads == not_allow)[0]
+                if(len(delind > 0)):
+                    allowed_beads = np.delete(allowed_beads,delind[0])
+            return allowed_beads
+    else:
+        return np.arange(0,no_gly)
+
+#Uses all of the above to create cross-links between glycan strands
+#This is fairly complicated to describe so I will not for now
+def cross_link(all_lines,pbcy,cper,per33,lper,oper):
+    no_layers = all_lines.shape[0]
+    no_lines = all_lines.shape[1]
+    no_gly = all_lines.shape[2]
+    clinks = []
+    clinks_np0 = []
+    clinks_np1 = []
+    for l in range(no_lines):
+        clinks.append([])
+    for cl in clinks:
+        if(len(cl) > 0):
+            cl_np = np.array(cl)
+            sort_ind0 = np.lexsort((cl_np[:,1],cl_np[:,0]))
+            sort_ind1 = np.lexsort((cl_np[:,0],cl_np[:,1]))
+            clinks_np0.append(cl_np[sort_ind0])
+            clinks_np1.append(cl_np[sort_ind1])
+        else:
+            clinks_np0.append(np.empty((0,2)))
+            clinks_np1.append(np.empty((0,2)))
+    for i in range(5000*no_layers):
+        layer_ind = random.randint(0,no_layers-1)
+        line_ind = random.randint(0,no_lines-1)
+        line1 = all_lines[layer_ind,line_ind]
+        line1_nam  = line1[line1[:,4]==0]
+        line1_nam = line1_nam[line1_nam[:,5]==1]
+        line1_nam = line1_nam[line1_nam[:,12]<2]
+        try:
+            b1ind = random.randint(0,line1_nam.shape[0]-1)
+        except:
+            continue
+        passed = False
+        flipped = 1
+        for fl in [1,-1]:
+            bead1 = line1_nam[b1ind]
+            direc = bead1[3]*fl
+            layer_ind2 = layer_ind
+            if(layer_ind != no_layers-1 and random.random() < lper and bead1[12] == 0):
+                layer_ind2 = layer_ind+1
+                if(layer_ind%2 == 0):
+                    acc_direc = (direc+1)/2
+                else:
+                    acc_direc = (direc-1)/2
+            else:
+                acc_direc = direc
+            ypos = bead1[1]
+            bead1_t = np.where(np.logical_and(all_lines[layer_ind,line_ind][:,1] > ypos-1e-7,all_lines[layer_ind,line_ind][:,1] < ypos+1e-7))[0][0]
+            if(layer_ind == layer_ind2):
+                if(direc == -1):
+                    allowed_beads = get_allowed_beads(line_ind,clinks_np0,bead1_t,0,no_gly)
+                elif(direc == 1):
+                    allowed_beads = get_allowed_beads((line_ind-int(direc))%no_lines,clinks_np1,bead1_t,1,no_gly)
+            else:
+                allowed_beads = np.arange(0,no_gly)
+            line2 = all_lines[layer_ind2,(line_ind-int(acc_direc))%no_lines,allowed_beads]
+            line2_nam = line2[line2[:,4]==0]
+            line2_nam = line2_nam[line2_nam[:,5]==1]
+            if(layer_ind != layer_ind2):
+                line2_nam = line2_nam[line2_nam[:,12]<1]
+            else:
+                line2_nam = line2_nam[line2_nam[:,12]<2]
+            line2_nam[:,1] -= ypos-pbcy/2
+            line2_nam[:,1] = enforce_pbc(pbcy,line2_nam[:,1])
+            rangee = 1.5
+            if(layer_ind != layer_ind2):
+                rangee = 0.75
+            line2_seg = line2_nam[line2_nam[:,1] > pbcy/2-rangee]
+            line2_seg = line2_seg[line2_seg[:,1] < pbcy/2+rangee]
+            line2_seg = line2_seg[np.logical_or(line2_seg[:,3] == -direc,np.logical_and(line2_seg[:,6] < 0,line2_seg[:,9] < 0))]
+            line2_seg[:,1] += ypos-pbcy/2
+            line2_seg[:,1] = enforce_pbc(pbcy,line2_seg[:,1])
+            try:
+                bead2_ind = random.randint(0,line2_seg.shape[0]-1)
+                passed = True
+                break
+            except:
+                bead1_t = np.where(np.logical_and(all_lines[layer_ind,line_ind][:,1] > ypos-1e-7,all_lines[layer_ind,line_ind][:,1] < ypos+1e-7))[0][0]
+                if(all_lines[layer_ind,line_ind,bead1_t,6] > -1 or all_lines[layer_ind,line_ind,bead1_t,9] > -1):
+                    break
+                flipped = -1
+                continue
+        if(not passed):
+            bead1_t = np.where(np.logical_and(all_lines[layer_ind,line_ind][:,1] > ypos-1e-7,all_lines[layer_ind,line_ind][:,1] < ypos+1e-7))[0][0]
+            if(layer_ind == layer_ind2):
+                all_lines[layer_ind,line_ind,bead1_t,12] += 2
+            continue
+        bead2 = line2_seg[bead2_ind]
+        ypos2 = bead2[1]
+        
+        
+        
+        all_lines[layer_ind,line_ind,bead1_t,3] *= flipped
+        ndirec = all_lines[layer_ind,line_ind,bead1_t,3]
+        if(layer_ind != layer_ind2):
+            if(layer_ind%2 == 0):
+                ndirec = (ndirec+1)/2
+            else:
+                ndirec = (ndirec-1)/2
+        fndirec = all_lines[layer_ind,line_ind,bead1_t,3]
+        bead2_t = np.where(np.logical_and(all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines][:,1] > ypos2-1e-7,all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines][:,1] < ypos2+1e-7))[0][0]
+        
+        
+        
+        lind1 = line_ind
+        lind2 = (line_ind-int(ndirec))%no_lines
+
+        if(abs(lind1-lind2) > 1):
+            if(lind1 > lind2):
+                clind = lind1
+                bind1 = bead1_t
+                bind2 = bead2_t
+            else:
+                clind = lind2
+                bind1 = bead2_t
+                bind2 = bead1_t
+        else:
+            if(lind1 < lind2):
+                clind = lind1
+                bind1 = bead1_t
+                bind2 = bead2_t
+            else:
+                clind = lind2
+                bind1 = bead2_t
+                bind2 = bead1_t
+        rand33 = random.random() 
+        if(random.random() < cper):
+            if(all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,6] < 0 and all_lines[layer_ind,line_ind,bead1_t,9] < 0):
+                if(all_lines[layer_ind,line_ind,bead1_t,6] != lind2 or all_lines[layer_ind,line_ind,bead1_t,7] != bead2_t):
+                    all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,6] = lind1
+                    all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,7] = bead1_t
+                    if(all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] == 0 and rand33 < per33 and all_lines[layer_ind,line_ind,bead1_t,9] < 0):
+                        all_lines[layer_ind,line_ind,bead1_t,12] +=1
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] +=2
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,13] = 1
+                        all_lines[layer_ind,line_ind,bead1_t,13] = 2
+                    else:
+                        all_lines[layer_ind,line_ind,bead1_t,12] +=1
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] +=1
+
+                    if(layer_ind != layer_ind2 or random.random() > oper):
+                        all_lines[layer_ind,line_ind,bead1_t,12] = 2
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] = 2
+                    
+                    all_lines[layer_ind,line_ind,bead1_t,9] = lind2
+                    all_lines[layer_ind,line_ind,bead1_t,10] = bead2_t
+                    all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,8] = layer_ind
+                    all_lines[layer_ind,line_ind,bead1_t,11] = layer_ind2
+                    all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,3] =-fndirec
+                    clinks[clind].append([bind1,bind2])
+            elif(all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,9] < 0 and all_lines[layer_ind,line_ind,bead1_t,6] < 0):
+                if(all_lines[layer_ind,line_ind,bead1_t,9] != lind2 or all_lines[layer_ind,line_ind,bead1_t,10] != bead2_t):
+                    all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,9] = lind1
+                    all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,10] = bead1_t
+                    if(all_lines[layer_ind,line_ind,bead1_t,12] == 0 and rand33 < per33 and all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,9] < 0):
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] +=1
+                        all_lines[layer_ind,line_ind,bead1_t,12] +=2
+                        all_lines[layer_ind,line_ind,bead1_t,13] = 1
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,13] = 2
+                    else:
+                        all_lines[layer_ind,line_ind,bead1_t,12] +=1
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] +=1
+
+                    if(layer_ind != layer_ind2 or random.random() > oper):
+                        all_lines[layer_ind,line_ind,bead1_t,12] = 2
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] = 2
+
+                    all_lines[layer_ind,line_ind,bead1_t,6] = lind2
+                    all_lines[layer_ind,line_ind,bead1_t,7] = bead2_t
+                    all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,11] = layer_ind
+                    all_lines[layer_ind,line_ind,bead1_t,8] = layer_ind2
+                    all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,3] =-fndirec
+                    clinks[clind].append([bind1,bind2])
+            else:
+                all_lines,is_flipped = flip_link(all_lines,layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t)
+                if(not is_flipped):
+                    all_lines,is_flipped = flip_link(all_lines,layer_ind,line_ind,bead1_t)
+                    if(not is_flipped):
+                        all_lines[layer_ind,line_ind,bead1_t,3] *= flipped
+                        continue
+                if(all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,6] < 0 and all_lines[layer_ind,line_ind,bead1_t,9] < 0):
+                    if(all_lines[layer_ind,line_ind,bead1_t,6] != lind2 or all_lines[layer_ind,line_ind,bead1_t,7] != bead2_t):
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,6] = lind1
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,7] = bead1_t
+                        if(all_lines[layer_ind,line_ind,bead1_t,12] == 0 and rand33 < per33 and all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,9] < 0):
+                            all_lines[layer_ind,line_ind,bead1_t,12] +=2
+                            all_lines[layer_ind,line_ind,bead1_t,13] = 1
+                            all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,11] = 2
+                        else:
+                            all_lines[layer_ind,line_ind,bead1_t,12] +=1
+                            if(all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] == 0 and rand33 < per33 and all_lines[layer_ind,line_ind,bead1_t,9] < 0):
+                                all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] +=2
+                                all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,13] = 1
+                                all_lines[layer_ind,line_ind,bead1_t,13] = 2
+                            else:
+                                all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] +=1
+
+                        if(layer_ind != layer_ind2 or random.random() > oper):
+                            all_lines[layer_ind,line_ind,bead1_t,12] = 2
+                            all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] = 2
+                        all_lines[layer_ind,line_ind,bead1_t,9] = lind2
+                        all_lines[layer_ind,line_ind,bead1_t,10] = bead2_t
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,8] = layer_ind
+                        all_lines[layer_ind,line_ind,bead1_t,11] = layer_ind2
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,3] =-fndirec
+                        clinks[clind].append([bind1,bind2])
+                elif(all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,9] < 0 and all_lines[layer_ind,line_ind,bead1_t,6] < 0):
+                    if(all_lines[layer_ind,line_ind,bead1_t,9] != lind2 or all_lines[layer_ind,line_ind,bead1_t,10] != bead2_t):
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,9] = lind1
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,10] = bead1_t
+                        if(all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] == 0 and rand33 < per33 and all_lines[layer_ind,line_ind,bead1_t,9] < 0):
+                            all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] +=2
+                            all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,13] = 1
+                            all_lines[layer_ind,line_ind,bead1_t,13] = 2
+                        else:
+                            all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] +=1
+                            if(all_lines[layer_ind,line_ind,bead1_t,12] == 0 and rand33 < per33 and all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,9] < 0):
+                                all_lines[layer_ind,line_ind,bead1_t,12] +=2
+                                all_lines[layer_ind,line_ind,bead1_t,13] = 1
+                                all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,13] = 2
+                            else:
+                                all_lines[layer_ind,line_ind,bead1_t,12] +=1
+                        if(layer_ind != layer_ind2 or random.random() > oper):
+                            all_lines[layer_ind,line_ind,bead1_t,12] = 2
+                            all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] = 2
+                        all_lines[layer_ind,line_ind,bead1_t,6] = lind2
+                        all_lines[layer_ind,line_ind,bead1_t,7] = bead2_t
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,11] = layer_ind
+                        all_lines[layer_ind,line_ind,bead1_t,8] = layer_ind2
+                        all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,3] =-fndirec
+                        clinks[clind].append([bind1,bind2])
+
+        else:
+            all_lines[layer_ind,line_ind,bead1_t,3] *= flipped
+            all_lines[layer_ind2,(line_ind-int(ndirec))%no_lines,bead2_t,12] += 1
+            all_lines[layer_ind,line_ind,bead1_t,12] +=1
+
+        clinks_np0 = []
+        clinks_np1 = []
+        for cl in clinks:
+            if(len(cl) > 0):
+                cl_np = np.array(cl)
+                sort_ind0 = np.lexsort((cl_np[:,1],cl_np[:,0]))
+                sort_ind1 = np.lexsort((cl_np[:,0],cl_np[:,1]))
+                clinks_np0.append(cl_np[sort_ind0])
+                clinks_np1.append(cl_np[sort_ind1])
+            else:
+                clinks_np0.append(np.empty((0,2)))
+                clinks_np1.append(np.empty((0,2)))
+       
+    return all_lines
+    
+#uses count_olig to determin distribution of oligomer lengths
+def count_all_olig(all_lines):
+    test_lines = all_lines[np.logical_and(all_lines[:,:,:,5] == 1,all_lines[:,:,:,4] == 0),:]
+    olig_lens = np.zeros(test_lines.shape[0])
+    olig_count = 0
+    for ly in range(all_lines.shape[0]):
+        for l in range(all_lines[ly].shape[0]):
+            for b in range(all_lines[ly,l].shape[0]):
+                if(all_lines[ly,l,b,5] == 1 and all_lines[ly,l,b,4] == 0):
+                    num,_ = count_olig(all_lines,ly,l,b) 
+                    olig_lens[olig_count] = num
+                    olig_count += 1
+    return olig_lens
 
 #loads an itp file
 def load_itp(fn):
@@ -982,8 +1599,230 @@ def load_itp(fn):
             if(data_ind > -1):
                 data[data_ind].append(lines.split())
     return data
+            
+#flattens glycan strand data into 2d array
+def lines_to_coords(all_lines):
+    old_shape = all_lines.shape
+    all_lines = all_lines.reshape(int(all_lines.size/14),14)
+    #sind = np.argsort(all_lines[:,4])
+    return all_lines,old_shape
+            
+#Writes the itp file for PG          
+def write_PGL_itp(all_lines,nam_itp,nag_itp,spep_itp,upep_itp,uupep_itp,prev_str,prev_nos):  
+    nam_data = load_itp(nam_itp)
+    nag_data = load_itp(nag_itp)
+    upep_data = load_itp(upep_itp)
+    uupep_data = load_itp(uupep_itp)
+    spep_data = load_itp(spep_itp)
+    
+        
+    data = [nam_data,nag_data]
+    atoms_str = prev_str[0]#"[ atoms ]\n"
+    bonds_str = prev_str[1]#"[ bonds ]\n"
+    constraints_str = prev_str[2]#"[ constraints ]\n"
+    angles_str = prev_str[3]#"[ angles ]\n"
+    dihedrals_str = prev_str[4]#"[ dihedrals ]\n"
+    
+    resno = prev_nos[0]
+    atm_no = prev_nos[1]
+    #x y z dir type place linked
+    #0 1 2 3    4    5     6
+    ang_link1=[
+    [2,     1,     8,     2,      90.000,      130.00],
+    [3,     1,     8,     2,     118.000,      100.00],
+    [4,     1,     8,    10,     151.000,      170.00],
+    [1,     8,     6,    10,      70.000,      600.00],
+    [1,     8,     9,    10,      93.000,      180.00],
+    [1,     8,     5,    10,     160.000,      555.00]]
+    a_link_add1 = [[0,0,-1],[0,0,-1],[0,0,-1],[0,-1,-1],[0,-1,-1],[0,-1,-1]]
+    dihedral_link1=[
+    [2,     1,     8,     5,     9,       0.000,        3.50,     1],
+    [2,     1,     8,     5,     9,       0.000,        3.00,     2],
+    [2,     1,     8,     6,     9,       0.000,        3.50,     1],
+    [2,     1,     8,     6,     9,       0.000,        3.00,     2],
+    [3,     1,     8,     9,     9,       0.000,        8.00,     1],
+    [3,     1,     8,     9,     9,       0.000,        2.00,     2],
+    [4,     1,     8,     6,     9,       0.000,        7.00,     1],
+    [4,     1,     8,     6,     9,       0.000,        3.00,     2],
+    [4,     1,     8,     9,     9,     180.000,        2.00,     2],
+    [4,     1,     8,     9,     9,     180.000,        3.00,     3]]
+    ang_link2=[
+    [2,     1,    9,    10,     113.000,       90.00],
+    [3,     1,    9,    10,      99.000,      100.00],
+    [4,     1,    9,    10,     145.000,      250.00],
+    [1,    9,    7,    10,      76.000,      400.00],
+    [1,    9,    6,    10,     135.000,      970.00]]
+    
+    a_link_add2 = [[0,0,-1],[0,0,-1],[0,0,-1],[0,-1,-1],[0,-1,-1]]
+    
+    dihedral_link2=[
+    [4,     1,    9,    6,     9,       0.000,        8.00,     1],
+    [4,     1,    9,    6,     9,       0.000,        2.00,     2],
+    [4,     1,    9,    7,     9,       0.000,        7.00,     1],
+    [4,     1,    9,    7,     9,       0.000,        3.00,     2],
+    [2,     1,    9,    6,     9,     180.000,        6.00,     1],
+    [2,     1,    9,    6,     9,       0.000,        4.00,     2]]
+    
+    atm_start = []
+    for layer in all_lines:
+        atm_start_p1 = []
+        for line in layer:
+            atm_start_p2 = []
+            prev_p = 0
+            for res in line:
+                atm_start_p2.append(atm_no)
+                if(res[5] == 1):
+                    r4 = int(res[4])
+                    
+                    if(prev_p == 1):
+                        if(r4 == 0):
+                            bonds_str += "\t"+str(1+atm_no-4)+"\t"+str(8+atm_no-4)+"\t"+str(1)+"\t"+str(0.316)+"\t"+str(28500.00)+"\n"       
+                            for ang in ang_link1:
+                                angles_str += "\t"+str(ang[0]+atm_no-4)+"\t"+str(ang[1]+atm_no-4)+"\t"+str(ang[2]+atm_no-4)+"\t"+str(ang[3])+"\t"+str(ang[4])+"\t"+str(ang[5])+"\n"
+                            for dih in dihedral_link1:
+                                dihedrals_str += "\t"+str(dih[0]+atm_no-4)+"\t"+str(dih[1]+atm_no-4)+"\t"+str(dih[2]+atm_no-4)+"\t"+str(dih[3]+atm_no-4)+"\t"+str(dih[4])+"\t"+str(dih[5])+"\t"+str(dih[6])+"\t"+str(dih[7])+"\n"                
+                        else:
+                            bonds_str += "\t"+str(1+atm_no-5)+"\t"+str(9+atm_no-5)+"\t"+str(1)+"\t"+str(0.288)+"\t"+str(32000.00)+"\n"      
+                            for ang in ang_link2:
+                                angles_str += "\t"+str(ang[0]+atm_no-5)+"\t"+str(ang[1]+atm_no-5)+"\t"+str(ang[2]+atm_no-5)+"\t"+str(ang[3])+"\t"+str(ang[4])+"\t"+str(ang[5])+"\n"
+                            for dih in dihedral_link2:
+                                dihedrals_str += "\t"+str(dih[0]+atm_no-5)+"\t"+str(dih[1]+atm_no-5)+"\t"+str(dih[2]+atm_no-5)+"\t"+str(dih[3]+atm_no-5)+"\t"+str(dih[4])+"\t"+str(dih[5])+"\t"+str(dih[6])+"\t"+str(dih[7])+"\n"                
+                            
+                        
+                    for bd in data[r4][1]:
+                        bonds_str += "\t"+str(int(bd[0])+atm_no)+"\t"+str(int(bd[1])+atm_no)+"\t"+bd[2]+"\t"+bd[3]+"\t"+bd[4]+"\n"                
 
-          
+                        
+                    for cd in data[r4][2]:
+                        constraints_str += "\t"+str(int(cd[0])+atm_no)+"\t"+str(int(cd[1])+atm_no)+"\t"+cd[2]+"\t"+cd[3]+"\t"+cd[4]+"\n"                
+                    for ad in data[r4][3]:
+                        angles_str += "\t"+str(int(ad[0])+atm_no)+"\t"+str(int(ad[1])+atm_no)+"\t"+str(int(ad[2])+atm_no)+"\t"+ad[3]+"\t"+ad[4]+"\t"+ad[5]+"\n"
+                    for dd in data[r4][4]:
+                        dihedrals_str += "\t"+str(int(dd[0])+atm_no)+"\t"+str(int(dd[1])+atm_no)+"\t"+str(int(dd[2])+atm_no)+"\t"+str(int(dd[3])+atm_no)+"\t"+dd[4]+"\t"+dd[5]+"\t"+dd[6]+"\t"+dd[7]+"\n"
+                    
+                    for ad in data[r4][0]:
+                        atoms_str += "\t"+str(atm_no+1)+"\t"+ad[1]+"\t"+str(resno)+"\t"+ad[3]+"\t"+ad[4]+"\t"+str(atm_no+1)+"\t"+ad[6]+"\t"+ad[7]+"\n"
+                        atm_no += 1
+                    
+                        
+                    
+                    resno += 1
+                prev_p = res[5]
+            
+            if(line[0][5] == 1 and line[-1][5] == 1):
+                if(int(line[0][4]) == 0):
+                    bonds_str += "\t"+str(1+atm_start_p2[0])+"\t"+str(8+atm_start_p2[-1]-4)+"\t"+str(1)+"\t"+str(0.316)+"\t"+str(28500.00)+"\n"       
+                    for nn,ang in enumerate(ang_link1):
+                        angles_str += "\t"+str(ang[0]+atm_start_p2[a_link_add1[nn][0]]+4*a_link_add1[nn][0])+"\t"+str(ang[1]+atm_start_p2[a_link_add1[nn][1]]+4*a_link_add1[nn][1])+"\t"+str(ang[2]+atm_start_p2[a_link_add1[nn][2]]+4*a_link_add1[nn][2])+"\t"+str(ang[3])+"\t"+str(ang[4])+"\t"+str(ang[5])+"\n"
+                    for dih in dihedral_link1:
+                        dihedrals_str += "\t"+str(dih[0]+atm_start_p2[0])+"\t"+str(dih[1]+atm_start_p2[0])+"\t"+str(dih[2]+atm_start_p2[-1]-4)+"\t"+str(dih[3]+atm_start_p2[-1]-4)+"\t"+str(dih[4])+"\t"+str(dih[5])+"\t"+str(dih[6])+"\t"+str(dih[7])+"\n"                
+                else:
+                    bonds_str += "\t"+str(1+atm_start_p2[0])+"\t"+str(9+atm_start_p2[-1]-5)+"\t"+str(1)+"\t"+str(0.288)+"\t"+str(32000.00)+"\n"      
+                    for nn,ang in enumerate(ang_link2):
+                        angles_str += "\t"+str(ang[0]+atm_start_p2[a_link_add2[nn][0]]+5*a_link_add1[nn][0])+"\t"+str(ang[1]+atm_start_p2[a_link_add2[nn][1]]+5*a_link_add1[nn][1])+"\t"+str(ang[2]+atm_start_p2[a_link_add2[nn][2]]+5*a_link_add1[nn][2])+"\t"+str(ang[3])+"\t"+str(ang[4])+"\t"+str(ang[5])+"\n"
+                    for dih in dihedral_link2:
+                        dihedrals_str += "\t"+str(dih[0]+atm_start_p2[0])+"\t"+str(dih[1]+atm_start_p2[0])+"\t"+str(dih[2]+atm_start_p2[-1]-5)+"\t"+str(dih[3]+atm_start_p2[-1]-5)+"\t"+str(dih[4])+"\t"+str(dih[5])+"\t"+str(dih[6])+"\t"+str(dih[7])+"\n"                
+                
+                 
+            atm_start_p1.append(atm_start_p2)
+        atm_start.append(atm_start_p1)
+            
+      
+    blink3 = [[5,    1,     1,       0.319,    14800.00]]   
+    
+    ang_link3 =[[ 4,     5,   1,    10,     104.000,       80.00],
+    [5,    1,   3,    10,     107.000,       60.00],
+    [5,    1,    2,     2,     100.000,       25.00]]
+    
+    dih_link3 = [[4,     5,    1,    3,     9,      60.000,        3.00,     2],
+    [5,    1,    3,    4,     9,     140.000,        3.00,     2]]
+
+    iplink = [8, 7, 1, 0.350, 1100.00]
+    ang_iplink = [[5,8,7,10,114,75],[8,7,6,10,95,75]]
+    
+    cl_atm_start = []
+    
+    for lyind,layer in enumerate(all_lines):
+        cl_atm_start_p1 = []
+        for lind,line in enumerate(layer):
+            cl_atm_start_p2 = []
+            for bind,res in enumerate(line):
+                cl_atm_start_p2.append(atm_no)
+                if(res[5] == 1):
+                    r4 = int(res[4])
+                    if(r4 == 0):
+                        if(res[13] == 1):
+                            data = uupep_data
+                        else:
+                            if(res[6] != -1 or res[13] == 2):
+                                data = upep_data
+                            else:
+                                data = spep_data
+                        
+                        b1_s = atm_start[lyind][lind][bind]
+                        for bd in blink3:
+                            bonds_str += "\t"+str(bd[0]+b1_s)+"\t"+str(bd[1]+atm_no)+"\t"+str(bd[2])+"\t"+str(bd[3])+"\t"+str(bd[4])+"\n"
+                        
+                        angles_str += "\t"+str(ang_link3[0][0]+b1_s)+"\t"+str(ang_link3[0][1]+b1_s)+"\t"+str(ang_link3[0][2]+atm_no)+"\t"+str(ang_link3[0][3])+"\t"+str(ang_link3[0][4])+"\t"+str(ang_link3[0][5])+"\n"
+                        angles_str += "\t"+str(ang_link3[1][0]+b1_s)+"\t"+str(ang_link3[1][1]+atm_no)+"\t"+str(ang_link3[1][2]+atm_no)+"\t"+str(ang_link3[1][3])+"\t"+str(ang_link3[1][4])+"\t"+str(ang_link3[1][5])+"\n"
+                        angles_str += "\t"+str(ang_link3[2][0]+b1_s)+"\t"+str(ang_link3[2][1]+atm_no)+"\t"+str(ang_link3[2][2]+atm_no)+"\t"+str(ang_link3[2][3])+"\t"+str(ang_link3[2][4])+"\t"+str(ang_link3[2][5])+"\n"
+                                        
+                        dihedrals_str += "\t"+str(dih_link3[0][0]+b1_s)+"\t"+str(dih_link3[0][1]+b1_s)+"\t"+str(dih_link3[0][2]+atm_no)+"\t"+str(dih_link3[0][3]+atm_no)+"\t"+str(dih_link3[0][4])+"\t"+str(dih_link3[0][5])+"\t"+str(dih_link3[0][6])+"\t"+str(dih_link3[0][7])+"\n"                
+                        dihedrals_str += "\t"+str(dih_link3[0][0]+b1_s)+"\t"+str(dih_link3[0][1]+atm_no)+"\t"+str(dih_link3[0][2]+atm_no)+"\t"+str(dih_link3[0][3]+atm_no)+"\t"+str(dih_link3[0][4])+"\t"+str(dih_link3[0][5])+"\t"+str(dih_link3[0][6])+"\t"+str(dih_link3[0][7])+"\n"                
+                        
+                        for bd in data[1]:
+                            bonds_str += "\t"+str(int(bd[0])+atm_no)+"\t"+str(int(bd[1])+atm_no)+"\t"+bd[2]+"\t"+bd[3]+"\t"+bd[4]+"\n"                
+                        for cd in data[2]:
+                            constraints_str += "\t"+str(int(cd[0])+atm_no)+"\t"+str(int(cd[1])+atm_no)+"\t"+cd[2]+"\t"+cd[3]+"\t"+cd[4]+"\n"                
+                        for ad in data[3]:
+                            angles_str += "\t"+str(int(ad[0])+atm_no)+"\t"+str(int(ad[1])+atm_no)+"\t"+str(int(ad[2])+atm_no)+"\t"+ad[3]+"\t"+ad[4]+"\t"+ad[5]+"\n"
+                        for dd in data[4]:
+                            dihedrals_str += "\t"+str(int(dd[0])+atm_no)+"\t"+str(int(dd[1])+atm_no)+"\t"+str(int(dd[2])+atm_no)+"\t"+str(int(dd[3])+atm_no)+"\t"+dd[4]+"\t"+dd[5]+"\t"+dd[6]+"\t"+dd[7]+"\n"
+                        
+                        for ad in data[0]:
+                            atoms_str += "\t"+str(atm_no+1)+"\t"+ad[1]+"\t"+str(resno)+"\t"+ad[3]+"\t"+ad[4]+"\t"+str(atm_no+1)+"\t"+ad[6]+"\t"+ad[7]+"\n"
+                            atm_no += 1
+                        resno += 1
+            cl_atm_start_p1.append(cl_atm_start_p2)
+        cl_atm_start.append(cl_atm_start_p1)
+    
+    for lyind,layer in enumerate(all_lines):
+        for lind,line in enumerate(layer):
+            for bind,res in enumerate(line):
+                c_atm1 = cl_atm_start[lyind][lind][bind]
+                ly2ind = int(res[8])
+                l2ind = int(res[6])
+                b2ind = int(res[7])
+                if(l2ind != -1):
+                    c_atm2 = cl_atm_start[ly2ind][l2ind][b2ind]
+                    if(all_lines[lyind][lind][bind][13] == 1 or all_lines[ly2ind][l2ind][b2ind][13] == 1):
+                        iplink[0] = 7
+                    else:
+                        pass
+                        #angles_str += "\t"+str(ang_iplink[0][0]+c_atm1)+"\t"+str(ang_iplink[0][1]+c_atm1)+"\t"+str(ang_iplink[0][2]+c_atm2)+"\t"+str(ang_iplink[0][3])+"\t"+str(ang_iplink[0][4])+"\t"+str(ang_iplink[0][5])+"\n"
+                        angles_str += "\t"+str(ang_iplink[1][0]+c_atm1)+"\t"+str(ang_iplink[1][1]+c_atm2)+"\t"+str(ang_iplink[1][2]+c_atm2)+"\t"+str(ang_iplink[1][3])+"\t"+str(ang_iplink[1][4])+"\t"+str(ang_iplink[1][5])+"\n"
+                        
+                    bonds_str += "\t"+str(iplink[0]+c_atm1)+"\t"+str(iplink[1]+c_atm2)+"\t"+str(iplink[2])+"\t"+str(iplink[3])+"\t"+str(iplink[4])+"\n"
+    
+    return [atoms_str,bonds_str,constraints_str,angles_str,dihedrals_str],[resno,atm_no]        
+        
+    
+    
+    
+                    
+#write the PG itp     
+def write_all_itp(itp_str,out_folder):
+    pgl_file = open(out_folder+"PGL.itp","w")    
+    pgl_file.write("[ moleculetype ]\n")
+    pgl_file.write("PGL    1\n\n")
+    pgl_file.write(itp_str[0]+"\n")
+    pgl_file.write(itp_str[1]+"\n")
+    pgl_file.write(itp_str[2]+"\n")
+    pgl_file.write(itp_str[3]+"\n")
+    pgl_file.write(itp_str[4]+"\n")
+    pgl_file.close()
+            
+    
 #Function that creates a leaflet using all of the above
 def create_leaflet(den,xbox,ybox,curv_A,curv_B,ch_ang,pore,leng,keep_end,mem_outer_red): 
     if(curv_A < 1e-5 or curv_B < 1e-5):
@@ -1199,6 +2038,14 @@ def get_charge(lz,uz):
                 mcharge += charges.get(j[1].strip(),0)
         last = j[1:3]
         
+    last = None   
+    pgcharge = 0
+    for ind,j in enumerate(PGL.atoms):
+        pos = PGL.coord[ind]
+        if not j[0].strip().startswith('v') and j[1:3] != last:
+            if(pos[2] > lz and pos[2] < uz):
+                pgcharge += charges.get(j[1].strip(),0)
+        last = j[1:3]
 
     last = None
     pcharge = 0
@@ -1208,9 +2055,478 @@ def get_charge(lz,uz):
             if(pos[2] > lz and pos[2] < uz):
                 pcharge += charges.get(j[1].strip(),0)  
         last = j[1:3]
-    total_charge = mcharge+pcharge
-    return total_charge,pcharge,mcharge,0
-            
+    total_charge = mcharge+pgcharge+pcharge
+    return total_charge,pcharge,mcharge,pgcharge
+
+
+#This function creates a list of indicies containing a PG oligomer    
+def count_olig_list(all_lines,lyind,lind,bind):
+    done = False
+    count = 1
+    all_linesT = all_lines.copy()
+    pposes = [int(all_linesT[lyind,lind,bind,12])]
+    if(all_linesT[lyind][lind][bind][13] == 1):
+        if(all_linesT[lyind,lind,bind,6] > -0.5):
+            tnlind = int(all_linesT[lyind,lind,bind,6])
+            tnbind = int(all_linesT[lyind,lind,bind,7])
+            tnlyind = int(all_linesT[lyind,lind,bind,8])
+            nlind = tnlind
+            nbind = tnbind
+            nlyind = tnlyind
+            switcher = 6
+        elif(all_linesT[lyind,lind,bind,9] > -0.5):
+            tnlind = int(all_linesT[lyind,lind,bind,9])
+            tnbind = int(all_linesT[lyind,lind,bind,10])
+            tnlyind = int(all_linesT[lyind,lind,bind,11])
+            nlind = tnlind
+            nbind = tnbind
+            nlyind = tnlyind
+            switcher = 9
+        pposes.append(int(all_linesT[nlyind,nlind,nbind,12]))
+        return pposes, False
+    if(all_linesT[lyind,lind,bind,6] > -0.5):
+        tnlind = int(all_linesT[lyind,lind,bind,6])
+        tnbind = int(all_linesT[lyind,lind,bind,7])
+        tnlyind = int(all_linesT[lyind,lind,bind,8])
+        nlind = tnlind
+        nbind = tnbind
+        nlyind = tnlyind
+        switcher = 6
+    elif(all_linesT[lyind,lind,bind,9] > -0.5):
+        tnlind = int(all_linesT[lyind,lind,bind,9])
+        tnbind = int(all_linesT[lyind,lind,bind,10])
+        tnlyind = int(all_linesT[lyind,lind,bind,11])
+        nlind = tnlind
+        nbind = tnbind
+        nlyind = tnlyind
+        switcher = 9
+    else:
+        return pposes,False
+    while not done:
+        count += 1
+        pposes.append(int(all_linesT[nlyind,nlind,nbind,12]))
+        if(all_linesT[nlyind,nlind,nbind,13] == 1):
+            return pposes,False
+
+        tnlind = int(all_linesT[nlyind,nlind,nbind,switcher])
+        tnbind = int(all_linesT[nlyind,nlind,nbind,switcher+1])
+        tnlyind = int(all_linesT[nlyind,nlind,nbind,switcher+2])
+        nlind = tnlind
+        nbind = tnbind
+        nlyind = tnlyind
+        if(nlind < 0):
+            done = True
+            break
+    return pposes, True
+
+#Applies the above to all
+def count_all_olig_list(all_lines):
+    test_lines = all_lines[np.logical_and(all_lines[:,:,:,5] == 1,all_lines[:,:,:,4] == 0),:]
+    olig_lens = []
+    olig_count = 0
+    for ly in range(all_lines.shape[0]):
+        for l in range(all_lines[ly].shape[0]):
+            for b in range(all_lines[ly,l].shape[0]):
+                if(all_lines[ly,l,b,5] == 1 and all_lines[ly,l,b,4] == 0):
+                    num,_ = count_olig_list(all_lines,ly,l,b) 
+                    olig_lens.append(num)
+                    olig_count += 1
+    return olig_lens
+
+#Gets the distance and periodic copy that is closest
+def get_closest_pos(pos1,pos2,box_size):
+    min_dist = 100000
+    part_copy = np.array([0,0])
+    for i in [-1,0,1]:
+        for k in [-1,0,1]:
+            dister = np.linalg.norm(pos1-(pos2+np.array([i,k])*box_size))
+            if(dister< min_dist):
+                min_dist = dister
+                part_copy[0] = i
+                part_copy[1] = k
+
+    return min_dist,part_copy
+
+#a version of the above for use in jitted parts
+@jax.jit
+def get_closest_pos_jax(pos1,pos2,box_size):
+    min_dist = 100000.0
+    part_copy = jnp.array([0,0])
+    def loop1(carry,ind1):
+        def loop2(carry,ind2):
+            part_copy = carry[0]
+            min_dist = carry[1]
+            dister = jnp.linalg.norm(pos1-(pos2+jnp.array([ind1,ind2])*box_size))
+            def leq(part_copy,min_dist):
+                part_copy = jnp.array([ind1,ind2])
+                min_dist= dister
+                return part_copy,min_dist
+            def geq(part_copy,min_dist):
+                return part_copy,min_dist
+            part_copy,min_dist = jax.lax.cond(dister<min_dist,leq,geq,part_copy,min_dist)
+            return (part_copy,min_dist),ind2
+        carry,_ =jax.lax.scan(loop2,carry,jnp.array([-1,0,1]))
+        return carry,ind1
+    carry,_ = jax.lax.scan(loop1,(part_copy,min_dist),jnp.array([-1,0,1]))
+    return carry[1],carry[0]
+
+#function that constrains values to cell
+def enforce_pbc2(ppos,box_size):
+    box = [0,0,box_size[0],box_size[1]]
+    for p in range(ppos.shape[0]):
+        if(ppos[p,0]-box[0] < 0):
+            ppos[p,0] += box[2]
+        if(ppos[p,1]-box[1] < 0):
+            ppos[p,1] += box[3]
+        ppos[p,0] = np.fmod(ppos[p,0]-box[0],box[2])+box[0]
+        ppos[p,1] = np.fmod(ppos[p,1]-box[1],box[3])+box[1]
+    return ppos
+
+#a jitted version of the above
+@jax.jit
+def enforce_pbc_jax(ppos,box_size):
+    box = jnp.array([box_size[0],box_size[1]])
+    def pos_loop(ppos,ind):
+        def lzero1(val):
+            return val+box[0]
+        def gzero(val):
+            return val
+        def lzero2(val):
+            return val+box[1]
+        ppos = ppos.at[ind,0].set(jax.lax.cond(ppos[ind,0]<0,lzero1,gzero,ppos[ind,0]))
+        ppos = ppos.at[ind,1].set(jax.lax.cond(ppos[ind,1]<0,lzero2,gzero,ppos[ind,1]))
+        ppos = ppos.at[ind,0].set(jnp.fmod(ppos[ind,0],box[0]))
+        ppos = ppos.at[ind,1].set(jnp.fmod(ppos[ind,1],box[1]))
+        return ppos,ind
+    ppos,_ = jax.lax.scan(pos_loop,ppos,jnp.arange(ppos.shape[0]))
+    return ppos
+
+#calculation of the acceleration given position and bonds
+@jax.jit
+def calc_acc_jax(ppos,bonds,box_size):
+    pacc = jnp.zeros_like(ppos)
+    def bond_loop(pacc,ind):
+        bind1 = jnp.array(bonds[ind,0],dtype=int)
+        bind2 = jnp.array(bonds[ind,1],dtype=int)
+        pa = ppos[bind1]
+        pb = ppos[bind2]
+        min_dist,part_copy = get_closest_pos_jax(pa,pb,box_size)
+        err_dist = bonds[ind,2]-min_dist
+        direc = (pa-(pb+part_copy*box_size))/min_dist
+        force = err_dist*direc
+        pacc = pacc.at[bind1].set(pacc[bind1]+force)
+        pacc = pacc.at[bind2].set(pacc[bind2]-force)
+        return pacc,ind
+    pacc,_ = jax.lax.scan(bond_loop,pacc,jnp.arange(bonds.shape[0]))
+    return pacc
+
+#some minor protein repulsion to avoid major clashes
+@jax.jit
+def prot_repul_jax(all_p_pad,ppos,plys,all_p_lens):
+    pacc = jnp.zeros_like(ppos)
+    ls = jnp.zeros(all_p_lens.shape[0])
+    def loop1(ls,ind):
+        ls = ls.at[ind].set(jnp.sum(all_p_pad[ind,:,2])/all_p_lens[ind])
+        return ls,ind
+    ls,_ = jax.lax.scan(loop1,ls,jnp.arange(all_p_lens.shape[0]))
+    
+    def loop2(pacc,ind1):
+        def loop3(layer,ind2):
+            def close(layer):
+                layer = ind2
+                return layer
+            def far(layer):
+                return layer
+            layer = jax.lax.cond(jnp.abs(plys[ind1]-ls[ind2]) < 1, close,far,layer)
+            return layer,ind2
+        layer,_ = jax.lax.scan(loop3,0,jnp.arange(ls.shape[0]))
+
+        def loop4(pacc,ind2):
+            direc = ppos[ind1]-all_p_pad[layer,ind2,:2]*50
+            dirlen = jnp.linalg.norm(direc)
+            direc /= dirlen
+            def cutoff():
+                return 0.0
+            def ncutoff():
+                return 170.0
+            force = jax.lax.cond(jnp.logical_or(dirlen > 70,ind2>all_p_lens[layer]), cutoff,ncutoff)
+            pacc = pacc.at[ind1].set(pacc[ind1]+force*direc/dirlen)
+            return pacc,ind2
+        pacc,_ = jax.lax.scan(loop4,pacc,jnp.arange(all_p_pad.shape[1]))
+        return pacc,ind1
+    pacc,_ = jax.lax.scan(loop2,pacc,jnp.arange(ppos.shape[0]))
+   
+    return pacc
+
+#core update function
+@partial(jax.jit,static_argnums=9)
+def update_pos_jax(ppos,pvel,pacc,bonds,dt,box_size,plys,all_p_pad,all_p_lens,ngly):
+    pacc = calc_acc_jax(ppos,bonds,box_size)+prot_repul_jax(all_p_pad,ppos,plys,all_p_lens)
+    pvel += pacc*dt+(-0.9*pvel*dt)
+    ppos += pvel*dt
+    ppos = enforce_pbc_jax(ppos,box_size)
+    return ppos,pvel,pacc
+
+#getting the total contraction/extention force over each bond
+@jax.jit
+def get_boxforce_jax(bonds,ppos,box_size):
+    total_force = jnp.zeros(2)
+
+    def bfor_loop(total_force,ind):
+        bind1 = jnp.array(bonds[ind,0],dtype=int)
+        bind2 = jnp.array(bonds[ind,1],dtype=int)
+        pa = ppos[bind1]
+        pb = ppos[bind2]
+        min_dist,part_copy = get_closest_pos_jax(pa,pb,box_size)
+
+        err_dist = bonds[ind,2]-min_dist
+        direc = (pa-(pb+part_copy*box_size))/min_dist
+
+        force = err_dist*jnp.abs(direc)
+        total_force += force
+        return total_force,ind
+    total_force,_ = jax.lax.scan(bfor_loop,total_force,jnp.arange(bonds.shape[0]))
+    return total_force
+
+
+#resecaling coordinates when the box size changes
+@jax.jit
+def rescale_to_new_box_jax(ppos,old_boxsize,new_boxsize):
+    def nbloop(ppos,ind):
+        ppos = ppos.at[ind,0].set(((ppos[ind,0])/old_boxsize[0])*new_boxsize[0])
+        ppos = ppos.at[ind,1].set(((ppos[ind,1])/old_boxsize[1])*new_boxsize[1])
+        return ppos,ind
+    ppos,_ = jax.lax.scan(nbloop,ppos,jnp.arange(ppos.shape[0]))
+    return ppos
+        
+
+#This is a large function that uses a basic physics model to relax the PG layer such that tension is 0 and there are no clashed with the protein
+def relax_pg(gposes,box_size,tol,all_p):
+    nly = gposes.shape[0]
+    gposes_temp = gposes.reshape((int(gposes.size/14),14))
+
+    particles_pos = []
+    particle_layer = []
+    bonds = []
+    gly_lens = 1.0*50
+    spep_lens = 1.5*50
+    upep_lens = 1.2*50
+    tupep_lens = 0.2*50
+    
+    bond_next = False
+    prev_x = 0
+    prev_z = -1
+    chx = 0
+    pind_chx = 0
+    for ind,pgpos in enumerate(gposes_temp):
+        if pgpos[5] == 1:
+            if pgpos[4] == 0:
+                if bond_next and pgpos[0] == prev_x and pgpos[2] == prev_z:
+                    bonds.append([len(particles_pos),len(particles_pos)-1,gly_lens])
+                if pgpos[0] != prev_x:
+                    a = gposes_temp[-1]
+                    b = gposes_temp[chx]
+                    if(a[5] == 1 and b[5] == 1):
+                        bonds.append([pind_chx,len(particles_pos)-1,gly_lens])
+                    chx = ind
+                    pind_chx = len(particles_pos)
+                inder = np.unravel_index(ind,(gposes.shape[0],gposes.shape[1],gposes.shape[2]))
+                gposes[inder[0],inder[1],inder[2],12] = len(particles_pos)
+                particles_pos.append(pgpos[:2]*50)
+                particle_layer.append(pgpos[2])
+                bond_next = True
+                prev_x = pgpos[0]
+                prev_z = pgpos[2]
+        else:
+            bond_next = False
+    
+    ngly = len(particles_pos)
+    
+    a = gposes_temp[np.logical_and(gposes_temp[:,5] == 1,gposes_temp[:,4] == 0)][-1]
+    b = gposes_temp[chx]
+    if(a[5] == 1 and b[5] == 1):
+        bonds.append([pind_chx,len(particles_pos)-1,gly_lens])
+    
+    groups = count_all_olig_list(gposes)
+    
+    nover_groups = []
+    replace_ind = 0
+    for xi,i in enumerate(groups):
+        replace = False
+        add = True
+        for xk,k in enumerate(nover_groups):
+            if(set(i) >= set(k)):
+                replace = True
+                replace_ind = xk
+                add = False
+                break
+            if(set(i) <= set(k)):
+                add = False
+                break
+        if add:
+            nover_groups.append(i)
+        if replace:
+            nover_groups[replace_ind] = i
+    
+    for i in nover_groups:
+        if(len(i) == 2):
+            _,part_copy = get_closest_pos(particles_pos[i[0]],particles_pos[i[1]],box_size)
+            mean_part = (particles_pos[i[0]]+particles_pos[i[1]]+part_copy*box_size)/2.0
+            bonds.append([len(particles_pos),i[0],spep_lens])
+            bonds.append([len(particles_pos),i[1],upep_lens])
+            particles_pos.append(mean_part)
+            particle_layer.append(particle_layer[i[0]])
+        if(len(i) > 2):
+            part_in_group = []
+            for k in i:
+                part_in_group.append(particles_pos[k])
+            part_in_group = np.array(part_in_group)
+            ind_in_group = np.array(i)
+            side1 = part_in_group[part_in_group[:,0] == part_in_group[0,0]]
+            side2 = part_in_group[part_in_group[:,0] != part_in_group[0,0]]
+            iside1 = ind_in_group[part_in_group[:,0] == part_in_group[0,0]]
+            iside2 = ind_in_group[part_in_group[:,0] != part_in_group[0,0]]
+            sind1 = np.argsort(side1[:,1])
+            sind2 = np.argsort(side2[:,1])
+            side1 = side1[sind1]
+            side2 = side2[sind2]
+            iside1 = iside1[sind1]
+            iside2 = iside2[sind2]
+            inter_group = np.empty((side1.shape[0] + side2.shape[0],2), dtype=side1.dtype)
+            ind_inter_group = np.empty((iside1.size + iside2.size,), dtype=iside1.dtype)
+            if(side1.size > side2.size):
+                inter_group[0::2,:] = side1
+                inter_group[1::2,:] = side2
+                ind_inter_group[0::2] = iside1
+                ind_inter_group[1::2] = iside2
+            else:
+                inter_group[0::2,:] = side2
+                inter_group[1::2,:] = side1
+                ind_inter_group[0::2] = iside2
+                ind_inter_group[1::2] = iside1
+            for k in range(len(i)-1):
+                if(k != 0):
+                    bonds.append([len(particles_pos),ind_inter_group[k],upep_lens-tupep_lens])
+                    bonds.append([len(particles_pos),len(particles_pos)-1,tupep_lens])
+                else:
+                    bonds.append([len(particles_pos),ind_inter_group[k],upep_lens])
+                _,part_copy = get_closest_pos(inter_group[k],inter_group[k+1],box_size)
+                mean_part = (inter_group[k]+inter_group[k+1]+part_copy*box_size)/2.0
+                particles_pos.append(mean_part)
+                particle_layer.append(particle_layer[ind_inter_group[k]])
+            bonds.append([len(particles_pos)-1,ind_inter_group[-1],spep_lens])
+    
+    ppos = jnp.array(particles_pos)
+    plys = jnp.array(particle_layer)
+    pvel = jnp.zeros_like(ppos)
+    pacc = jnp.zeros_like(ppos)
+
+    box_size = jnp.array(box_size)
+    bonds = jnp.array(bonds)
+
+
+    ppos = enforce_pbc_jax(ppos,box_size)
+    box_vel = jnp.zeros(2)
+    box_dt = 0.2
+    count = 0
+    tforce_add = jnp.zeros(2)
+    
+    tforce = get_boxforce_jax(bonds,ppos,box_size)/nly
+    tcheck = tforce.copy()
+
+    all_p_lens = []
+    max_len = 0
+    for ap in all_p:
+        if(ap.shape[0] > max_len):
+            max_len = ap.shape[0]
+        all_p_lens.append(ap.shape[0])
+    all_p_lens = np.array(all_p_lens)  
+    for ap in range(all_p_lens.shape[0]):
+        all_p[ap] = np.pad(all_p[ap],((0,max_len-all_p[ap].shape[0]),(0,0)),"constant",constant_values=((0,0),(0,0)))
+    all_p_pad = jnp.array(all_p)
+    all_p_lens = jnp.array(all_p_lens,dtype=int)
+    if all_p_pad.shape[1] == 0:
+        all_p_pad = jnp.zeros((all_p_pad.shape[0],1,3))
+
+    while np.linalg.norm(tcheck) > tol:
+        try:
+            count += 1    
+            ppos,pvel,pacc = update_pos_jax(ppos,pvel,pacc,bonds,0.3,box_size,plys,all_p_pad,all_p_lens,ngly)
+            tforce = get_boxforce_jax(bonds,ppos,box_size)/nly
+            old_box_size = box_size.copy()
+            if(count % 40 == 0):
+                #sc += 10
+                box_vel += (tforce_add-box_vel*0.5)*box_dt
+                box_size += (tforce_add)*box_dt
+                ppos = rescale_to_new_box_jax(ppos,old_box_size,box_size)
+                tforce_add = jnp.zeros(2)
+                tcheck = tforce.copy()
+            else:
+                tforce_add = tforce
+        except KeyboardInterrupt:
+            break
+
+    ppos = np.array(ppos)
+    box_size = np.array(box_size)
+        
+    cind = 0    
+    for ind,pgpos in enumerate(gposes_temp):
+        if pgpos[5] == 1:
+            if pgpos[4] == 0:
+                inder = np.unravel_index(ind,(gposes.shape[0],gposes.shape[1],gposes.shape[2]))
+                gposes[inder[0],inder[1],inder[2],:2] = ppos[cind]
+                cind += 1
+                
+    for ly in gposes:
+        for line in ly:
+            for ind,pos in enumerate(line):
+                if pos[5] == 1:
+                    if pos[4] == 1:
+                        ll = line.shape[0]
+                        if line[(ind+1)%ll][5] == 1:
+                            if line[(ind-1)%ll][5] == 1:
+                                _,pcpy = get_closest_pos(line[(ind+1)%ll][:2],line[(ind-1)%ll][:2],box_size)
+                                line[ind][:2] = enforce_pbc2(np.array([(line[(ind+1)%ll][:2]+line[(ind-1)%ll][:2]+pcpy*box_size)/2]),box_size)[0]
+                            else:
+                                _,pcpy = get_closest_pos(line[(ind+1)%ll][:2],line[(ind+3)%ll][:2],box_size)
+                                direc = line[(ind+1)%ll][:2]-(line[(ind+3)%ll][:2]+pcpy*box_size)
+                                direc /= np.linalg.norm(direc)
+                                direc = np.array([0,-1])
+                                line[ind][:2]=enforce_pbc2(np.array([50*0.5*direc+line[(ind+1)%ll][:2]]),box_size)[0]
+                        
+    gposes[:,:,:,:2] /= 50                     
+    return box_size,gposes
+
+
+#This function uses a flood fill algorithm to identifiy the inside of a protein. This works better than the basic method used in ring.
+def flood_fill(grid):
+    to_test = [[0,0]]
+    done = []
+    flagged = np.zeros_like(grid)
+    while len(to_test) > 0:
+        ct = to_test[0]
+        if grid[ct[0],ct[1]] == 0:
+            flagged[ct[0],ct[1]] = 1
+            poss_tests = [[ct[0]-1,ct[1]],[ct[0]+1,ct[1]],[ct[0],ct[1]+1],[ct[0],ct[1]-1]]
+            for i in poss_tests:
+                if i[0] >= 0 and i[1] >= 0 and i[0] < grid.shape[0] and i[1] < grid.shape[1]:
+                    already_done = False
+                    for d in done:
+                        if d[0] == i[0] and d[1] == i[1]:
+                            already_done = True
+                            break
+                    for d in to_test:
+                        if d[0] == i[0] and d[1] == i[1]:
+                            already_done = True
+                            break
+                    if not already_done:
+                        to_test.append(i)
+        done.append(to_test[0])
+        del to_test[0]
+    return flagged+grid
+    
+
+
 tm   = []
 lipL = []
 lipU = []
@@ -1249,6 +2565,7 @@ Input/output related options
 """,
     ("-f",      Option(tm.append,   1,        None, "Input GRO or PDB file 1: Protein")),
     ("-o",      Option(str,         1,        None, "Output GRO file: Membrane with Protein")),
+    ("-o_f",      Option(str,         1,        None, "Folder for additional files")),
     ("-p",      Option(str,         1,        None, "Optional rudimentary topology file")),
     ("-ct",      Option(str,         1,        None, "This will create a template of the membrane only.")),
     ("-in_t",      Option(str,         1,        None, "Input template for placement of multiple proteins.")),
@@ -1272,8 +2589,7 @@ used to set the lipid type and abundance for the upper leaflet. Option
 -l sets the type and abundance for the lower leaflet if option -u is
 also given, or for both leaflets if option -u is not given. -lo and -uo
 behave as -l and -u except -l can set abundance for -lo and -uo is these
-are not specified. Curvature can be specified using -curv and pores can be
-added using -pore.
+are not specified. Curvature can be specified using -curv.
 """,
     ("-l",      Option(lipL.append, 1,   None, "Lipid type and relative abundance (NAME[:#])")),
     ("-u",      Option(lipU.append, 1,   None, "Lipid type and relative abundance (NAME[:#])")),
@@ -1289,14 +2605,25 @@ added using -pore.
     ("-ps",        Option(float,        1,          0, "Specifies the distance (nm) between inner and outer membrane, when set to 0 only a single membrane is built")),
     ("-curv",        Option(str,        1,          "0,0,1", "Curvature of the membrane, consists of 3 comma separated values. The curvature at the middle the curvature as it relaxes back to planar and the direction of the curvature.")),
     ("-curv_o",        Option(str,        1,          "0,0,1", "Curvature of the outer membrane, see -curv")),
-    ("-curv_ext",        Option(float,        1,          3, "Extent of curved region in the absence of a protein, this also controls the size of the pore if -pore is used")),
-    ("-pore",        Option(bool,        0,          None, "Create a pore, with inner radius equal to -curv_ext and length equal to -ps")),
+    ("-curv_ext",        Option(float,        1,          3, "Extent of curved region in the absence of a protein.")),
+    #("-pore",        Option(bool,        0,          None, "Create a pore, with inner radius equal to -curv_ext and length equal to -ps")),
     ("-loc",      Option(str,         1,        None, "Currently WIP do not use. Input .npz for localisation data to bias lipid arangment.")),
     ("-l_loc",      Option(lipL_loc.append, 1,   None, "Currently WIP do not use. Lipid type for localisation")),
     ("-u_loc",      Option(lipU_loc.append, 1,   None, "Currently WIP do not use. Lipid type for localisation")),
     ("-micelle",        Option(bool,        0,          None, "Builds a micelle around a protein instead of a bilayer")),
     ("-radius",        Option(float,        1,          -1, "Radius of membrane outer disk. This is by default the whole cell")),
     ("-no_lipids",        Option(int,        1,          -1, "Number of lipids that make up a micelle, this will override area per lipid. Only for use with -micelle")),
+    """
+Peptidoglycan layer related options.
+""",
+   
+    ("-pgl",        Option(int,        1,          0, "Number of PG layers to place at -pgl_z.")),
+    ("-pgl_z",        Option(float,        1,          0, "Z position of PG layer relative to center of periplasmic space.")),
+    ("-cper",        Option(float,        1,          0.4, "Percentage of crosslinks.")),
+    ("-lper",        Option(float,        1,          0.1, "Percentage of crosslinks that are between layers.")),
+    ("-per33",        Option(float,        1,          0.03, "Percentage of 3-3 crosslinks, all other crosslinks will be 3-4.")),
+    ("-oper",        Option(float,        1,          1, "Percentage chance of a monomer linking with a oligomer. (Actual change of link is cper*oper)")),
+    ("-gdist",        Option(str,        1,          "0.75,4,8.9,0.25,10,45", "Distribution of glycan strand lengths. Format as weight 1,standard deviation 1,mean 1,weight 2..., were each triple describes a gaussian. The sum of these forms the distribution.")),
     """
 Protein related options. -fudge gives the exclusion radius around the protein.
 """,
@@ -1312,6 +2639,7 @@ Solvent related options.
     ("-sold",   Option(float,       1,         0.5, "Solvent diameter")),
     ("-solr",   Option(float,       1,         0.1, "Solvent random kick")),
     ("-excl",   Option(float,       1,         1.5, "Exclusion range (nm) for solvent addition relative to membrane center")),
+    ("-anti_freeze",   Option(float,       1,         0.2, "Rate at which to remove solvent to avoid freezing due to hexagonal lattice.")),
     """
 Charge related options.
 """,
@@ -1349,6 +2677,7 @@ if '-h' in args or '--help' in args:
 options = dict([i for i in options if not type(i) == str])
 
 
+
 # Process the command line
 while args:
     ar = args.pop(0)
@@ -1358,6 +2687,14 @@ while args:
 
 absoluteNumbers = not options["-d"]
 
+
+out_folder = options["-o_f"].value
+if out_folder:
+    if out_folder[-1] != "/":
+        out_folder += "/"
+
+if(not os.path.exists(out_folder)):
+    os.mkdir(out_folder)
 
 # HII edit - lipid definition
 # Add specified lipid definition to insane lipid library
@@ -1438,18 +2775,29 @@ if options["-box"].value:
     
 mem_outer_red = options["-radius"].value
 
+Num_PGL =  options["-pgl"].value
+Pos_PGL =  options["-pgl_z"].value
+cper = options["-cper"].value
+lper = options["-lper"].value
+per33 = options["-per33"].value
+oper = options["-oper"].value
+gdist_str = options["-gdist"].value
+
+gdist = gdist_str.split(",")
+gdist = np.array(gdist,dtype=float)
+gdist = gdist.reshape(int(gdist.size/3),3)
 
 
+
+anti_freeze = options["-anti_freeze"].value
 
 is_micelle = options["-micelle"].value
-#print(is_micelle)
 
 if(is_micelle is not None):
     is_micelle = True
 else:
     is_micelle = False
 
-#print(is_micelle)
 
 # options -x, -y, -z take precedence over automatic determination
 pbcSetX = 0
@@ -1497,12 +2845,12 @@ if(options["-zpbc"].value is not None):
     zpbc = True
 
 
-add_pore = options["-pore"].value
-if(add_pore is not None):
-    add_pore = True
-else:
-    add_pore = False
-
+#add_pore = options["-pore"].value
+#if(add_pore is not None):
+#    add_pore = True
+#else:
+#    add_pore = False
+add_pore = False
 
 zdist = float(options["-ps"].value)
 
@@ -1593,6 +2941,8 @@ prot_dirs = []
 prot_rings = []
 
 
+
+
 if not tm or options["-ct"].value != None or using_temp:
  
     ang_exts = np.array([np.arcsin(curvs_mid[0]*extent),np.arcsin(curvs_mid[1]*extent)]) 
@@ -1612,6 +2962,7 @@ if not tm or options["-ct"].value != None or using_temp:
 ## B. PROTEIN ---
     #for writing a template for muliple protein placments
     if(options["-ct"].value != None):
+        print("Writing template file...")
         new_file = open(options["-ct"].value,"w")
         count = 0
         trufal = [True,False]
@@ -1650,13 +3001,14 @@ if not tm or options["-ct"].value != None or using_temp:
         info_file.write("X Y Z:"+str(options["-x"].value)+","+str(options["-y"].value)+","+str(options["-z"].value)+"\n")
         info_file.write("Box:"+str(options["-box"].value))
         info_file.close()
-        
+        print("Done!")
         exit()
 
 
 
     if(using_temp):
-        #WHen a template is present it is used to build membrane
+        print("Extracting data from template...")
+        #WHen a template is present it used to build membrane
         in_prots = options["-fs"].value
         prot_file = open(in_prots,"r")
         lines = prot_file.read().split("\n")
@@ -1719,7 +3071,6 @@ if(using_temp or tm):
         if(pbcSetZ[2] < bheight*2+10):
             pbcSetZ[2] = bheight*2+10
         
-        #print(bheight*2+2)
             
         pbcx = pbcSetX and pbcSetX[0]
         pbcy = pbcSetY and pbcSetY[1]
@@ -1737,7 +3088,7 @@ if(using_temp or tm):
         poses[0][0] = pbcx/2
         poses[0][1] = pbcy/2
             
-            
+    print("Building protein(s)...")
     for pind,prot in enumerate(tm):
 
         prot_lip = tm_lip[pind]
@@ -1809,17 +3160,16 @@ if(using_temp or tm):
                             ztestpos = zdist*(2*dmi-1)
                         else:
                             ztestpos = 0
-                       
-                        in_mem = get_box_slice(np.array(prot_lip.coord),[0,0,ztestpos],[10,10,2])
-                        for im in in_mem:
-                            for dim in range((int(np.linalg.norm(im))+1)):
-                                imdir = im/np.linalg.norm(im)                        
-                                new_coord = imdir*dim
-                                new_coord[2] = ztestpos+1
-                                prot_lip.coord.extend([new_coord])
-                                new_coord[2] = ztestpos-1
-                                prot_lip.coord.extend([new_coord])
-                
+
+
+                        for zt in np.linspace(ztestpos-2,ztestpos+2,10):
+                            in_mem = get_box_slice(np.array(prot.coord),[0,0,zt],[100,100,0.5])
+                            for im in in_mem:
+                                for dim in np.linspace(0,np.linalg.norm(im)+1,int(np.linalg.norm(im))+1):
+                                    imdir = im/np.linalg.norm(im)                        
+                                    new_coord = imdir*dim
+                                    new_coord[2] = zt
+                                    prot_lip.coord.extend([new_coord])
             
             prot.coord = np.dot(rot_mat,np.array(prot.coord).T).T    
             prot_lip.coord = np.dot(rot_mat,np.array(prot_lip.coord).T).T     
@@ -1866,6 +3216,192 @@ pbcx, pbcy, pbcz = box[0][0], box[1][1], box[2][2]
 
 rx, ry, rz = pbcx+1e-8, pbcy+1e-8, pbcz+1e-8
 
+print("Done")
+
+#PG layer
+
+PGL = Structure()
+if(Num_PGL > 0):
+    print("Begining to build PG layer...")
+    spaceing = 2.5
+    z_poses = np.linspace(-spaceing*(Num_PGL-1)/2,spaceing*(Num_PGL-1)/2,Num_PGL)
+    exprot = float(options["-fudge"].value)
+    prev_str = ["[ atoms ]\n","[ bonds ]\n","[ constraints ]\n","[ angles ]\n","[ dihedrals ]\n"]
+    prev_nos = [1,0]
+    print("Creating glycan strands...")
+    Gposes,pc_zslice = Create_Glycan_strands2(Num_PGL,pbcy,pbcx,z_poses,0,0,np.array(protein.coord),gdist)
+    print("Cross-linking...")
+    Gposes = cross_link(Gposes,pbcy,cper,per33,lper,oper)
+    print("Counting resulting oligomers...")
+    olig_lens = count_all_olig(Gposes)
+    total_clink = olig_lens.shape[0]
+    mono = olig_lens[olig_lens == 1].shape[0]/total_clink
+    dimer = olig_lens[olig_lens == 2].shape[0]/total_clink
+    olig_plus = olig_lens[olig_lens > 2].shape[0]/total_clink
+    print("Momomer:",mono)
+    print("Dimer:",dimer)
+    print("Higher oligomer:",olig_plus)
+    print("Writing ITP for PG layer...")
+    prev_str,prev_nos = write_PGL_itp(Gposes,"NAM.itp","NAG.itp","SNPEP.itp","UNPEP.itp","UUNPEP.itp",prev_str,prev_nos)
+    print("Relaxing the PG layer (This will change the cell size slightly)...")
+    box_size,Gposes = relax_pg(Gposes,np.array([pbcx*50,pbcy*50]),5,pc_zslice)
+    box[0] = [box_size[0]/50,0,0]
+    box[1] = [0,box_size[1]/50,0]
+    #box[2] = pbcSetZ
+    
+    grobox = (box[0][0],box[1][1],box[2][2],
+              box[0][1],box[0][2],box[1][0],
+              box[1][2],box[2][0],box[2][1])
+    
+    pbcx, pbcy, pbcz = box[0][0], box[1][1], box[2][2]
+    
+    
+    
+    rx, ry, rz = pbcx+1e-8, pbcy+1e-8, pbcz+1e-8
+
+
+
+
+
+
+
+
+    Gposes,Gshape = lines_to_coords(Gposes)
+    
+    No_Nag = Gposes[Gposes[:,4] == 0].shape[0]
+    No_Nam = Gposes[Gposes[:,4] == 1].shape[0]
+    
+    PG_Glycan = ["NAG:"+str(No_Nag),"NAM:"+str(No_Nam)]
+    
+    
+    Gly_new, numG = list(zip(*[ parse_mol(i) for i in PG_Glycan ]))
+    totG       = float(sum(numG))
+    num_g     = [int(len(Gposes)*i/totG) for i in numG]
+    
+    Gly     = [l for i,l in list(zip(num_g,Gly_new)) for j in range(i)]
+    
+    
+    Gly_s    = (list(zip(Gly,Gposes)))
+    print("Building the PG layer...")
+    glycans = ["NAM","NAG"]
+    #Placing templates of components at each point defined
+    for pos in Gposes:
+        glycan = glycans[int(pos[4])]
+        if(pos[5] > 0):
+            resi += 1 
+            atoms    = list(zip(lipidsa[glycan][1].split(),lipidsx[lipidsa[glycan][0]],lipidsy[lipidsa[glycan][0]],lipidsz[lipidsa[glycan][0]]))
+            at,ax,ay,az = list(zip(*[i for i in atoms if i[0] != "-"]))
+            az       = [ i+pos[2] for i in az ]
+            xx       = list(zip( ax,ay ))
+            nx       = [pos[3]*i+pos[0] for i in ax]
+            ny       = [j+pos[1] for j in ay]
+            for i in range(len(at)):
+                atom  = "%5d%-5s%5s%5d"%(resi,glycan,at[i],atid)
+                PGL.coord.append((nx[i],ny[i],az[i]))               
+                PGL.atoms.append((at[i],glycan,resi,0,0,0))
+                atid += 1
+                
+
+    atoms_nam    = list(zip(lipidsa["NAM"][1].split(),lipidsx[lipidsa["NAM"][0]],lipidsy[lipidsa["NAM"][0]],lipidsz[lipidsa["NAM"][0]]))
+    atn,axn,ayn,azn = list(zip(*[i for i in atoms_nam if i[0] != "-"]))            
+    nam_temp = np.array([axn[-1],ayn[-1],azn[-1]])
+    for pos in Gposes:
+        glycan = glycans[int(pos[4])]
+        b1_pos = pos[:3]+np.array([pos[3],1,1])*nam_temp
+        if(pos[13] == 1):
+            atm = "UUPEP"
+            atm = "UUPEP"
+        else:
+            if(pos[6] != -1 or pos[13] ==2):
+                atm = "UPEP"
+            else:
+                atm = "SPEP"
+        if(pos[5] > 0 and glycan == "NAM"):
+            resi += 1 
+            atoms    = list(zip(lipidsa[atm][1].split(),lipidsx[lipidsa[atm][0]],lipidsy[lipidsa[atm][0]],lipidsz[lipidsa[atm][0]]))
+            if(pos[6] > -0.5 and pos[9] > -0.5):
+                lind1 = int(pos[6])
+                bind1 = int(pos[7])
+                lyind1 = int(pos[8])
+                lind2 = int(pos[9])
+                bind2 = int(pos[10])
+                lyind2 = int(pos[11])
+                b2_posA = Gposes[lyind1*Gshape[1]*Gshape[2]+lind1*Gshape[2]+bind1][:3]
+                b2_posB = Gposes[lyind2*Gshape[1]*Gshape[2]+lind2*Gshape[2]+bind2][:3]
+                b2_posB = b2_posB-b2_posA+np.array([pbcx/2,pbcy/2,0])
+                while(b2_posB[0]<0):
+                    b2_posB[0] += pbcx
+                while(b2_posB[0]>=pbcx):
+                    b2_posB[0] -= pbcx
+                while(b2_posB[1]<0):
+                    b2_posB[1] += pbcy
+                while(b2_posB[1]>=pbcy):
+                    b2_posB[1] -= pbcy
+                b2_pos = (b2_posB+np.array([pbcx/2,pbcy/2,0]))/2+b2_posA-np.array([pbcx/2,pbcy/2,0])
+            elif(pos[6] > -0.5):
+                lind1 = int(pos[6])
+                bind1 = int(pos[7])
+                lyind1 = int(pos[8])
+                b2_pos = Gposes[lyind1*Gshape[1]*Gshape[2]+lind1*Gshape[2]+bind1][:3]
+            elif(pos[9] > -0.5):
+                lind1 = int(pos[9])
+                bind1 = int(pos[10])
+                lyind1 = int(pos[11])
+                b2_pos = Gposes[lyind1*Gshape[1]*Gshape[2]+lind1*Gshape[2]+bind1][:3]  
+            else:
+                b2_pos = b1_pos-np.array([pos[3],0,0])*2.5
+
+
+            pbcb2= b2_pos-b1_pos+np.array([pbcx/2,pbcy/2,0])
+            while(pbcb2[0]<0):
+                pbcb2[0] += pbcx
+            while(pbcb2[0]>=pbcx):
+                pbcb2[0] -= pbcx
+            while(pbcb2[1]<0):
+                pbcb2[1] += pbcy
+            while(pbcb2[1]>=pbcy):
+                pbcb2[1] -= pbcy
+            leng = np.linalg.norm(pbcb2-np.array([pbcx/2,pbcy/2,0]))-0.64
+            if(leng < 1.5):
+                leng = 1.5 #changed this maybe change back idk
+
+            v2 = pbcb2-np.array([pbcx/2,pbcy/2,0])
+            v2 = v2/np.linalg.norm(v2)
+            v1 = [-1,0,0]
+            vcross = np.cross(v1,v2)
+            vmat = np.array([[0,-vcross[2],vcross[1]],[vcross[2],0,-vcross[0]],[-vcross[1],vcross[0],0]])
+            asin = np.linalg.norm(vcross)
+            acos = np.dot(v1,v2)
+            if(np.abs(1+acos) < 1e-6):
+                rot_mat = np.array([[-1,0,0],[0,1,0],[0,0,1]])
+            else:
+                rot_mat = np.eye(3)+vmat+np.dot(vmat,vmat)*(1/(1+acos))
+
+
+            
+            npos = (np.array([pbcx/2,pbcy/2,0])+pbcb2)/2+b1_pos-np.array([pbcx/2,pbcy/2,0])
+            
+            dil = leng/2.03
+
+
+
+            at,ax,ay,az = list(zip(*[i for i in atoms if i[0] != "-"]))
+            xx       = list(zip( ax,ay,az ))
+            nx       = [rot_mat[0,0]*i*dil+rot_mat[0,1]*j+rot_mat[0,2]*k+npos[0] for i,j,k in xx]
+            ny       = [rot_mat[1,0]*i*dil+rot_mat[1,1]*j+rot_mat[1,2]*k+npos[1] for i,j,k in xx]
+            nz       = [rot_mat[2,0]*i*dil+rot_mat[2,1]*j+rot_mat[2,2]*k+npos[2] for i,j,k in xx]
+            for i in range(len(at)):
+                atom  = "%5d%-5s%5s%5d"%(resi,glycan,at[i],atid)
+                PGL.coord.append((nx[i],ny[i],nz[i]))               
+                PGL.atoms.append((at[i],atm,resi,0,0,0))
+                atid += 1
+    
+
+    
+    molecules.extend(list(zip(["PGL"],[1])))
+    write_all_itp(prev_str,out_folder)
+    print("Done")
+
 
 #################
 ## 2. MEMBRANE ##
@@ -1874,6 +3410,7 @@ rx, ry, rz = pbcx+1e-8, pbcy+1e-8, pbcz+1e-8
 membrane = Structure()
 mi_rad = 0
 if lipL:
+    print("Begining to build lipid bilayer(s)...")
     #reading inputs
     area_l = float(options["-a"].value)
     if(not options["-au"].value is None):
@@ -1910,6 +3447,7 @@ if lipL:
     lipU = lipU or lipL
     trufal = [True,False]
     #building membrae grid points and normals based on inputs
+    print("Creating leaflet shape...")
     for i in range(2):
         if(options["-ps"].value > 1e-5 or i == 0):
             if(add_pore):
@@ -1934,7 +3472,10 @@ if lipL:
                     acc_lips  = len(direcs)  
                     new_area = area_ls[i]*acc_lips/no_lips
                     up_grid,direcs,mi_rad = build_micelle(new_area,prot_points,ret_val,grid_vals,8,pbcx,pbcy,av_liplen)
-                    
+
+                #up_grid,direcs,mi_rad = build_micelle(area_ls[i],prot_points,ret_val,grid_vals,8,pbcx,pbcy)
+
+
                 lo_grid = np.zeros((0,3))
                 direcs2 = np.zeros((0,3))
             else:
@@ -1981,7 +3522,7 @@ if lipL:
     lipUO = lipUO or lipLO
     lipUs = [lipU,lipUO]
     lipLs = [lipL,lipLO]
-    
+
     av_liplenU = get_avlip_len(lipU)
     av_liplenUO = get_avlip_len(lipUO)
     av_liplenL = get_avlip_len(lipL)
@@ -1993,10 +3534,12 @@ if lipL:
     tailsUO = np.linspace(0,av_liplenUO,10)
     tailsL = np.linspace(0,av_liplenL,10)
     tailsLO = np.linspace(0,av_liplenLO,10)
-    tailUs = [tailsU,tailsUO]
+    tailsUs = [tailsU,tailsUO]
     tailsLs = [tailsL,tailsLO]
+
     exprot = float(options["-fudge"].value)
     zdist = float(options["-ps"].value)
+    print("Calculating lipid positions...")
     for gi in range(2):
         total_up_lips = up_grids[gi].shape[0]
         total_lo_lips = lo_grids[gi].shape[0]
@@ -2007,7 +3550,7 @@ if lipL:
                 direc = np.array([direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2]])
                 coll = False
                 if tm:
-                    for dr in tailUs[gi]:
+                    for dr in tailsUs[gi]:
                         prot_slice = get_box_slice(prot_coords,poser-dr*direc,[exprot,exprot,exprot])
                         for pp in prot_slice:
                             if(np.linalg.norm(poser-dr*direc-pp)<exprot):
@@ -2069,14 +3612,14 @@ if lipL:
             #lower_tmp = LocBias(lower_tmp,num_lo,lipL_new,10000,lipL_loc,loc_grid[0])
             leaf_lo    = (-1,list(zip(lip_lo,lower_tmp)))
             if(gi == 0):
-                molecules  = list(zip(lipU_new,num_up)) + list(zip(lipL_new,num_lo))
+                molecules  += list(zip(lipU_new,num_up)) + list(zip(lipL_new,num_lo))
             else:
                 molecules  += list(zip(lipU_new,num_up)) + list(zip(lipL_new,num_lo))
     
             kick       = options["-rand"].value
             
             
-            
+            print("Building membrane(s)...")
             # Build the membrane
             for leaflet,leaf_lip in [leaf_up,leaf_lo]:
                 for lipid, pos_dir in leaf_lip:
@@ -2125,16 +3668,18 @@ if lipL:
     # Now move everything to the center of the box before adding solvent
     mz  = pbcz/2
     z   = [ i[2] for i in protein.coord+membrane.coord ]
-    mz -= (max(z)+min(z))/2
+    adj = -(max(z)+min(z))/2
+    mz += adj
     protein += (0,0,mz)
     membrane += (0,0,mz)
+    print("Done")
 else:
     mz=0
+    adj = 0
 
+if(Num_PGL > 0):
+    PGL += (0,0,adj)
 
-
-
-#PG layer
 
 
 ################
@@ -2144,7 +3689,7 @@ else:
 # Charge of the system so far
 
 
-charge,pcharge,mcharge,_ = get_charge(0,pbcz)
+charge,pcharge,mcharge,pgcharge = get_charge(0,pbcz)
 
 plen, mlen, slen = 0, 0, 0
 plen = protein and len(protein) or 0
@@ -2154,11 +3699,13 @@ print("; Charge of protein: %f" % pcharge,file=sys.stderr)
 
 mlen = membrane and len(membrane) or 0
 
-pglen = 0
+pglen = PGL and len(PGL) or 0
 
 print("; NDX Membrane %d %d" % (1+plen, membrane and plen+mlen or 0),file=sys.stderr)
 print("; Charge of membrane: %f" % mcharge,file=sys.stderr)
 
+print("; NDX PG Layer %d %d" % (1+mlen+plen, PGL and plen+mlen+pglen or 0),file=sys.stderr)
+print("; Charge of PG Layer: %f" % pgcharge,file=sys.stderr)
 
 print("; Total charge: %f" % charge,file=sys.stderr)
 
@@ -2170,8 +3717,9 @@ def _point(y,phi):
 
 def pointsOnSphere(n):
     return [_point((2.*k+1)/n-1,k*2.3999632297286531) for k in range(n)]
-    
+
 if solv:
+    print("Adding solvent...")
 
     # Set up a grid
     d        = 1/(options["-sold"].value*np.sqrt(3)/2)
@@ -2206,7 +3754,9 @@ if solv:
         zshift = (hz+0.5)*nz - midz # Shift of membrane middle to center of grid layer
     # Initialize a grid of solvent, spanning the whole cell
     # Exclude all cells within specified distance from membrane center
+    
     if(lipL):
+        print("Excluding solvent from membrane(s)...")
         if(options["-ps"].value > 1e-5):
             grids = []      
             for gk in range(2):
@@ -2219,12 +3769,12 @@ if solv:
             grids = np.array(grids)
             grid = grids[0]*grids[1]
         
-        else:            
+        else:
             if is_micelle:
                 rad = mi_rad
             else:
                 if mem_outer_red>0:
-                    rad = mem_outer_red    
+                    rad = mem_outer_red   
                 else:
                     rad = 1000
             if(cdirs[0] < 0):
@@ -2234,10 +3784,40 @@ if solv:
                 grid   = [[[((pbcx*k)/nx-pbcx/2)*((pbcx*k)/nx-pbcx/2)+((pbcy*j)/ny-pbcy/2)*((pbcy*j)/ny-pbcy/2) > rad*rad or (pbcz*i)/nz > leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]+2+mz or (pbcz*i)/nz < leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]-2+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
     else:
         grid   =   [[[True for i in range(nz)] for j in range(ny)] for k in range(nx)]
+
+
+    if len(protein.coord) > 0:
+        print("Filling the inside of protein(s) with solvent...")
+
+        grid = np.array(grid)
+        pc = np.array(protein.coord)
+        maxz = np.max(pc[:,2])
+        minz = np.min(pc[:,2])
+
+        max_iz = int((maxz/pbcz)*nz)
+        min_iz = int((minz/pbcz)*nz)
+        #print(max_iz,min_iz)
+
+        for zl in range(min_iz,max_iz):
+            #print(zl)
+            acc_z = (zl/nz)*pbcz
+            lzrange = acc_z-dz
+            uzrange = acc_z+dz
+            zpslice = pc[np.logical_and(pc[:,2] > lzrange,pc[:,2] < uzrange)]
+            water_layer = np.zeros((nx,ny))
+            for pos in zpslice[:,:2]:
+                px = int((pos[0]/pbcx)*nx)
+                py = int((pos[1]/pbcy)*ny)
+                water_layer[px,py] = 1
+            
+            filled_water = flood_fill(water_layer)
+            
+            grid[:,:,zl][filled_water[:,:] == 0] = True
+    print("Removing solvent in cells occupied by other structures...")
     # Flag all cells occupied by protein or membrane
-    for p,q,r in protein.coord+membrane.coord:
+    for p,q,r in protein.coord+membrane.coord+PGL.coord:
         for s,t,u in pointsOnSphere(20):
-            x,y,z = p+0.33*s,q+0.33*t,r+0.33*u
+            x,y,z = p+0.1*s,q+0.1*t,r+0.1*u
             
             if z >= pbcz:
                 x -= box[2][0]
@@ -2266,9 +3846,7 @@ if solv:
 
 
             grid[int(nx*x/rx)][ygrid][zgrid] = False
-    anti_freeze = 0.2
-    if(is_micelle):
-        anti_freeze = 0.2
+
     for i in range(nx):
         for j in range(ny):
             for k in range(nz):
@@ -2281,6 +3859,8 @@ if solv:
     grid = [ [R(),(i+0.5+R()*kick)*dx + (0.5*dx)*((j+k)%2),(j+0.5+R()*kick)*dy+(0.5*dy)*(k%2),(k+0.5+R()*kick)*dz] 
              for i in range(nx) for j in range(ny) for k in range(nz) if grid[i][j][k] ]
     
+
+    print("Calculating number of solvent compartments...")
     comp_nos = np.zeros(3)    
     if(zdist > 1e-5):
         for gr in grid:
@@ -2319,6 +3899,9 @@ if solv:
     # This is fine for simple salt solutions, but may not be optimal for complex mixtures
     # (like when mixing a 1M solution of this with a 1M solution of that
 
+
+    print("Calculating charges per compartment...")
+
     # First get names and relative numbers for each solvent
     solnames, solnums = list(zip(*[ parse_mol(i) for i in solv ]))
     solnames, solnums = list(solnames), list(solnums)
@@ -2326,7 +3909,6 @@ if solv:
 
     # Set the number of ions to add
     nna, ncl = 0, 0
-  
     charge_rats = np.zeros(3)
     if options["-charge_ratio"].value:
         concs = options["-charge_ratio"].value.split(",")
@@ -2542,7 +4124,7 @@ if solv:
 
     # Extend the list of molecules (for the topology)
     molecules.extend(list(zip(solnames,num_sol)))
-    
+    print("Building solvent and ions...")
     cc = 0
     # Build the solvent
     sol = []
@@ -2567,10 +4149,11 @@ if solv:
         else:          
             sol.append(("%5d%-5s%5s%5d"%(resi%1e5,resn,solmol and solmol[0][0] or resn,atid%1e5),(x,y,z)))
             atid += 1
+    print("Done")
 else:
     solvent, sol = None, []
 
-
+print("Writing files...")
 ## Write the output ##
 slen = solvent and len(sol) or 0
 
@@ -2594,7 +4177,7 @@ else:
 print(title,file=oStream)
 
  #print(the number of atoms)
-print("%5d"%(len(protein)+len(membrane)+len(sol)),file=oStream)
+print("%5d"%(len(protein)+len(membrane)+len(sol)+len(PGL)),file=oStream)
 
 
 membrane.atoms,membrane.coord = reorder_atoms(membrane.atoms,membrane.coord)
@@ -2617,12 +4200,21 @@ if protein:
         x,y,z    = protein.coord[i]
         oStream.write("%5d%-5s%5s%5d%8.3f%8.3f%8.3f\n"%(ri%1e5,rn,at,id%1e5,x,y,z))
         id += 1
+if PGL:
+    for i in range(len(PGL)):
+        at,rn,ri = PGL.atoms[i][:3]
+        x,y,z    = PGL.coord[i]
+        x = x%pbcx
+        y = y%pbcy
+        oStream.write("%5d%-5s%5s%5d%8.3f%8.3f%8.3f\n"%(ri%1e5,rn,at,id%1e5,x,y,z))
+        id += 1
 if membrane:
     for i in range(len(membrane)):
         at,rn,ri = membrane.atoms[i][:3]
         x,y,z    = membrane.coord[i]
         oStream.write("%5d%-5s%5s%5d%8.3f%8.3f%8.3f\n"%(ri%1e5,rn,at,id%1e5,x,y,z))
         id += 1
+
 if sol:
     # print(the solvent)
     print("\n".join([i[0]+"%8.3f%8.3f%8.3f"%i[1] for i in sol]),file=oStream)
@@ -2635,12 +4227,16 @@ if options["-p"].value:
     # Write a rudimentary topology file
     with open(options["-p"].value,"w") as top:
         #print('#include "martini_v3.itp"\n',file=top)
-        print('#include "martini_v3.0.0.itp"\n',file=top)
-        print('#include "martini_v3.0.0_ions_v1.itp"\n',file=top)
-        print('#include "martini_v3.0.0_solvents_v1.itp"\n',file=top)
-        print('#include "martini_v3.0.0_phospholipids_v1.itp"\n',file=top)
+        print('; '+' '.join(sys.argv),file=top)
+        print('#include "martini_v3.0.0.itp"',file=top)
+        print('#include "martini_v3.0.0_ions_v1.itp"',file=top)
+        print('#include "martini_v3.0.0_solvents_v1.itp"',file=top)
+        print('#include "martini_v3.0.0_phospholipids_v1.itp"',file=top)
+        if(PGL):
+            print('#include "PGL.itp"',file=top)
+
         if protein:
-            print('#include "protein-cg.itp"\n',file=top)
+            print('#include "protein-cg.itp"',file=top)
         print('[ system ]\n; name\n%s\n\n[ molecules ]\n; name  number'%title,file=top)
         if protein:
             print("%-10s %5d"%("Protein",1),file=top)
@@ -2648,3 +4244,5 @@ if options["-p"].value:
 
 else:
     print("\n".join("%-10s %7d"%tuple(i) for i in new_molecules),file=sys.stderr)
+
+print("Done!")

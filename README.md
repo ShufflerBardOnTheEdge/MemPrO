@@ -1,6 +1,17 @@
 # MemPrO
 Membrane Protein Orientation in Lipid Bilayers. The paper associated with this code can be found here \[link to be added soon\].
 
+Code and parameters from the following were used to help write this code:
+
+**Insane:**
+Tsjerk A. Wassenaar et al. “Computational lipidomics with insane: A versatile tool for generating custom membranes for molecular simulations”. In: Journal of Chemical Theory and Computation 11 (5 May 2015), pp. 2144–2155. issn: 15499626. [GitHub](https://github.com/Tsjerk/Insane) and [paper](https://pubs.acs.org/doi/abs/10.1021/acs.jctc.5b00209) 
+
+**Matini forcefield:**
+Siewert J ; Marrink et al. “The MARTINI force field The MARTINI Force Field: Coarse Grained Model for Biomolecular Simulations”. In: (2007). [Paper](https://pubs.acs.org/doi/10.1021/jp071097f)
+
+**Peptidoglycan parameters:**
+Rakesh Vaiwala et al. “Developing a Coarse-Grained Model for Bacterial Cell Walls: Evaluating Mechanical Properties and Free Energy Barriers”. In: Journal of Chemical Theory and Computation 16 (8 Aug. 2020), pp. 5369–5384. issn: 15499626. [Paper](https://pubs.acs.org/doi/abs/10.1021/acs.jctc.0c00539)
+
 ## Installation
 To install MemPrO run the following (Not yet on PyPi, this will work once the code has been published):
 >pip install MemPrO
@@ -184,7 +195,23 @@ MemPrO comes with Insane4MemPrO a CG system builder based on Insane. A link to t
 
 -micelle: (Optional) Builds a micelle around a protein instead of a bilayer.
 
--radius: (Optional) Builds a membrane disk with given radius, this can be usefull for simulating nano-disks.
+-radius: (Optional) Builds a membrane disk with given radius, this can be useful for simulating nano-disks.
+
+#### Peptidoglycan layer related options.
+
+-pgl: (Optional) Number of PG layers to place at -pgl_z.
+
+-pgl_z: (Optional) Z position of PG layer relative to centre of periplasmic space.
+
+-cper: (Optional) Percentage of cross-links.
+
+-lper: (Optional) Percentage of cross-links that are between layers.
+
+-per33: (Optional) Percentage of 3-3 cross-links, all other cross-links will be 3-4.
+
+-oper: (Optional) Percentage chance of a monomer linking with a oligomer. (Actual chance of link is cper*oper)
+
+-gdist: (Default 0.75,4,8.9,0.25,10,45) Distribution of glycan strand lengths. Format as weight 1,standard deviation 1,mean 1,weight 2..., were each triple describes a gaussian. The sum of these forms the distribution
 
 #### Protein related options:
 
@@ -219,6 +246,8 @@ MemPrO comes with Insane4MemPrO a CG system builder based on Insane. A link to t
 -charge_ratio : (Optional) When supplied indicates how to split the charge across compartments, otherwise each compartment is neutralised separately.
 
 -zpbc : (Optional) Determines if Z periodicity is used when calculating compartments.
+
+
 
 
 
