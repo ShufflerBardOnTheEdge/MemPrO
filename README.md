@@ -83,7 +83,7 @@ MemPro will takes the following flags as input:
 
 -dm, --dual_membrane : This toggles dual membrane minimisations. This allows the code to split the membrane into a inner and outer membrane and minimise the distance between them. Only use this is you know your protein will span the periplasm or is a gap junction etc.
 
--ch, --charge : This value corresponds to the partial charge of the (inner) membrane. For -ch and -ch_o below the value corresponds to the average charge on a lipid divided by the average area per lipid. This will give a average charge across a sheet that will represent the bilayer. The value for an E-coli membrane is around -0.008. In general bet preformance is obtained by using a charge of 0.
+-ch, --charge : This value corresponds to the partial charge of the (inner) membrane. For -ch and -ch_o below the value corresponds to the average charge on a lipid divided by the average area per lipid. This will give a average charge across a sheet that will represent the bilayer. The value for an E-coli membrane is around -0.008. In general best preformance is obtained by using a charge of 0.
 
 -ch_o, --charge_outer : This is the charge for the outer membrane only. This will do nothing without -dm.
 
