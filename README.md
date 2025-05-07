@@ -109,7 +109,13 @@ MemPro will takes the following flags as input:
 
 -bd, --build_system : This should be a number that indicates how many of the final configurations should be build using Insane4MemPrO. This will currently only work if your input file is coarse grain.  
 
--bd_args, --build_arguments: These are the arguments to pass to Insane4MemPrO. This mostly includes lipid composition, solvent type etc.
+-bd_args, --build_arguments : These are the arguments to pass to Insane4MemPrO. This mostly includes lipid composition, solvent type etc.
+
+-res, --additional_residues : A comma seperated list of additional residues present in the input file (eg POPE,POPG)
+
+-res_itp, --additional_residues_itp_file : An itp file containing descriptions of each additional residue added.
+
+-res_cg, --residue_cg_file : A folder containing files called RES.pdb where RES is the name of each additional residue added. RES.pdb should contain coarse graining information, example can be found on the GitHub repo for [CG2AT](https://github.com/owenvickery/cg2at/tree/master/database/fragments/martini_3-0_slipids/non_protein). This is only required for atomistic inputs with additional residues.
 
 ## Examples
 
