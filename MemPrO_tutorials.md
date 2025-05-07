@@ -142,7 +142,7 @@ Martini3 should come with "martini_v3.0.0_phospholipids_v1.itp", but in case you
 
 ![Alt text](Tutorial_pics/Fig20.svg)
 
-For an atomistic input the flag -res_cg will also need to be used. This will take a folder which contains files called RES.pdb where RES is replaced by the residues you are adding. For example in this case the folder would contain 1 file called "POPE.pdb". "RES.pdb" should contain the beading informations. The format for RES.pdb is based on CG2AT, an example for POPE can be found on the CG2AT GitHub Repo [here](https://github.com/owenvickery/cg2at/tree/master/database/fragments/martini_3-0_slipids/non_protein/POPE)
+For an atomistic input the flag -res_cg will also need to be used. This will take a folder which contains files called RES.pdb where RES is replaced by the residues you are adding. For example in this case the folder would contain 1 file called "POPE.pdb". "RES.pdb" should contain the beading informations. The format for "RES.pdb" is based on CG2AT, an example for POPE can be found on the CG2AT GitHub Repo [here](https://github.com/owenvickery/cg2at/tree/master/database/fragments/martini_3-0_slipids/non_protein/POPE)
 
 ## Final comments
 
