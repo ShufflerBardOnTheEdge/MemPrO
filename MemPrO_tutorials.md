@@ -100,7 +100,7 @@ It is not always possible to see if a membrane should be curved by looking at "c
 
 ## Tutorial 5 - Building CG systems from orientations
 
-In this final tutorial we will used MemPrO to orient 5NIK and automatically build a CG system. For the purpose of this tutorial both membranes will be made up of POPG and POPE even though this is not biologically accurate. Further tutorials for use of Insane4MemPrO are available [here](Insane4MemPrO_tutorials.md). We will start as always by making a folder called "Tutorial5" and then copy across 5nik.pdb or dowload as in [Double membrane systems](#tutorial-2---double-membrane-systems).
+In this tutorial we will used MemPrO to orient 5NIK and automatically build a CG system. For the purpose of this tutorial both membranes will be made up of POPG and POPE even though this is not biologically accurate. Further tutorials for use of Insane4MemPrO are available [here](Insane4MemPrO_tutorials.md). We will start as always by making a folder called "Tutorial5" and then copy across 5nik.pdb or dowload as in [Double membrane systems](#tutorial-2---double-membrane-systems).
 
 To build a CG system 5nik must first be coarse grained. For this we will use Martinize2, for install instructions and usage refer to the [GitHub repo](https://github.com/marrink-lab/vermouth-martinize). 
 
@@ -120,7 +120,31 @@ Looking in the folder "Orient" we should see the now familiar set of files produ
 
 These files can be used together with the output from martinize2/the appropriate files describing the CG protein to run simulation.
 
+## Tutorial 6 - Orienting Protein-Lipid complexes
+
+In this tutorial we will be orienting a simple protein-lipid complex. For this we will need to first create a protein lipid complex to orient. Follow [Insane4MemPrO - Tutorial 1](https://github.com/ShufflerBardOnTheEdge/MemPrO/blob/main/Insane4MemPrO_tutorials.md#tutorial-1---a-basic-example) to generate a CG system with POPE and the protein 4G1U.
+
+Create a new folder called "Tutorial6" and copy the final CG system across from Insane4MemPrO tutorial 1, for more interesting results you may energy minimise the system before continuing. To create a protein-lipid complex first load "CG-System.gro" in PyMOL, then hide all by the protein and lipids, with the following commands
+>hide
+
+>show spheres,pol
+
+>show spheres,resn POPE
+
+Now select a few of the lipids around the protein by clicking on each one you wish to add, then run the following command
+>save 4G1U_Lipid.pdb,pol or sele
+
+This will create a file called "4G1U_Lipid.pdb" which will be our protein-lipid complex. Make sure PyMOL is in the correct directory when you save the file! We can now orient this protein-lipid compelex using the following command
+
+>python PATH/TO/MemPrO_Script.py -f 4G1U_Lipid.pdb -res POPE -res_itp PATH/TO/martini_v3.0.0_phospholipids_v1.itp -ng 16 -ni 150
+
+Martini3 should come with "martini_v3.0.0_phospholipids_v1.itp", but in case you don't have this file any itp the describes a martini3 coarse grained POPE will work. Once the code has finished running we can have a look at "Orient/Rank_1/oriented_rank_1.pdb" to see if it has oriented correctly which, hopefully, it has.
+
+![Alt text](Tutorial_pics/Fig20.svg)
+
+For an atomistic input the flag -res_cg will also need to be used. This will take a folder which contains files called RES.pdb where RES is replaced by the residues you are adding. For example in this case the folder would contain 1 file called "POPE.pdb". "RES.pdb" should contain the beading informations. An example for POPE can be found in the examples folder in this repository.
+
 ## Final comments
 
-Hopefully with the above 5 tutorials you should now be set for using MemPrO to orient proteins and build CG systems ready for simulations. MemPrO has a few more advanced features and may in future have even more which are not covered by the tutorials, some advanced tutorials for these may become available in the future. For now if you run into difficulties or find errors please let me know by emailing m.parrag@warwick.ac.uk and I'll do my best to help.
+Hopefully with the above 6 tutorials you should now be set for using MemPrO to orient proteins and build CG systems ready for simulations. MemPrO has a few more advanced features and may in future have even more which are not covered by the tutorials, some advanced tutorials for these may become available in the future. For now if you run into difficulties or find errors please let me know by emailing m.parrag@warwick.ac.uk and I'll do my best to help.
 
