@@ -95,9 +95,11 @@ if(grid_size < 4):
 if args.rank not in ["h","p","auto"]:
 	print("ERROR: -rank must be either \"auto\", \"h\" or \"p\".")
 	exit()
+	
 ranker = args.rank
-if(args.rank == "auto"):
+if args.rank == "auto":
 	ranker = "p"
+
 
 mem_data = [0,0,0,0]
 try:
@@ -233,6 +235,8 @@ if(orient_dir == None):
 		os.mkdir("Orient/")
 	orient_dir = "Orient/"
 else:
+	if orient_dir[-1] != "/":
+	    orient_dir+= "/"
 	if(not os.path.exists(orient_dir)):
 		os.mkdir(orient_dir)
 
@@ -241,10 +245,11 @@ if(len(add_reses) > 0):
 	if(len(add_reses[0]) > 0):
 		for i in add_reses:
 			ori.add_Reses(i,args.additional_residues_itp_file)
-			ori.add_AtomToBeads(args.residue_cg_file.lstrip("/")+"/"+i+".pdb")
+			if len(args.residue_cg_file) > 0 :
+				ori.add_AtomToBeads(args.residue_cg_file.lstrip("/")+"/"+i+".pdb")
 
 #Creating a helper class that deals with loading the PDB files
-PDB_helper_test = ori.PDB_helper(fn,args.use_weights,build_system,ranges,False)
+PDB_helper_test = ori.PDB_helper(fn,args.use_weights,build_system,ranges,False,False)
 
 #Loading PDB
 _ = PDB_helper_test.load_pdb()
@@ -293,7 +298,7 @@ else:
 
 
 print("Done")
-print("Starting initial minimisation...")
+print("Starting minimisation...")
 
 #Minimising on the grid
 

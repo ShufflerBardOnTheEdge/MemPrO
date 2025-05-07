@@ -135,7 +135,7 @@ devices = jax.devices()
 
 #This is a class that deals with the pdb files and all construction of position arrays
 class PDB_helper:
-	def __init__(self,fn,use_weights,build_no,ranges,lsurf):
+	def __init__(self,fn,use_weights,build_no,ranges,lsurf,def_surf):
 		#A list to help with getting the correct bead types from a cg pdb
 		self.beads = ResToBead
 		self.fn = fn
@@ -143,6 +143,7 @@ class PDB_helper:
 		self.build_no = build_no
 		self.ranges = ranges
 		self.lsurf = lsurf
+		self.def_surf = def_surf
 		
 		#Placeholder vars
 		self.surface = 0
@@ -160,12 +161,12 @@ class PDB_helper:
 		#We need the following two methods to tell jax what is and what is not static
 	def _tree_flatten(self):
 		children = (self.surface,self.spheres,self.surface_poses,self.bead_types,self.surf_b_vals,self.poses,self.all_poses,self.b_vals,self.map_to_beads,self.normals,self.all_bead_types)
-		aux_data = {"Beads":self.beads,"fn":self.fn,"weights":self.use_weights,"Build_no":self.build_no,"ranges":self.ranges,"Lsurf":self.lsurf}
+		aux_data = {"Beads":self.beads,"fn":self.fn,"weights":self.use_weights,"Build_no":self.build_no,"ranges":self.ranges,"Lsurf":self.lsurf,"Dsurf":self.def_surf}
 		return (children,aux_data)
 	
 	@classmethod
 	def _tree_unflatten(cls,aux_data,children):
-		obj = cls(aux_data["fn"],aux_data["weights"],aux_data["Build_no"],aux_data["ranges"],aux_data["Lsurf"])
+		obj = cls(aux_data["fn"],aux_data["weights"],aux_data["Build_no"],aux_data["ranges"],aux_data["Lsurf"],aux_data["Dsurf"])
 		obj.surface = children[0]
 		obj.spheres = children[1]
 		obj.surface_poses = children[2]
@@ -422,7 +423,7 @@ class PDB_helper:
 		
 	@jax.jit
 	def fire_pointv3(self,fpoint,direc,points,hit_points):
-		rad = 8
+		rad = 7
 		best_ind = jnp.array([0.0,1e9])
 		direc = direc/jnp.linalg.norm(direc)
 		@jax.vmap
@@ -457,7 +458,7 @@ class PDB_helper:
 		hit_points = hit_points.at[:,0].set( hit_points[:,0]+ jnp.sum(ret_points,axis=0))
 		return hit_points
 				
-	def get_surface_v2(self,points,hit_points):
+	def get_surface_v2(self,points,hit_points,def_surf):
 		nnn = 5000
 		nnnr = nnn%no_cpu
 		nnn -= nnnr
@@ -468,7 +469,13 @@ class PDB_helper:
 		chh1 = nnn
 		chh = chh1
 		while chh/chh1 > 0.0025:
-			dpoints = np.random.rand(nnn,2)*2*np.pi
+			if def_surf:
+				dpoints = np.random.rand(nnn,2)
+				dpoints[:,0] *= 2*np.pi
+				dpoints[:,1] = np.pi/2
+				#dpoints[:,1] -= np.pi/4
+			else:
+				dpoints = np.random.rand(nnn,2)*2*np.pi
 			dpoints2 = np.array([[np.sin(i[0]),np.cos(i[0])*np.sin(i[1]),np.cos(i[0])*np.cos(i[1])] for i in dpoints])
 			inder = np.array([np.random.randint(0,points.shape[0]) for i in range(nnn)],dtype=int)
 			fpoints = jnp.array(mrange*dpoints2+points[inder])
@@ -484,28 +491,29 @@ class PDB_helper:
 
 	@partial(jax.jit,static_argnums=3)
 	def get_surface_v3(self,points,bpoints,mrad):
-		srad = 16
-		thresh = 0.65
-		total = jnp.zeros((20,10))
+		srad = 4
+		thresh = 0.9
+		total = jnp.zeros((40,20))
 		total = get_sph_circ(total,jnp.array([0,0]),jnp.pi)
 		total_area = jnp.sum(total)
 		#jax.debug.print("TA{x}",x=total_area)
 		is_surf = jnp.zeros((points.shape[0]))
 		def sloopv3_1(is_surf,ind):
 			pind = ind
-			ang_grid = jnp.zeros((20,10))
+			ang_grid = jnp.zeros((40,20))
 			def sloopv3_2(ang_grid,ind):
 				direc = points[pind]-points[bpoints[pind,ind]]
 				dist = jnp.linalg.norm(direc)
 				def far(ang_grid):
 					return ang_grid
 				def nfar(ang_grid):
-					angle = jnp.arccos(2*dist/srad)
-					cen_y = jnp.arccos(direc[2]/dist)
-					cen_x = jnp.arctan(direc[1]/direc[0])
+					#angle = (jnp.pi/3)*srad/jnp.max(jnp.array([4.0,dist]))#jnp.arccos(2*dist/srad)#0.6
+					angle = jnp.arccos(jnp.clip(dist/(2*srad),0,1))
+					cen_y = jnp.arctan2(direc[2],jnp.sqrt(direc[0]*direc[0]+direc[1]*direc[1]))
+					cen_x = jnp.arctan2(direc[1],direc[0])
 					ang_grid = get_sph_circ(ang_grid,jnp.array([cen_x,cen_y]),angle)
 					return ang_grid
-				ang_grid = jax.lax.cond((dist < srad)*(dist>1e-5),nfar,far,ang_grid)
+				ang_grid = jax.lax.cond((dist < srad*3)*(dist>1e-5),nfar,far,ang_grid)
 				return ang_grid,ind
 			ang_grid,_ = jax.lax.scan(sloopv3_2,ang_grid,jnp.arange(mrad))
 			perc = jnp.sum(ang_grid)/total_area
@@ -567,7 +575,7 @@ class PDB_helper:
 		else:
 			shard_points = jax.device_put(self.poses,sharding)
 			shard_surface = jax.device_put(self.surface,sharding)
-			shard_surface = self.get_surface_v2(shard_points,shard_surface).block_until_ready()
+			shard_surface = self.get_surface_v2(shard_points,shard_surface,self.def_surf).block_until_ready()
 			self.surface = jnp.array(jax.device_get(shard_surface))
 		
 		surface_number = jnp.sum(self.surface,dtype = "int")
@@ -1015,7 +1023,7 @@ class MemBrain:
 		cgrid,_ = jax.lax.scan(spf1,cgrid,jnp.arange(100))
 		plt.imshow(cgrid)
 		plt.show()
-	    
+		
 		
 	#This is function fot calculating the potential of the PG layer for a bead at a z value
 	@jax.jit
@@ -2844,7 +2852,7 @@ class MemBrain:
 						for xk in zs:
 							count += 1
 							count_str = (6-len(str(count)))*" "+str(count)
-							c = "ATOM "+count_str+" BB   DUM Z   1       0.000   0.000  15.000  1.00  0.00" 
+							c = "ATOM "+count_str+" BB   DUM Z   1	   0.000   0.000  15.000  1.00  0.00" 
 							xp = np.format_float_positional(pos[0]+xk*norma[0],precision=3)
 							yp = np.format_float_positional(pos[1]+xk*norma[1],precision=3)
 							zp = np.format_float_positional(pos[2]+xk*norma[2],precision=3)
@@ -2886,7 +2894,7 @@ class MemBrain:
 				for pos in xyz:
 					count += 1
 					count_str = (6-len(str(count)))*" "+str(count)
-					c = "ATOM "+count_str+" BB   PGL Z   1       0.000   0.000  15.000  1.00  0.00" 
+					c = "ATOM "+count_str+" BB   PGL Z   1	   0.000   0.000  15.000  1.00  0.00" 
 					xp = np.format_float_positional(pos[0],precision=3)
 					yp = np.format_float_positional(pos[1],precision=3)
 					zpa = np.format_float_positional(pg_pos+self.pg_thickness/2,precision=3)
@@ -2985,7 +2993,7 @@ def write_point(points,fn,orient_dir):
 	for i in points:
 		count += 1
 		count_str = (6-len(str(count)))*" "+str(count)
-		c = "ATOM "+count_str+" BB   DUM     1       0.000   0.000  15.000  1.00  0.00" 
+		c = "ATOM "+count_str+" BB   DUM	 1	   0.000   0.000  15.000  1.00  0.00" 
 		xp = np.format_float_positional(i[0],precision=3)
 		yp = np.format_float_positional(i[1],precision=3)
 		zp = np.format_float_positional(i[2],precision=3)
@@ -3460,9 +3468,9 @@ def check_for_nan(val,pnum):
 	def isnnanj():
 		return 0
 	return jax.lax.cond(jnp.isnan(val),isnanj,isnnanj)
-    
-    
-    
+	
+	
+	
 def get_box_slice(points,p,r):
 	indices = np.arange(points.shape[0])
 	islice = indices[points[:,0]>p[0]-r[0]]
@@ -3478,7 +3486,7 @@ def get_box_slice(points,p,r):
 	islice = islice[pslice[:,2]<p[2]+r[2]]
 	pslice = pslice[pslice[:,2]<p[2]+r[2]]
 	return pslice,islice
-    
+	
 def get_binned_points(points,rad):
 	binned_points = np.zeros((points.shape[0],points.shape[0]),dtype=int)
 	max_in_rad = 0	
@@ -3493,7 +3501,7 @@ def get_binned_points(points,rad):
 
 @jax.jit
 def get_sph_circ(grid,cen,angle):
-	n = 10
+	n = 20
 	dx = jnp.pi/n
 	dy = jnp.pi/n
 	xs = jnp.linspace(0,2*jnp.pi-dx,2*n)+dx/2

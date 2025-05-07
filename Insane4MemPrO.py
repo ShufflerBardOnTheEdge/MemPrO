@@ -2565,7 +2565,7 @@ Input/output related options
 """,
     ("-f",      Option(tm.append,   1,        None, "Input GRO or PDB file 1: Protein")),
     ("-o",      Option(str,         1,        None, "Output GRO file: Membrane with Protein")),
-    ("-o_f",      Option(str,         1,        None, "Folder for additional files")),
+    ("-o_f",      Option(str,         1,        None, "Folder for additional files (Default: InsaneData)")),
     ("-p",      Option(str,         1,        None, "Optional rudimentary topology file")),
     ("-ct",      Option(str,         1,        None, "This will create a template of the membrane only.")),
     ("-in_t",      Option(str,         1,        None, "Input template for placement of multiple proteins.")),
@@ -2613,6 +2613,7 @@ are not specified. Curvature can be specified using -curv.
     ("-micelle",        Option(bool,        0,          None, "Builds a micelle around a protein instead of a bilayer")),
     ("-radius",        Option(float,        1,          -1, "Radius of membrane outer disk. This is by default the whole cell")),
     ("-no_lipids",        Option(int,        1,          -1, "Number of lipids that make up a micelle, this will override area per lipid. Only for use with -micelle")),
+    ("-def",      Option(str,         1,        None, "Input folder containing deformation data from MemPrOD, This cannot be used with -ps or -curv.")),
     """
 Peptidoglycan layer related options.
 """,
@@ -2689,12 +2690,36 @@ absoluteNumbers = not options["-d"]
 
 
 out_folder = options["-o_f"].value
-if out_folder:
-    if out_folder[-1] != "/":
-        out_folder += "/"
-
+if not out_folder:
+	out_folder = "InsaneData/"
+	
+if out_folder[-1] != "/":
+    out_folder += "/"
 if(not os.path.exists(out_folder)):
     os.mkdir(out_folder)
+
+
+
+memdata = options["-def"].value
+if memdata:
+    mdata = np.load(memdata+"Membrane_pos.npz")
+    membrane_pos = mdata["arr_0"]
+    mdata2 = np.load(memdata+"Rotation_matrix.npz")
+    rot_mat_def = mdata2["arr_0"]
+    mdata5 = np.load(memdata+"Z_change.npz")
+    z_change = mdata5["arr_0"]
+    mdata3 = np.load(memdata+"Xlin.npz")
+    xlin_def = mdata3["arr_0"]
+    mdata4 = np.load(memdata+"Ylin.npz")
+    ylin_def = mdata4["arr_0"]
+else:
+    membrane_pos = 0
+    rot_mat_def = np.eye(3)
+    xlin_def = 0
+    ylin_def = 0
+    z_change = 0
+
+
 
 # HII edit - lipid definition
 # Add specified lipid definition to insane lipid library
@@ -3179,11 +3204,11 @@ if(using_temp or tm):
 
         # And we collect the atoms
         protein.atoms.extend(prot.atoms)
-        protein.coord.extend(prot.coord)
+        protein.coord.extend(np.array([0,0,z_change/10])+(np.dot(rot_mat_def,(np.array(prot.coord)-poses[0]).T).T)+poses[0])
         
         
         protein_lip.atoms.extend(prot_lip.atoms)
-        protein_lip.coord.extend(prot_lip.coord)
+        protein_lip.coord.extend(np.array([0,0,z_change/10])+(np.dot(rot_mat_def,(np.array(prot_lip.coord)-poses[0]).T).T)+poses[0])
         
 
     prot_up,prot_lo,prot_up_a,prot_up_b,prot_lo_a,prot_lo_b = [],[],[],[],[],[]
@@ -3638,10 +3663,25 @@ if lipL:
                     # The z-coordinates are spaced at 0.3 nm,
                     # starting with the first bead at 0.15 nm
                     #+leaflet*(0.5+(i-min(az)))*options["-bd"].value
-                    az       = [ leaflet*-2+pos[2]+leaflet*(0.5+(i-min(az)))*options["-bd"].value for i in az ]
+                    
                     xx       = list(zip( ax,ay ))
                     nx       = [rcos*i-rsin*j+pos[0]+random.random()*kick for i,j in xx]
                     ny       = [rsin*i+rcos*j+pos[1]+random.random()*kick for i,j in xx]
+                    zdef = 0
+                    mtdef = 1.0
+                    if memdata:
+                        xtest = (nx[0]-pbcx/2)*10
+                        ytest = (ny[0]-pbcy/2)*10
+                        xind = int(((xtest-xlin_def[0])/(xlin_def[-1]-xlin_def[0]))*xlin_def.shape[0])
+                        yind = int(((ytest-ylin_def[0])/(ylin_def[-1]-ylin_def[0]))*ylin_def.shape[0])
+                        if xind < 0 or yind < 0 or xind >= xlin_def.shape[0] or yind >= ylin_def.shape[0]:
+                            zdef = 0
+                        else:
+                            defor = membrane_pos[xind,yind]/10.0
+                            zdef = defor[0]
+                            mtdef = (10*defor[1]/membrane_pos[0,0,1])
+                    az       = np.array([ leaflet*-2+pos[2]+leaflet*(0.5+(i-min(az)))*options["-bd"].value for i in az ])
+                    az *= mtdef  
                     # Add the atoms to the list
                     nppos = np.array(dirs)
                     pos2 = np.array([pos[0],pos[1],pos[2]])
@@ -3655,10 +3695,11 @@ if lipL:
                     v = np.cross(downn,nppos)
                     vmat = np.array([[0,-v[2],v[1]],[v[2],0,-v[0]],[-v[1],v[0],0]])
                     rot_mat = np.eye(3)+vmat+np.dot(vmat,vmat)*1/(1+angl)
-                    new_poses = [np.dot(rot_mat,np.array([nx[i],ny[i],az[i]])-pos2)+pos2 for i in range(len(az))]               
+                    new_poses = [np.dot(rot_mat,np.array([nx[i],ny[i],az[i]])-pos2)+pos2 for i in range(len(az))]       
+                    
                     for i in range(len(at)):
                         atom  = "%5d%-5s%5s%5d"%(resi,lipid,at[i],atid)
-                        membrane.coord.append((new_poses[i][0],new_poses[i][1],new_poses[i][2]+zdist*(gi*2-1)))               
+                        membrane.coord.append((new_poses[i][0],new_poses[i][1],new_poses[i][2]+zdist*(gi*2-1)+zdef))               
                         
                         membrane.atoms.append((at[i],lipid,resi,0,0,0))
                         atid += 1
