@@ -28,11 +28,11 @@ Before running MemPrO some environment variables must be set, for Linux users th
 
 >export NUM_CPU=N
 
->export PATH_TO_INSANE=PATH/TO/INSANE4MEMPRO
+>export PATH_TO_INSANE=PATH/TO/Insane4MemPrO.py
 
->export PATH_TO_MARTINI=PATH/TO/MARTINI3
+>export PATH_TO_MARTINI=PATH/TO/martini3.itp
 
-Where N is replaced by the number of CPU you wish to use.
+Where N is replaced by the number of CPU you wish to use and martini3.itp is the name of the martini3 itp file you are using.
 
 MemPrO is also accessible on Google Colab via the link [ADD LINK]. The Colab will contain instructions for use. (Currently the Colab in WIP and this will be updated)
 
@@ -123,11 +123,11 @@ Before running MemPrO some environment variables must be set, for Linux users th
 
 >export NUM_CPU=N
 
->export PATH_TO_INSANE=PATH/TO/INSANE4MEMPRO
+>export PATH_TO_INSANE=PATH/TO/Insane4MemPrO.py
 
->export PATH_TO_MARTINI=PATH/TO/MARTINI3
+>export PATH_TO_MARTINI=PATH/TO/martini3.itp
 
-Where N is replaced by the number of CPU you wish to use, for the examples below 20 were used.
+Where N is replaced by the number of CPU you wish to use and martini3.itp is the name of the martini3 itp file you are using. For the examples below 20 CPUs were used.
 
 The below will orient input_file.pdb on a grid of 40 starting configurations with 150 minimisation iterations
 
