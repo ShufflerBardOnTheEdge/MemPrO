@@ -3708,7 +3708,7 @@ if lipL:
 	
 	#removing lipids within -fudge of protein
 	prot_coords = np.array(protein_lip.coord)
-	write_point(prot_coords*10,"Protein_filled.pdb")
+	#write_point(prot_coords*10,"Protein_filled.pdb")
 	
 	tailsU = np.linspace(0,av_liplenU,50)
 	tailsUO = np.linspace(0,av_liplenUO,50)
