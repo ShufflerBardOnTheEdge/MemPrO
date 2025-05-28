@@ -123,6 +123,33 @@ As with all tutorials above we can also build this automatically with MemPrO usi
 
 We no longer need to specifiy the Z position of the PG layer with "-pgl_z" as MemPrO deals with this as with all such structural information. Looking in the folder "Orient_build/Rank_1/CG_System_rank_1/" we find both the CG system and the topology file, called "CG-system.gro" and "topol.top" respectively. "topol.top" will need to be modified as always. The system is now ready for energy minimisation and simulation. As with the above it is recommended to use position restrains during equilibration to allow water to fill out the inside of the protein correctly.
 
+## Tutorial 5 - Building with Deformations
+
+In this tutorial we will look at how to use Insane4MemPrO to build deformation predictions from MemPrOD. If you haven't used MemPrOD before I recommend looking at the [MemPrOD GitHub](https://github.com/ShufflerBardOnTheEdge/MemPrOD). We begin as always by creating a new folder called "Tutorial5". We will be using the protein 4BWZ which can be downloaded from [here](https://memprotmd.bioch.ox.ac.uk/_ref/PDB/4bwz/_sim/4bwz_default_dppc/), download "4bwz_default_dppc-head-contacts.pdb" and rename this to "4bwz.pdb". Put "4bwz.pdb" into "Tutorial5". 
+
+We will as before use martinize2 to coarse grain the protein. Refer to [Tutorial 1 - A Basic Example](https://github.com/ShufflerBardOnTheEdge/MemPrO/blob/main/Insane4MemPrO_tutorials.md#tutorial-1---a-basic-example) if you are unsure how to do this. We should not have a coarse grained copy of 4BWZ called "4bwz-cg.pdb". We will now run MemPrO to orient the protein with the following command:
+
+>python PATH/TO/MemPrO_Script.py -f 4bwz-cg.pdb
+
+We will now create a file "4bwz-oriented.pdb" containing the oriented protein without the dummy membrane - Again refer to [Tutorial 1 - A Basic Example](https://github.com/ShufflerBardOnTheEdge/MemPrO/blob/main/Insane4MemPrO_tutorials.md#tutorial-1---a-basic-example) if you are unsure.
+
+Next we will predict the deformations using MemPrOD. Instructions for installation and use of MemPrOD can be found [here](https://github.com/ShufflerBardOnTheEdge/MemPrOD). Run the following command
+
+>python PATH/TO/MemPrOD.py -f 4bwz-oriented.pdb
+
+This will take around 100s to run. A folder called Deformations will be create in which we will find several files and folders. We are only interested in "Deformations.pdb" and "Membrane_Data/". We can look at "Deformations.pdb" and "4bwz-oriented.pdb" together to see what the deformation prediction looks like. We are now ready to build a CG system with deformations. We run the following command:
+
+>python PATH/TO/Insane4MemPrO.py -f 4bwz-oriented.pdb -p topol.top -o CG-System.gro -x 20 -y 20 -z 20 -sol W -l POPE -negi_c0 CL -posi_c0 NA -def Deformations/Membrane_Data/
+
+The only difference between the usual command is the -def flag, this tells Insane4MemPrO where all the deformation information is stored, which in our case is Deformations/Membrane_Data/. We can now look at "CG-system.gro" in PyMOL, run the following set of commands to see the deformation more clearly
+
+>hide
+
+>show spheres,name nh3
+
+>show spheres,pol
+
+Hopefully now you should be able to see how the NH3 beads in the POPE lipid are deformed in the same way as predicted by MemPrOD. This system can now be energy minimised and equilibrated as usual.
 ## Final comments
 
 Hopefully now you feel confident in using Insane4MemPrO to build complex systems with and without the use of MemPrO to automatically apply any structural elements. There are some more advanced features of Insane4MemPrO that were not covered in these tutorials. More tutorials on these advanced topics may become available in the future. For now if you run into any problems/bugs please let me know at m.parrag@warwick.ac.uk and I will do my best to help.
