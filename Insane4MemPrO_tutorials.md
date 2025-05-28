@@ -150,6 +150,9 @@ The only difference between the usual command is the -def flag, this tells Insan
 >show spheres,pol
 
 Hopefully now you should be able to see how the NH3 beads in the POPE lipid are deformed in the same way as predicted by MemPrOD. This system can now be energy minimised and equilibrated as usual.
+
+![Alt text](Tutorial_pics/Fig21.svg)
+
 ## Final comments
 
 Hopefully now you feel confident in using Insane4MemPrO to build complex systems with and without the use of MemPrO to automatically apply any structural elements. There are some more advanced features of Insane4MemPrO that were not covered in these tutorials. More tutorials on these advanced topics may become available in the future. For now if you run into any problems/bugs please let me know at m.parrag@warwick.ac.uk and I will do my best to help.
