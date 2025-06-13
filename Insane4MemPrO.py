@@ -1262,11 +1262,17 @@ def get_allowed_beads(cind,clinks_np,bead,inder,no_gly):
 	greater = np.where(clinks_np[cind][:,inder] > bead)[0]
 	less = np.where(clinks_np[cind][:,inder] < bead)[0]
 	if(len(greater) == 0):
-		urange = 0
+		if(len(less) == 0):
+			urange = 0
+		else:
+			urange = less[0]
 	else:
 		urange = greater[0]
 	if(len(less) == 0):
-		lrange = -1
+		if(len(greater) == 0):
+			lrange = -1
+		else:
+			lrange = greater[-1]
 	else:
 		lrange = less[-1]
 	if(clinks_np[cind].size > 0):
@@ -1301,6 +1307,7 @@ def get_allowed_beads(cind,clinks_np,bead,inder,no_gly):
 				lrange_b = no_gly+1
 			else:
 				lrange_b = np.max(poss_lrb)
+			lrange_b = np.max((poss_lrb+3)%no_gly-3)%no_gly
 
 		
 
@@ -1309,6 +1316,7 @@ def get_allowed_beads(cind,clinks_np,bead,inder,no_gly):
 				urange_b = 0
 			else:
 				urange_b = np.min(poss_urb)
+			urange_b = np.min((poss_urb-3)%no_gly+3)%no_gly
 
 			inc_l = np.where(clinks_np[cind][:,(inder+1)%2] == lrange_b)[0]
 			inc_u = np.where(clinks_np[cind][:,(inder+1)%2] == urange_b)[0]
@@ -1364,7 +1372,7 @@ def cross_link(all_lines,pbcy,cper,per33,lper,oper):
 		else:
 			clinks_np0.append(np.empty((0,2)))
 			clinks_np1.append(np.empty((0,2)))
-	for i in range(5000*no_layers):
+	for i in range(20*no_layers*no_gly*no_lines):
 		layer_ind = random.randint(0,no_layers-1)
 		line_ind = random.randint(0,no_lines-1)
 		line1 = all_lines[layer_ind,line_ind]
@@ -3340,15 +3348,7 @@ if(using_temp or tm):
 											for pi in range(10):
 												new_coord = np.array([xxs[xi],yys[yi],zt])+packer[pi]
 												prot_lip.coord.extend([new_coord])
-								"""			
-								for im in in_mem:
-									for dim in np.linspace(0,np.linalg.norm(im)+1,int(np.linalg.norm(im))+1):
-										imdir = im/np.linalg.norm(im)						
-										new_coord = imdir*dim
-										new_coord[2] = zt
-										prot_lip.coord.extend([new_coord])
-							"""
-			#todo
+
 			prot.coord = np.dot(rot_mat,np.array(prot.coord).T).T	
 			prot_lip.coord = np.dot(rot_mat,np.array(prot_lip.coord).T).T	 
 			prot += poses[pind]
