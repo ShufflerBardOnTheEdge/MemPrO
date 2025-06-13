@@ -3748,24 +3748,26 @@ if lipL:
 					poser = np.array([up_grids[gi][i][0],up_grids[gi][i][1],mtdef*up_grids[gi][i][2]+zdist*(gi*2-1)+zdef])
 					coll = False
 					path = [poser+si]
-					if tm:
-						for it,dr in enumerate(tailsUs[gi]):
-							#prot_slice = get_box_slice(prot_coords,poser-dr*direc*mtdef,[exprot,exprot,exprot])
+					for it,dr in enumerate(tailsUs[gi]):
+						#prot_slice = get_box_slice(prot_coords,poser-dr*direc*mtdef,[exprot,exprot,exprot])
+						if tm:
 							prot_sliceb = get_box_slice(prot_coords,path[-1],[exprot,exprot,exprot])
-							if not prot_sliceb.size == 0:
-								path_bead,can_place = place_bead(jnp.array(path[-1]),tailsUs[gi][1],jnp.array(direc),SpGrid,jnp.array(prot_sliceb),exprot)
-							else:
-								path_bead = path[-1]-direc*tailsUs[gi][1]
-								can_place =True
-							path.append(np.array(path_bead))
-							if(not can_place):
-								coll = True
-								break
-						if not coll:
-							for _ in range(10):
-								path_bead = path[-1]-direc*tailsUs[gi][1]
-								path.append(np.array(path_bead))
+						else:
+							prot_sliceb = jnp.empty((0,3))
+						if not prot_sliceb.size == 0:
+							path_bead,can_place = place_bead(jnp.array(path[-1]),tailsUs[gi][1],jnp.array(direc),SpGrid,jnp.array(prot_sliceb),exprot)
+						else:
+							path_bead = path[-1]-direc*tailsUs[gi][1]
+							can_place =True
+						path.append(np.array(path_bead))
+						if(not can_place):
+							coll = True
 							break
+					if not coll:
+						for _ in range(10):
+							path_bead = path[-1]-direc*tailsUs[gi][1]
+							path.append(np.array(path_bead))
+						break
 				if(not coll):
 					 upper_tmp.append((random.random(),up_grids[gi][i][0],up_grids[gi][i][1],up_grids[gi][i][2],direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2],path))
 					 upper.append((random.random(),up_grids[gi][i][0],up_grids[gi][i][1],up_grids[gi][i][2],direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2],path))
@@ -3790,24 +3792,27 @@ if lipL:
 				
 					coll = False
 					path = [poser+si]
-					if tm:
-						for it,dr in enumerate(tailsLs[gi]):
-							#prot_slice = get_box_slice(prot_coords,poser+dr*direc*mtdef,[exprot,exprot,exprot])
+					#if tm:
+					for it,dr in enumerate(tailsLs[gi]):
+						#prot_slice = get_box_slice(prot_coords,poser+dr*direc*mtdef,[exprot,exprot,exprot])
+						if tm:
 							prot_sliceb = get_box_slice(prot_coords,path[-1],[exprot,exprot,exprot])
-							if not prot_sliceb.size == 0:
-								path_bead,can_place = place_bead(jnp.array(path[-1]),tailsLs[gi][1],-jnp.array(direc),SpGrid,jnp.array(prot_sliceb),exprot)
-							else:
-								path_bead = path[-1]+direc*tailsLs[gi][1]
-								can_place =True
-							path.append(np.array(path_bead))
-							if(not can_place):
-								coll = True
-								break
-						if not coll:
-							for _ in range(10):
-								path_bead = path[-1]+direc*tailsLs[gi][1]
-								path.append(np.array(path_bead))
+						else:
+							prot_sliceb = jnp.empty((0,3))
+						if not prot_sliceb.size == 0:
+							path_bead,can_place = place_bead(jnp.array(path[-1]),tailsLs[gi][1],-jnp.array(direc),SpGrid,jnp.array(prot_sliceb),exprot)
+						else:
+							path_bead = path[-1]+direc*tailsLs[gi][1]
+							can_place =True
+						path.append(np.array(path_bead))
+						if(not can_place):
+							coll = True
 							break
+					if not coll:
+						for _ in range(10):
+							path_bead = path[-1]+direc*tailsLs[gi][1]
+							path.append(np.array(path_bead))
+						break
 					
 				if(not coll):
 
