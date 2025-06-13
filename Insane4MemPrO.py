@@ -1904,6 +1904,7 @@ def create_leaflet(den,xbox,ybox,curv_A,curv_B,ch_ang,pore,leng,keep_end,mem_out
 	else:
 		gpoints2[:,2] = gpoints2[:,2]-rad_B -shift
 		gpoints3[:,2] = gpoints3[:,2] -shift
+				
 	gpoints = np.concatenate([gpoints,gpoints2,gpoints3])
 	direcs = np.concatenate([direcs,direcs2,direcs3])
 	return gpoints,direcs
@@ -3950,7 +3951,7 @@ if lipL:
 					
 					for i in range(len(at)):
 						atom  = "%5d%-5s%5s%5d"%(resi,lipid,at[i],atid)
-						membrane.coord.append((new_poses[i][0],new_poses[i][1],new_poses[i][2]+zdist*(gi*2-1)+zdef))			   
+						membrane.coord.append((new_poses[i][0],new_poses[i][1],new_poses[i][2]))			   
 						
 						membrane.atoms.append((at[i],lipid,resi,0,0,0))
 						atid += 1
