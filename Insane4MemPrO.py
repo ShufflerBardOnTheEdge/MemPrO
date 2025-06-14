@@ -982,7 +982,7 @@ def build_micelle(area_l,all_cens,grid,grid_vals,coff,pbcx,pbcy,avlip_len):
 	disk_dirs = []
 	disk_grid,disc_direcs = DiskGrid(den,0,pbcx,pbcy,-1)
 	disc_direcs = np.array(disc_direcs)
-
+	
 	for i,d in enumerate(disk_grid):
 		val = eval_gaussianj(jnp.array(d[:2]),jnp.array(all_cens),stand,1)
 		if(val > coff+5):
@@ -1904,7 +1904,7 @@ def create_leaflet(den,xbox,ybox,curv_A,curv_B,ch_ang,pore,leng,keep_end,mem_out
 	else:
 		gpoints2[:,2] = gpoints2[:,2]-rad_B -shift
 		gpoints3[:,2] = gpoints3[:,2] -shift
-				
+		
 	gpoints = np.concatenate([gpoints,gpoints2,gpoints3])
 	direcs = np.concatenate([direcs,direcs2,direcs3])
 	return gpoints,direcs
@@ -3711,10 +3711,10 @@ if lipL:
 	prot_coords = np.array(protein_lip.coord)
 	#write_point(prot_coords*10,"Protein_filled.pdb")
 	
-	tailsU = np.linspace(0,av_liplenU,50)
-	tailsUO = np.linspace(0,av_liplenUO,50)
-	tailsL = np.linspace(0,av_liplenL,50)
-	tailsLO = np.linspace(0,av_liplenLO,50)
+	tailsU = np.linspace(0,av_liplenU*1.5,50)
+	tailsUO = np.linspace(0,av_liplenUO*1.5,50)
+	tailsL = np.linspace(0,av_liplenL*1.5,50)
+	tailsLO = np.linspace(0,av_liplenLO*1.5,50)
 	tailsUs = [tailsU,tailsUO]
 	tailsLs = [tailsL,tailsLO]
 
