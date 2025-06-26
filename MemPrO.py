@@ -837,6 +837,7 @@ class MemBrain:
 		#Placeholder vars TODO remove vars ony longer in use
 		self.no_mins=0
 		self.result_grid = jnp.zeros((1,1))
+		self.start_grid = jnp.zeros((1,1))
 		self.minima = jnp.zeros((1,8))
 		self.pg_poses=0
 		self.all_areas=0
@@ -846,7 +847,7 @@ class MemBrain:
 	
 	#We need the following two methods to tell jax what is and what is not static
 	def _tree_flatten(self):
-		children = (self.mem_structure,self.result_grid,self.curva,self.mem_structure_im,self.mem_structure_om,self.minima,self.pg_poses,self.minima,self.all_areas,self.re_rank_vals,self.re_rank_pots,self.re_rank_disses)
+		children = (self.mem_structure,self.result_grid,self.curva,self.mem_structure_im,self.mem_structure_om,self.minima,self.pg_poses,self.minima,self.all_areas,self.re_rank_vals,self.re_rank_pots,self.re_rank_disses,self.start_grid)
 		aux_data = {"int_data":self.int_data,"Data":self.data,"Poses":self.poses,"Bead_types":self.bead_types,"All_Poses":self.all_poses,
 		"B_vals":self.b_vals,"Surface_poses":self.surface_poses,"Sphere_poses":self.spheres,
 			"Surface":self.surface,"Surface_b_vals":self.surf_b_vals,
@@ -881,6 +882,7 @@ class MemBrain:
 		obj.re_rank_vals = children[8]
 		obj.re_rank_pots = children[9]
 		obj.re_rank_disses = children[10]
+		obj.start_grid = children[11]
 		return obj
 
 
@@ -1996,6 +1998,7 @@ class MemBrain:
 		no_runs = jnp.ceil(grid_size/no_cpu).astype(int)
 		
 		pos_grid,_ = jax.lax.scan(min_plot_fun_1,pos_grid,jnp.arange(grid_size))
+		self.start_grid = pos_grid.copy()
 		no_grid = pos_grid.shape[0]
 		pos_grid =jnp.pad(pos_grid,((0,no_runs*no_cpu - no_grid),(0,0)),mode="edge")
 
@@ -2091,14 +2094,28 @@ class MemBrain:
 	def collect_minima_info(self,grid_size):
 		pos_tracker = jnp.array([[0,0,1]],dtype="float64")
 		results = jnp.reshape(self.result_grid,(grid_size,9))
+		
+		start_grid = jnp.reshape(self.start_grid,(grid_size,9))
 		res_spos = jnp.zeros((grid_size,1,3))
 		color_grid = jnp.zeros((grid_size,3),dtype="float64")
 		pot_grid = self.result_grid[:,-1]
 		sposs = jnp.zeros((grid_size,4))
+		start_sposs = jnp.zeros((grid_size,4))
 		def calc_spos(spos,ind):
 			spos = spos.at[ind].set(self.normalise_pos(results[ind][:7]))
 			return spos,ind
 		sposs,_ = jax.lax.scan(calc_spos,sposs,jnp.arange(grid_size))
+		
+		
+		osposs,_ = jax.lax.scan(calc_spos,sposs,jnp.arange(grid_size))
+		
+		def calc_spos(spos,ind):
+			spos = spos.at[ind].set(self.normalise_pos(start_grid[ind][:7]))
+			return spos,ind
+		start_sposs,_ = jax.lax.scan(calc_spos,start_sposs,jnp.arange(grid_size))
+		
+		
+		
 		def calc_poses_fun_1(res_spos,ind):
 			spos = sposs[ind]
 			part_pos = position_point_jit(0,spos[2],spos[3],pos_tracker)
@@ -2154,6 +2171,11 @@ class MemBrain:
 			
 		minima_types,_= jax.lax.scan(calc_no_poses_fun_1,minima_types,jnp.arange(grid_size))
 		
+		
+				
+		
+		
+		
 		min_res_spos = jnp.zeros((minima_types[-1],8))
 		def av_min_res_spos(min_res_spos,ind):
 			spos = sposs[ind]
@@ -2165,6 +2187,8 @@ class MemBrain:
 			return min_res_spos,ind
 		min_res_spos,_ = jax.lax.scan(av_min_res_spos,min_res_spos,np.arange(grid_size))
 		min_res_spos = min_res_spos.at[:,:4].set(min_res_spos[:,:4]/min_res_spos[:,4:])
+		
+		
 		prev_sposes = jnp.zeros(minima_types[-1]+1)+10
 		prev_sposes = prev_sposes.at[minima_types[-1]].set(2.0)
 		def fix_spos(prev_sposes,ind):
@@ -2195,6 +2219,8 @@ class MemBrain:
 		_,sposs_ind3 = jax.lax.scan(fix_spos,prev_sposes,jnp.arange(grid_size))
 		sposs = sposs.at[:,2].set(sposs_ind2)
 		sposs = sposs.at[:,3].set(sposs_ind3)
+		
+				
 		minima = jnp.zeros(((minima_types[-1])*5,4))
 		def av_minima_fun_1(minima,ind):
 			spos = sposs[ind]
@@ -2214,7 +2240,6 @@ class MemBrain:
 			minima_ind = jnp.argsort(minima[minima_types[-1]:2*minima_types[-1],0])[::-1]
 		elif self.rank_sort == "p":
 			minima_ind = jnp.argsort(minima[2*minima_types[-1]:3*minima_types[-1],0])
-
 		minima = minima.at[:minima_types[-1]].set(minima[minima_ind])
 		minima = minima.at[minima_types[-1]:2*minima_types[-1]].set(minima[minima_ind+minima_types[-1]])
 		minima = minima.at[2*minima_types[-1]:3*minima_types[-1]].set(minima[minima_ind+2*minima_types[-1]])
@@ -2506,7 +2531,7 @@ class MemBrain:
 				dt2 = np.dot(rot_mat,dirs2[ind][:2])
 				ang2 = np.arctan2(dt2[1],dt2[0])
 				all_dots[ind] = ang2
-			all_dots = np.where(all_dots<0,all_dots+2*jnp.pi,all_dots)
+			all_dots = np.where(all_dots<0,all_dots+2*np.pi,all_dots)
 			first = np.nanargmin(all_dots)
 			convex_hull[convex_hull[-1]] = first
 			convex_hull[-1] = convex_hull[-1]+1
@@ -3268,14 +3293,14 @@ def get_int_strength(bead_1,bead_2,martini_file):
 			
 def get_mem_def(martini_file):
 	#We use interactions strengths from martini using a POPE(Q4p)/POPG(P4)/POPC(Q1)? lipid as a template
-	W_B_mins = jnp.array([get_int_strength("W",list(Beadtype.keys())[i],martini_file) for i in range(23)])
-	LH1_B_mins = jnp.array([get_int_strength("P4",list(Beadtype.keys())[i],martini_file) for i in range(23)])
-	LH2_B_mins = jnp.array([get_int_strength("Q5",list(Beadtype.keys())[i],martini_file) for i in range(23)])
-	LH3_B_mins = jnp.array([get_int_strength("SN4a",list(Beadtype.keys())[i],martini_file) for i in range(23)])
-	LH4_B_mins = jnp.array([get_int_strength("N4a",list(Beadtype.keys())[i],martini_file) for i in range(23)])
-	LT1_B_mins = jnp.array([get_int_strength("C1",list(Beadtype.keys())[i],martini_file) for i in range(23)])
-	LT2_B_mins = jnp.array([get_int_strength("C4h",list(Beadtype.keys())[i],martini_file) for i in range(23)])
-	Charge_B_mins =jnp.array([0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,-1,-1,0,0,0,0,0],dtype="float64")
+	W_B_mins = jnp.array([get_int_strength("W",list(Beadtype.keys())[i],martini_file) for i in range(len(Beadtype.keys()))])
+	LH1_B_mins = jnp.array([get_int_strength("P4",list(Beadtype.keys())[i],martini_file) for i in range(len(Beadtype.keys()))])
+	LH2_B_mins = jnp.array([get_int_strength("Q5",list(Beadtype.keys())[i],martini_file) for i in range(len(Beadtype.keys()))])
+	LH3_B_mins = jnp.array([get_int_strength("SN4a",list(Beadtype.keys())[i],martini_file) for i in range(len(Beadtype.keys()))])
+	LH4_B_mins = jnp.array([get_int_strength("N4a",list(Beadtype.keys())[i],martini_file) for i in range(len(Beadtype.keys()))])
+	LT1_B_mins = jnp.array([get_int_strength("C1",list(Beadtype.keys())[i],martini_file) for i in range(len(Beadtype.keys()))])
+	LT2_B_mins = jnp.array([get_int_strength("C4h",list(Beadtype.keys())[i],martini_file) for i in range(len(Beadtype.keys()))])
+	Charge_B_mins =jnp.array([0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],dtype="float64")
 															   # #
 	return (W_B_mins,LH1_B_mins,LH2_B_mins,LH3_B_mins,LH4_B_mins,LT1_B_mins,LT2_B_mins,Charge_B_mins)	
 
