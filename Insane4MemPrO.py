@@ -3768,6 +3768,11 @@ if lipL:
 						for _ in range(10):
 							path_bead = path[-1]-direc*tailsUs[gi][1]
 							path.append(np.array(path_bead))
+						path_top = [poser+si+direc*tailsUs[gi][1]]
+						for _ in range(50):
+							path_top.append(path_top[-1]+direc*tailsUs[gi][1])
+						for i in range(49):
+							path.append(path_top[-i-1])
 						break
 				if(not coll):
 					 upper_tmp.append((random.random(),up_grids[gi][i][0],up_grids[gi][i][1],up_grids[gi][i][2],direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2],path))
@@ -3813,6 +3818,11 @@ if lipL:
 						for _ in range(10):
 							path_bead = path[-1]+direc*tailsLs[gi][1]
 							path.append(np.array(path_bead))
+						path_top = [poser+si+direc*tailsUs[gi][1]]
+						for _ in range(50):
+							path_top.append(path_top[-1]+direc*tailsUs[gi][1])
+						for i in range(49):
+							path.append(path_top[-i-1])
 						break
 					
 				if(not coll):
@@ -3887,21 +3897,7 @@ if lipL:
 					xx	   = list(zip( ax,ay ))
 					nx	   = [rcos*i-rsin*j+pos[0]+random.random()*kick for i,j in xx]
 					ny	   = [rsin*i+rcos*j+pos[1]+random.random()*kick for i,j in xx]
-					"""
-					zdef = 0
-					mtdef = 1.0
-					if memdata:
-						xtest = (nx[0]-pbcx/2)*10
-						ytest = (ny[0]-pbcy/2)*10
-						xind = int(((xtest-xlin_def[0])/(xlin_def[-1]-xlin_def[0]))*xlin_def.shape[0])
-						yind = int(((ytest-ylin_def[0])/(ylin_def[-1]-ylin_def[0]))*ylin_def.shape[0])
-						if xind < 0 or yind < 0 or xind >= xlin_def.shape[0] or yind >= ylin_def.shape[0]:
-							zdef = 0
-						else:
-							defor = membrane_pos[xind,yind]/10.0
-							zdef = defor[0]
-							mtdef = (10*defor[1]/membrane_pos[0,0,1])
-					"""
+
 					az	   = np.array([ leaflet*-2+pos[2]+leaflet*(0.5+(i-min(az)))*options["-bd"].value for i in az ])
 					if leaflet == 1:
 						vgrid = tailsUs[gi]
@@ -3910,7 +3906,7 @@ if lipL:
 					new_poses = []
 					for ai in range(az.shape[0]):
 						vi = 0
-						indv = (np.abs(az[ai]-pos[2])/vgrid[-1])*len(vgrid)
+						indv = -leaflet*((az[ai]-pos[2])/vgrid[-1])*len(vgrid)
 						indv_f = np.floor(indv)
 						indv_c = np.ceil(indv)
 						indv_p = indv_c-indv
@@ -3920,35 +3916,6 @@ if lipL:
 						new_poses.append(new_pos)
 						
 						
-					
-					#new_poses = [np.array([nx[i],ny[i],az[i]]) for i in range(len(az))]	
-					
-					"""
-					
-										
-					
-					print(az)
-					zerod = np.min(az*leaflet)*leaflet
-					az -= zerod
-					az *= mtdef
-					az += zerod  
-					# Add the atoms to the list
-					nppos = np.array(dirs)
-					pos2 = np.array([pos[0],pos[1],pos[2]])
-					downn = np.array([0,0,1])				  
-					angl = np.dot(nppos,downn)
-					if(angl < -1+1e-5):
-						downn = np.array([0,1e-4,1]) 
-						downn = downn/np.linalg.norm(downn)				 
-						angl = np.dot(nppos,downn)
-
-					v = np.cross(downn,nppos)
-					vmat = np.array([[0,-v[2],v[1]],[v[2],0,-v[0]],[-v[1],v[0],0]])
-					rot_mat = np.eye(3)+vmat+np.dot(vmat,vmat)*1/(1+angl)
-					new_poses = [np.dot(rot_mat,np.array([nx[i],ny[i],az[i]])-pos2)+pos2 for i in range(len(az))]	   
-					"""
-					
-					
 					for i in range(len(at)):
 						atom  = "%5d%-5s%5s%5d"%(resi,lipid,at[i],atid)
 						membrane.coord.append((new_poses[i][0],new_poses[i][1],new_poses[i][2]))			   
