@@ -209,8 +209,19 @@ class PDB_helper:
 			num = 1
 			atom_to_bead = atom_types
 		else:
+			if res_type >= len(AtomsToBead):
+				print("ERROR -  Could not find CG information for residue:", list(Reses.keys())[res_type])
+				print("Check that CG information is added through -res_cg (see -help for further info), files that contain this information can generally be found on the CG2AT github.")
+				exit()
 			atom_to_bead = AtomsToBead[res_type]
 			num = len(atom_to_bead)
+		
+		if len(ResToBead[res_type]) != num:
+			print("ERROR -  Missmatch between CG info (-res_cg) and bead type information (-res_itp).")
+			print("Detected", num, "beads from -res_cg.")
+			print("Detected", len(ResToBead[res_type]), "beads from -res_itp")
+			print("Check relevant files are in the correct format.")
+			exit()
 		
 		reses = np.zeros(num)+res_type
 		beads_pos = np.zeros((num,3))
@@ -2320,14 +2331,14 @@ class MemBrain:
 		
 		for i in range(self.no_mins):
 			inder = np.where(nminima_ind == i)
-			os.rename(orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve.png",orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve_"+str(inder[0][0]+1)+".png")
-			os.rename(orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve.png",orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve_"+str(inder[0][0]+1)+".png")
+			os.rename(orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve.svg",orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve_"+str(inder[0][0]+1)+".svg")
+			os.rename(orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve.svg",orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve_"+str(inder[0][0]+1)+".svg")
 			if(inder[0][0]+1 != i+1):
-				shutil.move(orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve_"+str(inder[0][0]+1)+".png",orient_dir+"Rank_"+str(inder[0][0]+1))
-				shutil.move(orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve_"+str(inder[0][0]+1)+".png",orient_dir+"Rank_"+str(inder[0][0]+1))
+				shutil.move(orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve_"+str(inder[0][0]+1)+".svg",orient_dir+"Rank_"+str(inder[0][0]+1))
+				shutil.move(orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve_"+str(inder[0][0]+1)+".svg",orient_dir+"Rank_"+str(inder[0][0]+1))
 		for i in range(self.no_mins):	
-			os.rename(orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve_"+str(i+1)+".png",orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve.png")
-			os.rename(orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve_"+str(i+1)+".png",orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve.png")
+			os.rename(orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve_"+str(i+1)+".svg",orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve.svg")
+			os.rename(orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve_"+str(i+1)+".svg",orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve.svg")
 	#This function optimises the membrane thickness (Should probably be JAXED)
 	@partial(jax.jit,static_argnums=2)
 	def optimise_mem_thickness(self,ind,fine,outer):
@@ -2645,7 +2656,7 @@ class MemBrain:
 			plt.xlabel("Z")
 			plt.title("Potential energy against curvature")
 			plt.tight_layout()
-			plt.savefig(rank_dir+"curv_potential_curve.png")
+			plt.savefig(rank_dir+"curv_potential_curve.svg")
 			plt.clf()
 		
 		plt.plot(zs,pot_graph)
@@ -2653,7 +2664,7 @@ class MemBrain:
 		plt.xlabel("Z")
 		plt.title("Potential energy against z position relative to centre of membrane")
 		plt.tight_layout()
-		plt.savefig(rank_dir+"Z_potential_curve.png")
+		plt.savefig(rank_dir+"Z_potential_curve.svg")
 		plt.clf()
 		
 		if(in_depth_ind > 148):
@@ -2896,7 +2907,7 @@ class MemBrain:
 				plt.ylabel("Potential energy(rel)")
 				plt.xlabel("z")
 				plt.tight_layout()
-				plt.savefig(rank_dir+"PG_potential_curve.png")
+				plt.savefig(rank_dir+"PG_potential_curve.svg")
 				plt.clf()
 				
 				areas = self.all_areas[i][0]
@@ -2907,7 +2918,7 @@ class MemBrain:
 				plt.ylabel("Area (A^2)")
 				plt.xlabel("z")
 				plt.tight_layout()
-				plt.savefig(rank_dir+"cross-section_area_curve.png")
+				plt.savefig(rank_dir+"cross-section_area_curve.svg")
 				plt.clf()
 				
 				
@@ -3351,13 +3362,13 @@ def create_graphs(orient_dir,col_grid,pot_grid,angs,resa):
 	plt.ylabel("Phi")
 	plt.title("Orientation of minima given starting position (z,theta,phi)")
 	plt.tight_layout()
-	plt.savefig(orient_dir+"local_minima_orientation.png")
+	plt.savefig(orient_dir+"local_minima_orientation.svg")
 	plt.imshow(graph_mesh_vals,extent=[0,jnp.pi*2,0,jnp.pi/2],aspect=4)
 	plt.xlabel("Theta")
 	plt.ylabel("Phi")
 	plt.title("Relative potential energy of minima given starting position (z,theta,phi)")
 	plt.tight_layout()
-	plt.savefig(orient_dir+"local_minima_potential.png")
+	plt.savefig(orient_dir+"local_minima_potential.svg")
 	plt.clf()
 	
 #concerts three letter codes to one for transmembrane residue output
@@ -3557,9 +3568,10 @@ def add_Reses(Res,Resitp):
 	itpfile.close()
 	restobead_add = []
 	for iline in itp_lines:
+		iline = iline.split(";")[0]
 		if Res in iline:
 			sline = iline.split()
-			if len(sline) == 7:
+			if len(sline) >= 7:
 				bt = sline[1]
 				restobead_add.append(bt)
 				bead = sline[4]

@@ -8,6 +8,7 @@ import jax
 import jax.profiler
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import time
 import MemPrO as ori
 import argparse
@@ -26,7 +27,7 @@ parser.add_argument("-o","--output",help="Name of the output directory (Default:
 parser.add_argument("-ni","--iters",help="Number of minimisation iterations (Default: 150)")
 parser.set_defaults(iters=150)
 parser.add_argument("-ng","--grid_size",help="Number of starting configurations (Default: 20)")
-parser.set_defaults(grid_size=20)
+parser.set_defaults(grid_size=36)
 parser.add_argument("-dm","--dual_membrane",action="store_true",help="Toggle dual membrane orientation")
 parser.set_defaults(dual_membrane=False)
 parser.add_argument("-pg","--predict_pg_layer",action="store_true",help="Toggle peptidogylcan call wall prediction")
@@ -53,11 +54,11 @@ parser.add_argument("-mt","--membrane_thickness",help="Initial thickness of (inn
 parser.set_defaults(membrane_thickness=28.0)
 parser.add_argument("-mt_o","--outer_membrane_thickness",help="Initial thickness of outer membrane in Angstroms (Deafult: 24)")
 parser.set_defaults(outer_membrane_thickness=24.0)
-parser.add_argument("-res","--additional_residues",help="Comma seperate list of additional residues in input files (eg: POPG)")
+parser.add_argument("-res","--additional_residues",help="Comma seperate list of additional residues in input files (eg: POPG) Note the only ATOM entries will be read, all HETATM entries will be ignored.")
 parser.set_defaults(additional_residues="")
-parser.add_argument("-res_itp","--additional_residues_itp_file",help="Path to the itp file describing all additional residues. A CG representation is required, for atomisitic inputs an additional file is required which describes the beading.")
+parser.add_argument("-res_itp","--additional_residues_itp_file",help="Path to the itp file describing all additional residues, and bead types associated to beads in the residue. A CG representation is required, for atomisitic inputs an additional file is required which describes the beading.")
 parser.set_defaults(additional_residues_itp_file="")
-parser.add_argument("-res_cg","--residue_cg_file",help="Folder that contains a files of name RES.pdb describing the beading for each additional RES")
+parser.add_argument("-res_cg","--residue_cg_file",help="Folder that contains a files of name RES.pdb describing the beading for each additional RES - see CG2AT github for examples")
 parser.set_defaults(residue_cg_file="")
 parser.add_argument("-mt_opt","--membrane_thickness_optimisation",action="store_true",help="Toggle membrane thickness optimisation. Cannot use with -c")
 parser.set_defaults(membrane_thickness_optimisation=False)
@@ -75,7 +76,7 @@ if(len(add_reses) > 0):
 	if(len(add_reses[0]) > 0):
 		print("Using additional residues:",", ".join(add_reses))
 		if args.additional_residues_itp_file == "":
-			print("ERROR: Additional resisidue itp is required if using additional residues.")
+			print("ERROR: Additional residue itp is required if using additional residues.")
 			exit()
 		if args.residue_cg_file == "":
 			print("WARNING: You have not added beading information for the added residues, this will cause an error if orienting a atomisitic input.")
@@ -283,6 +284,30 @@ data = PDB_helper_test.get_data()
 
 #Creating MemBrain class
 Mem_test = ori.MemBrain(data,int_data,args.peripheral,0,args.predict_pg_layer,mem_data,args.curvature,args.dual_membrane,args.write_bfactors,ranker)
+
+#Testing stuff only
+"""
+xs =jnp.linspace(-40,40,500)
+ys = jnp.linspace(-40,40,500)
+img = jnp.zeros((500,500))
+
+def lj(x,sig,ep):
+	return 4*ep*((jnp.power(sig,12)/jnp.power(x,12))-(jnp.power(sig,6)/jnp.power(x,6)))
+def lp1(img, ind1):
+	def lp2(img, ind2):
+		img = img.at[ind1,ind2].set(Mem_test.smjh(xs[ind1],2,11,Mem_test.mem_structure))
+		#img = img.at[ind1,ind2].set(lj(xs[ind1],3.87,10))
+		return img, ind2
+	img,_=jax.lax.scan(lp2,img,jnp.arange(500))
+	return img,ind1
+img,_=jax.lax.scan(lp1,img,jnp.arange(500))
+plt.imshow(img,cmap = mpl.colormaps["seismic"])
+#plt.axvline(4.35,color="green")
+#plt.plot(xs,img[:,0])
+plt.show()
+exit()
+"""
+#End of testing stuff
 
 #Setting up a sphereical grid for local minima calculations
 angs = ori.create_sph_grid(grid_size)
