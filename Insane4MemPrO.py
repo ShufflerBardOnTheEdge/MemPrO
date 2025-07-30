@@ -75,7 +75,7 @@ lipidsa.update({ "NAG":(moltype, "B1 B2 B3 B4")})
 moltype = "lipid"
 lipidsx[moltype] = (	0, .5,  0,  0, .5,  0,  0, .5,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1)
 lipidsy[moltype] = (	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0)
-lipidsz[moltype] = (   10,  9,  9,  8,  8,  7,  6,  6,  5,  4,  3,  2,  1,  0,  5,  4,  3,  2,  1,  0)
+lipidsz[moltype] = (   10,  9,  9,  8,  8,  7,  6,  6,  5,  4,  3,  2.5,  1,  0,  5,  4,  3,  2.5,  1,  0)
 lipidsa.update({	  # 1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20
 ## Phospholipids
 	"DTPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A  -   -   -   -  C1B C2B  -   -   -   - "),
@@ -137,6 +137,7 @@ lipidsa.update({	  # 1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  
   "DSDG.o": (moltype, "C61 C41 C11 C62 C42 C12 GL1 GL2 C1A C2A C3A C4A C5A  -  C1B C2B C3B C4B C5B  - "),
   "DSSQ.o": (moltype, " -   -   S6 C6   C4 C1  GL1 GL2 C1A C2A C3A C4A C5A  -  C1B C2B C3B C4B C5B  - "),
 })
+
 
 
 # HII fix for PI templates and new templates PI(s) with diffrent tails, PO-PIP1(3) and POPIP2(4,5)  
@@ -1126,7 +1127,7 @@ def MC_Glycan_Strands(pbcy,pbcx,zpos,xoff,yoff,prot_coords,gdist,num):
 	testx = np.linspace(0,65,100)
 	plt.plot(test_kde(testx))
 	plt.plot(glycan_dist(testx,gdist))
-	plt.savefig(out_folder+"Dist"+str(num)+".png")
+	plt.savefig(out_folder+"Dist"+str(num)+".svg")
 	plt.clf()
 
 	for l in all_linesT:
@@ -3334,7 +3335,7 @@ if(using_temp or tm):
 								dx = xxs[1]-xxs[0]
 								dy = yys[1]-yys[0]
 								for im in in_mem:
-									gridx,gridy = put_into_grid(im[:2],[xext+2,yext+2],[20,20],[xmin-1,ymin-1])
+									gridx,gridy = put_into_grid(im[:2],[xext+4,yext+4],[20,20],[xmin-2,ymin-2])
 									gridd[gridx,gridy] =1
 
 								gridd = 1-np.array(accessable(1-jnp.array(gridd)))
@@ -3895,8 +3896,8 @@ if lipL:
 					#+leaflet*(0.5+(i-min(az)))*options["-bd"].value
 					
 					xx	   = list(zip( ax,ay ))
-					nx	   = [rcos*i-rsin*j+pos[0]+random.random()*kick for i,j in xx]
-					ny	   = [rsin*i+rcos*j+pos[1]+random.random()*kick for i,j in xx]
+					nx	   = [rcos*i-rsin*j+random.random()*kick for i,j in xx]
+					ny	   = [rsin*i+rcos*j+random.random()*kick for i,j in xx]
 
 					az	   = np.array([ leaflet*-2+pos[2]+leaflet*(0.5+(i-min(az)))*options["-bd"].value for i in az ])
 					if leaflet == 1:
@@ -3912,7 +3913,27 @@ if lipL:
 						indv_p = indv_c-indv
 						pf = path[int(indv_f)]
 						pc = path[int(indv_c)]
-						new_pos = pf*(1-indv_p)+pc*indv_p+np.array([nx[ai],ny[ai],pos[2]])
+
+						sdirec = pf-pc
+						sdirec /= np.linalg.norm(sdirec)
+						
+						upp = np.array([0,0,1])	
+						sdirec2 = sdirec+1e-4*np.linalg.norm(upp+sdirec)
+						sdirec2 /= np.linalg.norm(sdirec2)			  
+						angl = np.dot(-sdirec2,upp)
+						
+						
+						v = np.cross(-sdirec2,upp)
+						vmat = np.array([[0,-v[2],v[1]],[v[2],0,-v[0]],[-v[1],v[0],0]])
+						rot_mat = np.eye(3)+vmat+np.dot(vmat,vmat)*1/(1+angl)
+						
+						xdir = np.dot(np.array([1,0,0]),rot_mat)
+						ydir = np.dot(np.array([0,1,0]),rot_mat)
+						
+						if np.linalg.norm(xdir)<0.9:
+							print(np.linalg.norm(xdir))
+						
+						new_pos = pf*(1-indv_p)+pc*indv_p+pos[:3]+nx[ai]*xdir+ny[ai]*ydir
 						new_poses.append(new_pos)
 						
 						
@@ -4014,7 +4035,7 @@ if solv:
 		zshift = (hz+0.5)*nz - midz # Shift of membrane middle to center of grid layer
 	# Initialize a grid of solvent, spanning the whole cell
 	# Exclude all cells within specified distance from membrane center
-	
+	mem_size = 1.9
 	if(lipL):
 		print("Excluding solvent from membrane(s)...")
 		if(options["-ps"].value > 1e-5):
@@ -4022,9 +4043,9 @@ if solv:
 			for gk in range(2):
 			
 				if(cdirs[gk] < 0):
-					grid   = [[[(pbcz*i)/nz < -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[gk],rcurv_up[gk],ang_exts[gk],add_pore,inner_lengs[gk]-2)[0]-2+mz+zdist*(2*gk-1) or (pbcz*i)/nz > -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[gk],rcurv_lo[gk],ang_exts[gk],add_pore,inner_lengs[gk]+2)[0]+2+mz+zdist*(2*gk-1) for i in range(nz)] for j in range(ny)] for k in range(nx)]
+					grid   = [[[(pbcz*(i+0.5))/nz <= -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[gk],rcurv_up[gk],ang_exts[gk],add_pore,inner_lengs[gk]-2)[0]-mem_size+mz+zdist*(2*gk-1) or (pbcz*(i+0.5))/nz >= -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[gk],rcurv_lo[gk],ang_exts[gk],add_pore,inner_lengs[gk]+2)[0]+mem_size+mz+zdist*(2*gk-1) for i in range(nz)] for j in range(ny)] for k in range(nx)]
 				else:  
-					grid   = [[[(pbcz*i)/nz > leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[gk],rcurv_up[gk],ang_exts[gk],add_pore,inner_lengs[gk]-2)[0]+2+mz+zdist*(2*gk-1) or (pbcz*i)/nz < leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[gk],rcurv_lo[gk],ang_exts[gk],add_pore,inner_lengs[gk]+2)[0]-2+mz+zdist*(2*gk-1) for i in range(nz)] for j in range(ny)] for k in range(nx)]
+					grid   = [[[(pbcz*(i+0.5))/nz >= leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[gk],rcurv_up[gk],ang_exts[gk],add_pore,inner_lengs[gk]-2)[0]+mem_size+mz+zdist*(2*gk-1) or (pbcz*(i+0.5))/nz <= leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[gk],rcurv_lo[gk],ang_exts[gk],add_pore,inner_lengs[gk]+2)[0]-mem_size+mz+zdist*(2*gk-1) for i in range(nz)] for j in range(ny)] for k in range(nx)]
 				grids.append(grid)
 			grids = np.array(grids)
 			grid = grids[0]*grids[1]
@@ -4038,10 +4059,9 @@ if solv:
 				else:
 					rad = 1000
 			if(cdirs[0] < 0):
-				grid   = [[[((pbcx*k)/nx-pbcx/2)*((pbcx*k)/nx-pbcx/2)+((pbcy*j)/ny-pbcy/2)*((pbcy*j)/ny-pbcy/2) > rad*rad or (pbcz*i)/nz < -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]-2+mz or (pbcz*i)/nz > -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]+2+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
-
+				grid   = [[[((pbcx*k)/nx-pbcx/2)*((pbcx*k)/nx-pbcx/2)+((pbcy*j)/ny-pbcy/2)*((pbcy*j)/ny-pbcy/2) > rad*rad or (pbcz*(i+0.5))/nz <= -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]-mem_size+mz or (pbcz*(i+0.5))/nz >= -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]+mem_size+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
 			else:  
-				grid   = [[[((pbcx*k)/nx-pbcx/2)*((pbcx*k)/nx-pbcx/2)+((pbcy*j)/ny-pbcy/2)*((pbcy*j)/ny-pbcy/2) > rad*rad or (pbcz*i)/nz > leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]+2+mz or (pbcz*i)/nz < leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]-2+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
+				grid   = [[[((pbcx*k)/nx-pbcx/2)*((pbcx*k)/nx-pbcx/2)+((pbcy*j)/ny-pbcy/2)*((pbcy*j)/ny-pbcy/2) > rad*rad or (pbcz*(i+0.5))/nz >= leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]+mem_size+mz or (pbcz*(i+0.5))/nz <= leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]-mem_size+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
 	else:
 		grid   =   [[[True for i in range(nz)] for j in range(ny)] for k in range(nx)]
 
