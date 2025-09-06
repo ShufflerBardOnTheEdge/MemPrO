@@ -13,8 +13,8 @@ Siewert J ; Marrink et al. “The MARTINI force field The MARTINI Force Field: C
 Rakesh Vaiwala et al. “Developing a Coarse-Grained Model for Bacterial Cell Walls: Evaluating Mechanical Properties and Free Energy Barriers”. In: Journal of Chemical Theory and Computation 16 (8 Aug. 2020), pp. 5369–5384. issn: 15499626. [Paper](https://pubs.acs.org/doi/abs/10.1021/acs.jctc.0c00539)
 
 ## Installation
-To install MemPrO run the following (Not yet on PyPi, this will work once the code has been published):
->pip install MemPrO
+To install MemPrO run the following:
+>pip install mempro
 
 Otherwise, clone the GitHub repository. Python 3.11.5 or better is required, and the following packages need to be installed
 * Jax 0.4.30 (As JAX is in constant development at the time of writing do not use any other versions, as MemPrO may no longer work as intended)
@@ -32,7 +32,7 @@ Before running MemPrO some environment variables must be set, for Linux users th
 
 >export PATH_TO_MARTINI=PATH/TO/martini3.itp
 
-Where N is replaced by the number of CPU you wish to use and martini3.itp is the name of the martini3 itp file you are using.
+Where N is replaced by the number of CPU you wish to use and martini3.itp is the name of the martini3 itp file you are using. When installing via PyPi PATH_TO_INSANE does not need to be specified. 
 
 MemPrO is also accessible on Google Colab via the link [ADD LINK]. The Colab will contain instructions for use. (Currently the Colab in WIP and this will be updated)
 
@@ -127,7 +127,7 @@ Before running MemPrO some environment variables must be set, for Linux users th
 
 >export PATH_TO_MARTINI=PATH/TO/martini3.itp
 
-Where N is replaced by the number of CPU you wish to use and martini3.itp is the name of the martini3 itp file you are using. For the examples below 20 CPUs were used.
+Where N is replaced by the number of CPU you wish to use and martini3.itp is the name of the martini3 itp file you are using. For the examples below 20 CPUs were used. **If installing with pip than "MemPrO" and "Insane4MemPrO" can be used to run the code instead of the full path as shown in the example and tutorials below.**
 
 The below will orient input_file.pdb on a grid of 40 starting configurations with 150 minimisation iterations
 
