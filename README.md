@@ -32,7 +32,7 @@ Before running MemPrO some environment variables must be set, for Linux users th
 
 >export PATH_TO_MARTINI=PATH/TO/martini3.itp
 
-Where N is replaced by the number of CPU you wish to use and martini3.itp is the name of the martini3 itp file you are using. When installing via PyPi PATH_TO_INSANE does not need to be specified. 
+Where N is replaced by the number of CPU you wish to use and martini3.itp is the name of the martini3 itp file you are using.
 
 MemPrO is also accessible on Google Colab via the link [ADD LINK]. The Colab will contain instructions for use. (Currently the Colab in WIP and this will be updated)
 
