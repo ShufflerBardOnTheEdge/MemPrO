@@ -15,6 +15,7 @@ from jax import tree_util
 from jax.sharding import PositionalSharding
 from jax.experimental import mesh_utils
 import shutil
+from collections import defaultdict
 
 
 PATH_TO_INSANE = os.environ["PATH_TO_INSANE"]
@@ -138,6 +139,7 @@ class PDB_helper:
 	def __init__(self,fn,use_weights,build_no,ranges,lsurf,def_surf):
 		#A list to help with getting the correct bead types from a cg pdb
 		self.beads = ResToBead
+		self.beadtype_index = 0
 		self.fn = fn
 		self.use_weights = use_weights
 		self.build_no = build_no
@@ -209,19 +211,8 @@ class PDB_helper:
 			num = 1
 			atom_to_bead = atom_types
 		else:
-			if res_type >= len(AtomsToBead):
-				print("ERROR -  Could not find CG information for residue:", list(Reses.keys())[res_type])
-				print("Check that CG information is added through -res_cg (see -help for further info), files that contain this information can generally be found on the CG2AT github.")
-				exit()
 			atom_to_bead = AtomsToBead[res_type]
 			num = len(atom_to_bead)
-		
-		if len(ResToBead[res_type]) != num:
-			print("ERROR -  Missmatch between CG info (-res_cg) and bead type information (-res_itp).")
-			print("Detected", num, "beads from -res_cg.")
-			print("Detected", len(ResToBead[res_type]), "beads from -res_itp")
-			print("Check relevant files are in the correct format.")
-			exit()
 		
 		reses = np.zeros(num)+res_type
 		beads_pos = np.zeros((num,3))
@@ -348,53 +339,109 @@ class PDB_helper:
 		self.poses = self.poses - pos_mean
 		self.all_poses = self.all_poses - pos_mean
 		self.b_vals = self.b_vals/jnp.max(self.b_vals+1e-9)
-		return pos_mean
+		return pos_mean		
 		
-	#Loads a cg pdb into jnp arrays containg position, residue index and beadtype index
+
 	def load_cg_pdb(self):
 		self.reses = []
 		self.poses = []
 		self.bead_types = []
 		self.b_vals = []
-		lfile = open(os.path.join(self.fn),"r")
-		content = lfile.read()
-		lfile.close()
-		content = content.split("\n")
-		for c in content:
-			if(len(c) > 46):
-				if("[" not in c and c[:4]=="ATOM"):	
-					res = c[17:21].strip()
-					bead = c[12:17].strip()
-					zpos = c[46:54]
-					ypos = c[38:46]
-					xpos = c[30:38]
-					atom_num = int(c[22:26].strip())
-					b_val = float(c[60:66].strip())
-					pos = np.array([float(xpos.strip()),float(ypos.strip()),float(zpos.strip())])
-					if(not np.any(np.isnan(pos))):
-						if(res not in list(Reses.keys())):
-							res = "UNK" 
-						self.bead_types.append(Beadtype[self.beads[Reses[res]][Beads[bead]]])
-						self.reses.append(Reses[res])
-						self.poses.append(pos)
-						if(self.ranges.size != 0):
-							if(self.in_ranges(atom_num)):
-								self.b_vals.append(1.0)
-							else:
-								self.b_vals.append(0)
-						else:
-							self.b_vals.append(b_val)
 
+		# Read PDB content
+		with open(os.path.join(self.fn), "r") as lfile:
+			content = lfile.read().split("\n")
+
+		# Group atom lines by (residue name, residue ID)
+		residue_atoms = defaultdict(list)
+		for c in content:
+			if len(c) > 54 and "[" not in c and c.startswith("ATOM"):
+				resname = c[17:21].strip()
+				resid = int(c[22:26].strip())
+				chain_id = c[21].strip()
+				residue_atoms[(resname, chain_id, resid)].append(c)
+
+		for (resname, chain_id, resid), atoms in residue_atoms.items():
+			original_resname = resname
+			if resname not in Reses:
+				print(f"Unknown residue {resname}, using UNK")
+				resname = "UNK"
+			res_index = Reses[resname]
+			bead_list = ResToBead[res_index]
+
+			# Collect atom positions
+			atom_pos_list = []
+			atom_bval_list = []
+			atom_nums = []
+
+			for c in atoms:
+				try:
+					x = float(c[30:38].strip())
+					y = float(c[38:46].strip())
+					z = float(c[46:54].strip())
+					b = float(c[60:66].strip())
+					atom_num = int(c[22:26].strip())
+					pos = np.array([x, y, z])
+
+					if not np.any(np.isnan(pos)):
+						atom_pos_list.append(pos)
+						atom_bval_list.append(b)
+						atom_nums.append(atom_num)
+				except ValueError:
+					continue
+
+			if len(atom_pos_list) == 0:
+				print(f"Skipping residue {resname} {resid} due to no valid positions.")
+				continue
+
+			# Fallback mean values
+			mean_pos = np.mean(atom_pos_list, axis=0)
+			mean_b = np.mean(atom_bval_list) if atom_bval_list else 0.0
+
+			# Use quick hack: match bead types with atom positions by order
+			if len(bead_list) != len(atom_pos_list):
+				print(atom_pos_list)
+				print(f"Mismatch in bead count vs atom count for {resname} {resid}. Using mean positions. Expecting {len(bead_list)}, found {len(atom_pos_list)}")
+				for bead_type in bead_list:
+					bead_index = Beadtype.get(bead_type, -1)
+					if bead_index == -1:
+						raise ValueError(f"Unknown bead type: {bead_type}")
+					self.bead_types.append(bead_index)
+					self.reses.append(res_index)
+					self.poses.append(mean_pos)
+					self.b_vals.append(mean_b)
+				continue
+
+			for bead_type, pos, b_val in zip(bead_list, atom_pos_list, atom_bval_list):
+				bead_index = Beadtype.get(bead_type, -1)
+				if bead_index == -1:
+					raise ValueError(f"Unknown bead type: {bead_type}")
+				self.bead_types.append(bead_index)
+				self.reses.append(res_index)
+				self.poses.append(pos)
+
+				if self.ranges.size != 0:
+					in_range = any(self.in_ranges(num) for num in atom_nums)
+					self.b_vals.append(1.0 if in_range else 0.0)
+				else:
+					self.b_vals.append(b_val)
+
+		# Convert to JAX arrays
 		self.poses = jnp.array(self.poses)
+		pos_mean = jnp.mean(self.poses, axis=0)
+		self.poses -= pos_mean
+
 		self.reses = jnp.array(self.reses)
 		self.bead_types = jnp.array(self.bead_types)
-		pos_mean = jnp.mean(self.poses,axis=0)
-		self.poses = self.poses - pos_mean
 		self.b_vals = jnp.array(self.b_vals)
-		self.b_vals = self.b_vals/jnp.max(self.b_vals+1e-9)
+		self.b_vals /= jnp.max(self.b_vals + 1e-9)
+
 		self.all_poses = self.poses.copy()
-		self.map_to_beads = np.array([i for i in range(self.poses.shape[0])])
+		self.map_to_beads = jnp.arange(self.poses.shape[0])
+
 		return pos_mean
+
+
 
 	#loads a pdb
 	def load_pdb(self):
@@ -411,11 +458,6 @@ class PDB_helper:
 		if(not self.use_weights and self.ranges.size == 0):
 			self.b_vals = self.b_vals.at[:].set(1.0)
 		return pos_mean
-
-	
-
-			
-
 
 	### Begining of code for getting the surface of the CG protein ###
 
@@ -2331,14 +2373,14 @@ class MemBrain:
 		
 		for i in range(self.no_mins):
 			inder = np.where(nminima_ind == i)
-			os.rename(orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve.svg",orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve_"+str(inder[0][0]+1)+".svg")
-			os.rename(orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve.svg",orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve_"+str(inder[0][0]+1)+".svg")
+			os.rename(orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve.png",orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve_"+str(inder[0][0]+1)+".png")
+			os.rename(orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve.png",orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve_"+str(inder[0][0]+1)+".png")
 			if(inder[0][0]+1 != i+1):
-				shutil.move(orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve_"+str(inder[0][0]+1)+".svg",orient_dir+"Rank_"+str(inder[0][0]+1))
-				shutil.move(orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve_"+str(inder[0][0]+1)+".svg",orient_dir+"Rank_"+str(inder[0][0]+1))
+				shutil.move(orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve_"+str(inder[0][0]+1)+".png",orient_dir+"Rank_"+str(inder[0][0]+1))
+				shutil.move(orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve_"+str(inder[0][0]+1)+".png",orient_dir+"Rank_"+str(inder[0][0]+1))
 		for i in range(self.no_mins):	
-			os.rename(orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve_"+str(i+1)+".svg",orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve.svg")
-			os.rename(orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve_"+str(i+1)+".svg",orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve.svg")
+			os.rename(orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve_"+str(i+1)+".png",orient_dir+"Rank_"+str(i+1)+"/Z_potential_curve.png")
+			os.rename(orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve_"+str(i+1)+".png",orient_dir+"Rank_"+str(i+1)+"/curv_potential_curve.png")
 	#This function optimises the membrane thickness (Should probably be JAXED)
 	@partial(jax.jit,static_argnums=2)
 	def optimise_mem_thickness(self,ind,fine,outer):
@@ -2656,7 +2698,7 @@ class MemBrain:
 			plt.xlabel("Z")
 			plt.title("Potential energy against curvature")
 			plt.tight_layout()
-			plt.savefig(rank_dir+"curv_potential_curve.svg")
+			plt.savefig(rank_dir+"curv_potential_curve.png")
 			plt.clf()
 		
 		plt.plot(zs,pot_graph)
@@ -2664,7 +2706,7 @@ class MemBrain:
 		plt.xlabel("Z")
 		plt.title("Potential energy against z position relative to centre of membrane")
 		plt.tight_layout()
-		plt.savefig(rank_dir+"Z_potential_curve.svg")
+		plt.savefig(rank_dir+"Z_potential_curve.png")
 		plt.clf()
 		
 		if(in_depth_ind > 148):
@@ -2797,54 +2839,53 @@ class MemBrain:
 				pot_pb = self.calc_pot_per_bead_ind(i)
 				pot_pb = np.array(pot_pb)
 			for c in content:
-				if(len(c) > 46):
-					if("[" not in c and c[:4]=="ATOM"):
-						zpos = c[46:54]
-						ypos = c[38:46]
-						xpos = c[30:38]
-						res = c[17:20].strip()
-						atom_num = int(c[22:26].strip())
-						b_val = float(c[60:66].strip())
-						pos = np.array([float(xpos.strip()),float(ypos.strip()),float(zpos.strip())])
-						if(not np.any(np.isnan(pos))):
-							xp = np.format_float_positional(orient_poses[count][0],precision=3)
-							yp = np.format_float_positional(orient_poses[count][1],precision=3)
-							zp = np.format_float_positional(orient_poses[count][2],precision=3)
-							xp += "0"*(3-len((xp.split(".")[1])))
-							yp += "0"*(3-len((yp.split(".")[1])))
-							zp += "0"*(3-len((zp.split(".")[1])))
-							if(atom_num != prev_num):
-								if(neww):
-									strr += three2one(res)
-									strc += "T"
-								else:
-									strr += three2one(res)
-									strc += "N"
-								neww = False
-							bbp = np.format_float_positional(b_val,precision=3)
-							if(self.dbmem):
-								if((npmem_im[i]/2 > orient_poses[count][2]+min_zdist[i] >-npmem_im[i]/2) or (npmem_om[i]/2 > orient_poses[count][2]-min_zdist[i] >-npmem_om[i]/2)):
-									neww = True
+				if len(c) > 54 and "[" not in c and c.startswith("ATOM"):
+					zpos = c[46:54]
+					ypos = c[38:46]
+					xpos = c[30:38]
+					res = c[17:20].strip()
+					atom_num = int(c[22:26].strip())
+					b_val = float(c[60:66].strip())
+					pos = np.array([float(xpos.strip()),float(ypos.strip()),float(zpos.strip())])
+					if(not np.any(np.isnan(pos))):
+						xp = np.format_float_positional(orient_poses[count][0],precision=3)
+						yp = np.format_float_positional(orient_poses[count][1],precision=3)
+						zp = np.format_float_positional(orient_poses[count][2],precision=3)
+						xp += "0"*(3-len((xp.split(".")[1])))
+						yp += "0"*(3-len((yp.split(".")[1])))
+						zp += "0"*(3-len((zp.split(".")[1])))
+						if(atom_num != prev_num):
+							if(neww):
+								strr += three2one(res)
+								strc += "T"
 							else:
-								if(npmem_im[i]/2 > orient_poses[count][2] >-npmem_im[i]/2):
-									neww = True
-							npsurf = np.array(self.surface)
-							if(not self.curva and self.write_bfac):
-								if(npsurf[self.map_to_beads[count]] == 1):
-									count_pb += 1
-									no_bead = int(np.sum(npsurf[:self.map_to_beads[count]]))
-									bbp = np.format_float_positional(pot_pb[no_bead],precision=3)
-								else:
-									bbp = np.format_float_positional(0,precision=3)
-							
-							bbp += "0"*(3-len((bbp.split(".")[1])))
-							new_c = c[:30]+(" "*(8-len(xp)))+xp+(" "*(8-len(yp)))+yp+(" "*(8-len(zp))) +zp+c[54:60]+(" "*(8-len(bbp)))+bbp+c[66:]+"\n"						
-							new_file.write(new_c)
-							all_orients.write(new_c)
-							if(self.build_no > i):
-								new_file_b.write(new_c)
-							count += 1
-						prev_num = atom_num
+								strr += three2one(res)
+								strc += "N"
+							neww = False
+						bbp = np.format_float_positional(b_val,precision=3)
+						if(self.dbmem):
+							if((npmem_im[i]/2 > orient_poses[count][2]+min_zdist[i] >-npmem_im[i]/2) or (npmem_om[i]/2 > orient_poses[count][2]-min_zdist[i] >-npmem_om[i]/2)):
+								neww = True
+						else:
+							if(npmem_im[i]/2 > orient_poses[count][2] >-npmem_im[i]/2):
+								neww = True
+						npsurf = np.array(self.surface)
+						if(not self.curva and self.write_bfac):
+							if(npsurf[self.map_to_beads[count]] == 1):
+								count_pb += 1
+								no_bead = int(np.sum(npsurf[:self.map_to_beads[count]]))
+								bbp = np.format_float_positional(pot_pb[no_bead],precision=3)
+							else:
+								bbp = np.format_float_positional(0,precision=3)
+						
+						bbp += "0"*(3-len((bbp.split(".")[1])))
+						new_c = c[:30]+(" "*(8-len(xp)))+xp+(" "*(8-len(yp)))+yp+(" "*(8-len(zp))) +zp+c[54:60]+(" "*(8-len(bbp)))+bbp+c[66:]+"\n"						
+						new_file.write(new_c)
+						all_orients.write(new_c)
+						if(self.build_no > i):
+							new_file_b.write(new_c)
+						count += 1
+					prev_num = atom_num
 			infos.write("Transmembrane residues (T):\n")
 			infos.write(strr+"\n")
 			infos.write(strc+"\n")
@@ -2907,7 +2948,7 @@ class MemBrain:
 				plt.ylabel("Potential energy(rel)")
 				plt.xlabel("z")
 				plt.tight_layout()
-				plt.savefig(rank_dir+"PG_potential_curve.svg")
+				plt.savefig(rank_dir+"PG_potential_curve.png")
 				plt.clf()
 				
 				areas = self.all_areas[i][0]
@@ -2918,7 +2959,7 @@ class MemBrain:
 				plt.ylabel("Area (A^2)")
 				plt.xlabel("z")
 				plt.tight_layout()
-				plt.savefig(rank_dir+"cross-section_area_curve.svg")
+				plt.savefig(rank_dir+"cross-section_area_curve.png")
 				plt.clf()
 				
 				
@@ -3362,13 +3403,13 @@ def create_graphs(orient_dir,col_grid,pot_grid,angs,resa):
 	plt.ylabel("Phi")
 	plt.title("Orientation of minima given starting position (z,theta,phi)")
 	plt.tight_layout()
-	plt.savefig(orient_dir+"local_minima_orientation.svg")
+	plt.savefig(orient_dir+"local_minima_orientation.png")
 	plt.imshow(graph_mesh_vals,extent=[0,jnp.pi*2,0,jnp.pi/2],aspect=4)
 	plt.xlabel("Theta")
 	plt.ylabel("Phi")
 	plt.title("Relative potential energy of minima given starting position (z,theta,phi)")
 	plt.tight_layout()
-	plt.savefig(orient_dir+"local_minima_potential.svg")
+	plt.savefig(orient_dir+"local_minima_potential.png")
 	plt.clf()
 	
 #concerts three letter codes to one for transmembrane residue output
@@ -3558,30 +3599,46 @@ def get_sph_circ(grid,cen,angle):
 	grid,_ = jax.lax.scan(scloop1,grid,jnp.arange(2*n))
 	return grid
 	
-def add_Reses(Res,Resitp):
-	current_res_no = len(list(Reses.keys()))
-	current_beadtype_no = len(list(Beadtype.keys()))
-	current_bead_no = 0
-	Reses[Res] = current_res_no
-	itpfile = open(Resitp,"r")
-	itp_lines = itpfile.readlines()
-	itpfile.close()
-	restobead_add = []
-	for iline in itp_lines:
-		iline = iline.split(";")[0]
-		if Res in iline:
-			sline = iline.split()
-			if len(sline) >= 7:
-				bt = sline[1]
-				restobead_add.append(bt)
-				bead = sline[4]
-				Beads[bead] = current_bead_no
-				current_bead_no += 1
-				if bt not in list(Beadtype.keys()):
-					Beadtype[bt] = current_beadtype_no
-					current_beadtype_no += 1
-	ResToBead.append(restobead_add)
+def add_Reses(Res, Resitp):
+    current_res_no = len(Reses)
+    current_beadtype_no = len(Beadtype)
+    current_bead_no = len(Beads)
+    
+    Reses[Res] = current_res_no
+    print("Initial Beads:", Beads)
+ 
+    with open(Resitp, "r") as itpfile:
+        itp_lines = itpfile.readlines()
+ 
+    restobead_add = []
+    for iline in itp_lines:
+        iline = iline.strip()
+        if iline.startswith(";"):
+            continue  # Skip comment lines
+        if Res in iline:
+            sline = iline.split()
+            if len(sline) >= 7:
+                bt = sline[1]
+                bead = sline[4]
+                
+                restobead_add.append(bt)
+                
+                # Add bead if it's new
+                if bead not in Beads:
+                    Beads[bead] = current_bead_no
+                    current_bead_no += 1
+                else:
+                    #continue
+                    print(f"Bead '{bead}' already exists with index {Beads[bead]}")
+                
+                # Add bead type if it's new
+                if bt not in Beadtype:
+                    Beadtype[bt] = current_beadtype_no
+                    current_beadtype_no += 1
 
+    ResToBead.append(restobead_add)
+
+    
 def add_AtomToBeads(fn):
 	bead_contents = []
 	bead_names = []
@@ -3605,3 +3662,5 @@ def add_AtomToBeads(fn):
 	bead_contents.append(beads)
 	AtomsToBead.append(bead_contents)
 	return bead_names,bead_contents
+
+
