@@ -400,16 +400,27 @@ class PDB_helper:
 
 			# Use quick hack: match bead types with atom positions by order
 			if len(bead_list) != len(atom_pos_list):
-				print(atom_pos_list)
-				print(f"Mismatch in bead count vs atom count for {resname} {resid}. Using mean positions. Expecting {len(bead_list)}, found {len(atom_pos_list)}")
+				#print(f"Mismatch in bead count vs atom count for {resname} {resid}. Using mean positions. Expecting {len(bead_list)}, found {len(atom_pos_list)}")
+				if resname == "UNK":
+					bead_list = np.arange(len(atom_pos_list))
+				else:
+					print(atom_pos_list)
+					print(f"Mismatch in bead count vs atom count for {resname} {resid}. Using mean positions. Expecting {len(bead_list)}, found {len(atom_pos_list)}")
 				for bead_type in bead_list:
-					bead_index = Beadtype.get(bead_type, -1)
+					if resname == "UNK":
+						bead_index == 22
+					else:
+						bead_index = Beadtype.get(bead_type, -1)
 					if bead_index == -1:
 						raise ValueError(f"Unknown bead type: {bead_type}")
 					self.bead_types.append(bead_index)
 					self.reses.append(res_index)
-					self.poses.append(mean_pos)
-					self.b_vals.append(mean_b)
+					if resname == "UNK":
+						self.poses.append(atom_pos_list[bead_type])
+						self.b_vals.append(atom_bval_list[bead_type])
+					else:
+						self.poses.append(mean_pos)
+						self.b_vals.append(mean_b)
 				continue
 
 			for bead_type, pos, b_val in zip(bead_list, atom_pos_list, atom_bval_list):
