@@ -12,8 +12,6 @@ from enum import Enum
 from functools import partial
 import datetime
 from jax import tree_util
-from jax.sharding import PositionalSharding
-from jax.experimental import mesh_utils
 import shutil
 from collections import defaultdict
 
@@ -23,68 +21,11 @@ PATH_TO_INSANE = os.environ["PATH_TO_INSANE"]
 warnings.filterwarnings('ignore')
 
 #We define some enumerations for use later
-"""
-class Reses(Enum):
-	ALA = 0
-	GLY = 1
-	ILE = 2
-	LEU = 3
-	PRO = 4
-	VAL = 5
-	PHE = 6
-	TYR = 7
-	TRP = 8
-	ARG = 9
-	LYS = 10
-	HIS = 11
-	SER = 12
-	THR = 13
-	ASP = 14
-	GLU = 15
-	ASN = 16
-	GLN = 17
-	CYS = 18
-	MET = 19
-	UNK = 20
-"""
+
 Reses = {"ALA":0,"GLY":1,"ILE":2,"LEU":3,"PRO":4,"VAL":5,"PHE":6,"TYR":7,"TRP":8,"ARG":9,"LYS":10,"HIS":11,"SER":12,"THR":13,"ASP":14,"GLU":15,"ASN":16,"GLN":17,"CYS":18,"MET":19,"UNK":20}
-"""
-class Beads(Enum):
-	BB =  0
-	SC1 = 1
-	SC2 = 2
-	SC3 = 3
-	SC4 = 4
-	SC5 = 5
-	SC6 = 6
-"""
+
 Beads = {"BB":0,"SC1":1,"SC2":2,"SC3":3,"SC4":4,"SC5":5,"SC6":6}
-"""
-class Beadtype(Enum):
-	SP2 = 0 #p4
-	TC3 = 1 #p4
-	SP1 = 2 #P1
-	P2 = 3 #p5
-	SC2 = 4 #AC2
-	SP2a = 5 #p5
-	SC3 = 6 #c3
-	SC4 = 7 #SC5
-	TC5 = 8 #SC5
-	TC4 = 9 #SC4
-	TN6 = 10 #SP1
-	TN6d = 11 #SNd
-	SQ3p = 12 #Qp
-	SQ4p = 13 #Qp
-	TN5a = 14 #SP1
-	TP1 = 15 #P1
-	SQ5n = 16 #Qa
-	Q5n = 17 #Qa
-	TC6 = 18 #c5
-	C6 = 19 #c5
-	P5 = 20 #p5
-	SP5 = 21 #p4
-	GHOST = 22 #May need for PG as well
-"""
+
 Beadtype = {"SP2":0, #p4
 	"TC3" : 1, #p4
 	"SP1" : 2, #P1
@@ -120,7 +61,7 @@ AtomsToBead = [[["N","C","O"],["CB"]],[["N","C","O","CA"]],[["N","C","O"],["CB",
 	
 #We need to force JAX to fully utilize a multi-core cpu
 no_cpu = int(os.environ["NUM_CPU"])
-os.environ["XLA_FLAGS"] = "--xla_force_host_platform_device_count="+str(no_cpu)
+os.environ["XLA_FLAGS"] = "--xla_cpu_use_thunk_runtime=false --xla_force_host_platform_device_count="+str(no_cpu)
 
 
 #This is useful for debugging nans in grad
@@ -130,8 +71,13 @@ os.environ["XLA_FLAGS"] = "--xla_force_host_platform_device_count="+str(no_cpu)
 config.update("jax_enable_x64",True)
 config.update("jax_platform_name","cpu")
 
-sharding = PositionalSharding(mesh_utils.create_device_mesh((no_cpu,1)))
-sharding0 = PositionalSharding(mesh_utils.create_device_mesh((no_cpu,)))
+
+
+mesh = jax.make_mesh((no_cpu,1), ('x', 'y'))
+mesh0 = jax.make_mesh((no_cpu,), ('x'))
+sharding = jax.sharding.NamedSharding(mesh, jax.sharding.PartitionSpec('x', 'y'))
+sharding0 = jax.sharding.NamedSharding(mesh0, jax.sharding.PartitionSpec('x'))
+#sharding0 = PositionalSharding(mesh_utils.create_device_mesh((no_cpu,)))
 devices = jax.devices()
 
 #This is a class that deals with the pdb files and all construction of position arrays
