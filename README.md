@@ -105,6 +105,8 @@ MemPro will takes the following flags as input:
 
 -c, --curvature : This toggles global curvature minimisation. This is currently not compatible with -dm. 
 
+-flip, --flip : This flips the protein in the Z-axis on output.
+
 -itp, --itp_file : The code makes heavy use of the Martini3 parameters. The path to a Martini 3 itp file should go here. The default location is read from the environment variable PATH_TO_MARTINI.
 
 -bd, --build_system : This should be a number that indicates how many of the final configurations should be build using Insane4MemPrO. This will currently only work if your input file is coarse grain.  
