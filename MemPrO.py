@@ -2733,7 +2733,7 @@ class MemBrain:
 			if(err_val != 0):
 				print("WARNING: There was an error when trying to build the system. Check -bd_args are correct.")
 	#Writes a pdb using a given file as a template and replacing positions
-	def write_oriented(self,temp_fn,orient_dir,run_cmd):
+	def write_oriented(self,temp_fn,orient_dir,run_cmd,flip):
 		lfile = open(temp_fn,"r")
 		content = lfile.read()
 		lfile.close()
@@ -2807,7 +2807,7 @@ class MemBrain:
 					if(not np.any(np.isnan(pos))):
 						xp = np.format_float_positional(orient_poses[count][0],precision=3)
 						yp = np.format_float_positional(orient_poses[count][1],precision=3)
-						zp = np.format_float_positional(orient_poses[count][2],precision=3)
+						zp = np.format_float_positional(flip*orient_poses[count][2],precision=3)
 						xp += "0"*(3-len((xp.split(".")[1])))
 						yp += "0"*(3-len((yp.split(".")[1])))
 						zp += "0"*(3-len((zp.split(".")[1])))
@@ -2889,7 +2889,7 @@ class MemBrain:
 							c = "ATOM "+count_str+" BB   DUM Z   1	   0.000   0.000  15.000  1.00  0.00" 
 							xp = np.format_float_positional(pos[0]+xk*norma[0],precision=3)
 							yp = np.format_float_positional(pos[1]+xk*norma[1],precision=3)
-							zp = np.format_float_positional(pos[2]+xk*norma[2],precision=3)
+							zp = np.format_float_positional(flip*(pos[2]+xk*norma[2]),precision=3)
 							xp += "0"*(3-len((xp.split(".")[1])))
 							yp += "0"*(3-len((yp.split(".")[1])))
 							zp += "0"*(3-len((zp.split(".")[1])))
@@ -2931,8 +2931,8 @@ class MemBrain:
 					c = "ATOM "+count_str+" BB   PGL Z   1	   0.000   0.000  15.000  1.00  0.00" 
 					xp = np.format_float_positional(pos[0],precision=3)
 					yp = np.format_float_positional(pos[1],precision=3)
-					zpa = np.format_float_positional(pg_pos+self.pg_thickness/2,precision=3)
-					zpb = np.format_float_positional(pg_pos-self.pg_thickness/2,precision=3)
+					zpa = np.format_float_positional(flip*(pg_pos+self.pg_thickness/2),precision=3)
+					zpb = np.format_float_positional(flip*(pg_pos-self.pg_thickness/2),precision=3)
 					xp += "0"*(3-len((xp.split(".")[1])))
 					yp += "0"*(3-len((yp.split(".")[1])))
 					zpa += "0"*(3-len((zpa.split(".")[1])))

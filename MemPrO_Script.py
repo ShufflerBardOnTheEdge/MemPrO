@@ -12,8 +12,6 @@ import matplotlib as mpl
 import time
 import MemPrO as ori
 import argparse
-from jax.sharding import PositionalSharding
-from jax.experimental import mesh_utils
 import logging
 
 warnings.filterwarnings('ignore')
@@ -40,6 +38,8 @@ parser.add_argument("-w","--use_weights",action="store_true",help="Toggle use of
 parser.set_defaults(use_weights=False)
 parser.add_argument("-c","--curvature",action="store_true",help="Toggle curvature minimisation.")
 parser.set_defaults(curvature=False)
+parser.add_argument("-flip","--flip",action="store_true",help="Flips protein in the Z-axis after orientation.")
+parser.set_defaults(flip=False)
 parser.add_argument("-itp","--itp_file",help="Path to force field (martini_v3.itp)")
 parser.set_defaults(itp_file=martini_default_path)
 parser.add_argument("-bd","--build_system",help = "Build a MD ready CG-system for ranks < n (Default: n=0)")
@@ -69,6 +69,10 @@ parser.set_defaults(write_bfactors=False)
 parser.add_argument("-rank","--rank",help="The method by which to rank the minima. auto will rank using a calculated value intended to give the best result. Hits (h) will rank by percentage hits. Potential (p) will rank by lowest potential. Default (auto)")
 parser.set_defaults(rank="auto")
 args = parser.parse_args()
+
+fliper = 1
+if args.flip:
+	fliper = -1
 
 
 add_reses = args.additional_residues.split(",")
@@ -361,7 +365,7 @@ if(args.predict_pg_layer):
 print("Writing data...")
 #Writing to a file
 
-Mem_test.write_oriented(fn,orient_dir," ".join(sys.argv))
+Mem_test.write_oriented(fn,orient_dir," ".join(sys.argv),fliper)
 print("Done")
 
 if(build_system >0):
