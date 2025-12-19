@@ -75,7 +75,7 @@ lipidsa.update({ "NAG":(moltype, "B1 B2 B3 B4")})
 moltype = "lipid"
 lipidsx[moltype] = (	0, .5,  0,  0, .5,  0,  0, .5,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1)
 lipidsy[moltype] = (	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0)
-lipidsz[moltype] = (   10,  9,  9,  8,  8,  7,  6,  6,  5,  4,  3,  2.5,  1,  0,  5,  4,  3,  2.5,  1,  0)
+lipidsz[moltype] = (   10,  9,  9,  8,  8,  7,  6,  6,  5,  4,  3,  2,  1,  0,  5,  4,  3,  2,  1,  0)
 lipidsa.update({	  # 1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20
 ## Phospholipids
 	"DTPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A  -   -   -   -  C1B C2B  -   -   -   - "),
@@ -96,8 +96,8 @@ lipidsa.update({	  # 1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  
 	"DOPE": (moltype, " -   -   -  NH3  -  PO4 GL1 GL2 C1A D2A C3A C4A  -   -  C1B D2B C3B C4B  -   - "),
 	"POPG": (moltype, " -   -   -  GL0  -  PO4 GL1 GL2 C1A D2A C3A C4A  -   -  C1B C2B C3B C4B  -   - "),
 	"DOPG": (moltype, " -   -   -  GL0  -  PO4 GL1 GL2 C1A D2A C3A C4A  -   -  C1B D2B C3B C4B  -   - "),
-	"POPS": (moltype, " -   -   -  CN0  -  PO4 GL1 GL2 C1A D2A C3A C4A  -   -  C1B C2B C3B C4B  -   - "),
-	"DOPS": (moltype, " -   -   -  CN0  -  PO4 GL1 GL2 C1A D2A C3A C4A  -   -  C1B D2B C3B C4B  -   - "),
+	"POPS": (moltype, " -   -   -  CNO  -  PO4 GL1 GL2 C1A D2A C3A C4A  -   -  C1B C2B C3B C4B  -   - "),
+	"DOPS": (moltype, " -   -   -  CNO  -  PO4 GL1 GL2 C1A D2A C3A C4A  -   -  C1B D2B C3B C4B  -   - "),
 	"DPSM": (moltype, " -   -   -  NC3  -  PO4 AM1 AM2 T1A C2A C3A  -   -   -  C1B C2B C3B C4B  -   - "),
 	"DBSM": (moltype, " -   -   -  NC3  -  PO4 AM1 AM2 T1A C2A C3A C4A  -   -  C1B C2B C3B C4B C5B  - "),
 	"BNSM": (moltype, " -   -   -  NC3  -  PO4 AM1 AM2 T1A C2A C3A C4A  -   -  C1B C2B C3B C4B C5B C6B"),
@@ -128,8 +128,8 @@ lipidsa.update({	  # 1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  
   "PPCS.o": (moltype, " -   -   -  NC3  -  PO4 AM1 AM2 C1A C2A C3A C4A  -   -  D1B C2B C3B C4B  -   - "),
   "DOPG.o": (moltype, " -   -   -  GL0  -  PO4 GL1 GL2 C1A C2A D3A C4A C5A  -  C1B C2B D3B C4B C5B  - "),
   "POPG.o": (moltype, " -   -   -  GL0  -  PO4 GL1 GL2 C1A C2A C3A C4A  -   -  C1B C2B D3B C4B C5B  - "),
-  "DOPS.o": (moltype, " -   -   -  CN0  -  PO4 GL1 GL2 C1A C2A D3A C4A C5A  -  C1B C2B D3B C4B C5B  - "),
-  "POPS.o": (moltype, " -   -   -  CN0  -  PO4 GL1 GL2 C1A C2A C3A C4A  -   -  C1B C2B D3B C4B C5B  - "),
+  "DOPS.o": (moltype, " -   -   -  CNO  -  PO4 GL1 GL2 C1A C2A D3A C4A C5A  -  C1B C2B D3B C4B C5B  - "),
+  "POPS.o": (moltype, " -   -   -  CNO  -  PO4 GL1 GL2 C1A C2A C3A C4A  -   -  C1B C2B D3B C4B C5B  - "),
    "CPG.o": (moltype, " -   -   -  GL0  -  PO4 GL1 GL2 C1A C2A C3A C4A  -   -  C1B C2B D3B C4B  -   - "),
    "PPG.o": (moltype, " -   -   -  GL0  -  PO4 GL1 GL2 C1A C2A C3A C4A  -   -  D1B C2B C3B C4B  -   - "),
    "PPT.o": (moltype, " -   -   -  GL0  -  PO4 GL1 GL2 C1A D2A D3A D4A  -   -  D1B C2B C3B C4B  -   - "),
@@ -139,38 +139,30 @@ lipidsa.update({	  # 1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  
 })
 
 
-
-# HII fix for PI templates and new templates PI(s) with diffrent tails, PO-PIP1(3) and POPIP2(4,5)  
-#Prototopology for phosphatidylinositol type lipids 5,6,7 are potentail phosphates (PIP1,PIP2 and PIP3)
-# 1,2,3 - is the inositol and 4 is the phosphate that links to the tail part.
-#  5
-#   \
-#  6-2-1-4-8--10-11-12-13-14-15
-#	|/	|
-#  7-3	 9--16-17-18-19-20-21 
 moltype = "INOSITOLLIPIDS"
-lipidsx[moltype] = (   .5,  .5,   0,   0,   1, .5,  0,  0,   .5,   0,   0,   0,   0,   0,   0,   1,   1,   1,   1,   1,   1)
-lipidsy[moltype] = (	0,   0,   0,   0,   0,  0,  0,  0,	0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0)
-lipidsz[moltype] = (	8,   9,   9,   7,  10, 10, 10,  6,	6,   5,   4,   3,   2,   1,   0,   5,   4,   3,   2,   1,   0)
-lipidsa.update({	  # 1	 2	3	4	5   6   7   8	9	10	11	12	13	14   15	16	17	18	19   20 
-	"DPPI": (moltype, " C1   C2   C3	CP   -   -   -  GL1  GL2  C1A  C2A  C3A  C4A   -	-   C1B  C2B  C3B  C4B   -	- "),
-	"POPI": (moltype, " C1   C2   C3	CP   -   -   -  GL1  GL2  C1A  D2A  C3A  C4A   -	-   C1B  C2B  C3B  C4B   -	- "),
-	"PIPI": (moltype, " C1   C2   C3	CP   -   -   -  GL1  GL2  C1A  D2A  D3A  C4A   -	-   C1B  C2B  C3B  C4B   -	- "),
-	"PAPI": (moltype, " C1   C2   C3	CP   -   -   -  GL1  GL2  D1A  D2A  D3A  D4A  C5A   -   C1B  C2B  C3B  C4B   -	- "),
-	"PUPI": (moltype, " C1   C2   C3	CP   -   -   -  GL1  GL2  D1A  D2A  D3A  D4A  D5A   -   C1B  C2B  C3B  C4B   -	- "),
-	"POP1": (moltype, " C1   C2   C3	CP  P1   -   -  GL1  GL2  C1A  C2A  D3A  C4A   -	-   C1B  C2B  C3B  C4B   -	- "),
-	"POP2": (moltype, " C1   C2   C3	CP  P1  P2   -  GL1  GL2  C1A  C2A  D3A  C4A   -	-   C1B  C2B  C3B  C4B   -	- "),
-	"POP3": (moltype, " C1   C2   C3	CP  P1  P2  P3  GL1  GL2  C1A  C2A  D3A  C4A   -	-   C1B  C2B  C3B  C4B   -	- "),
-## Templates using the old lipid names and definitions
-  "PI.o"  : (moltype, " C1   C2   C3	CP   -   -   -  GL1  GL2  C1A  C2A  C3A  C4A   -	-   CU1  CU2  CU3  CU4  CU5   - "),
-  "PI34.o": (moltype, " C1   C2   C3	CP PO1 PO2   -  GL1  GL2  C1A  C2A  C3A  C4A   -	-   CU1  CU2  CU3  CU4  CU5   - "),
+lipidsx[moltype] = (   .5,  .5,   0,  .25,   0,   0, .5,  1,  0,   .5,   0,   0,   0,   0,   0,   0,   1,   1,   1,   1,   1,   1)
+lipidsy[moltype] = (    0,   0,   0,    0,   0,   0,  0,  0,  0,    0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0)
+lipidsz[moltype] = (    8,   9,   9,  8.5,   7,  10, 10, 10,  6,    6,   5,   4,   3,   2,   1,   0,   5,   4,   3,   2,   1,   0)
+lipidsa.update({       # 1    2    3    4    5     6   7   8  9    10   11   12   13   14   15    16   17   18   19   20   21   22
+    "POPI": (moltype, " C1   C2   C3   C4   PO4   -   -   -  GL1  GL2  C1A  D2A  C3A  C4A   -     -   C1B  C2B  C3B  C4B   -    -"),
+    "POP1": (moltype, " C1   C2   C3   C4   PO4  P3   -   -  GL1  GL2  C1A  D2A  C3A  C4A   -     -   C1B  C2B  C3B  C4B   -    -"),  # POP1_3
+    "POP4": (moltype, " C1   C2   C3   C4   PO4   -  P4   -  GL1  GL2  C1A  D2A  C3A  C4A   -     -   C1B  C2B  C3B  C4B   -    -"),  # POP1_4
+    "POP5": (moltype, " C1   C2   C3   C4   PO4   -   -  P5  GL1  GL2  C1A  D2A  C3A  C4A   -     -   C1B  C2B  C3B  C4B   -    -"),  # POP1_5
+    "POP2": (moltype, " C1   C2   C3   C4   PO4  P3  P4   -  GL1  GL2  C1A  D2A  C3A  C4A   -     -   C1B  C2B  C3B  C4B   -    -"),  # POP2_34
+    "POP7": (moltype, " C1   C2   C3   C4   PO4  P3   -  P5  GL1  GL2  C1A  D2A  C3A  C4A   -     -   C1B  C2B  C3B  C4B   -    -"),  # POP2_35
+    "POP6": (moltype, " C1   C2   C3   C4   PO4   -  P4  P5  GL1  GL2  C1A  D2A  C3A  C4A   -     -   C1B  C2B  C3B  C4B   -    -"),  # POP2_45
+    "POP3": (moltype, " C1   C2   C3   C4   PO4  P3  P4  P5  GL1  GL2  C1A  D2A  C3A  C4A   -     -   C1B  C2B  C3B  C4B   -    -"),  # POP3_345
+    "SAPI": (moltype, " C1   C2   C3   C4   PO4   -   -   -  GL1  GL2  C1A  D2A  D3A  D4A  C5A    -   C1B  C2B  C3B  C4B   -    -"),
+    "SAP1": (moltype, " C1   C2   C3   C4   PO4  P3   -   -  GL1  GL2  C1A  D2A  D3A  D4A  C5A    -   C1B  C2B  C3B  C4B   -    -"),  # SAP1_3
+    "SAP4": (moltype, " C1   C2   C3   C4   PO4   -  P4   -  GL1  GL2  C1A  D2A  D3A  D4A  C5A    -   C1B  C2B  C3B  C4B   -    -"),  # SAP1_4
+    "SAP5": (moltype, " C1   C2   C3   C4   PO4   -   -  P5  GL1  GL2  C1A  D2A  D3A  D4A  C5A    -   C1B  C2B  C3B  C4B   -    -"),  # SAP1_5
+    "SAP2": (moltype, " C1   C2   C3   C4   PO4  P3  P4   -  GL1  GL2  C1A  D2A  D3A  D4A  C5A    -   C1B  C2B  C3B  C4B   -    -"),  # SAP2_34
+    "SAP7": (moltype, " C1   C2   C3   C4   PO4  P3   -  P5  GL1  GL2  C1A  D2A  D3A  D4A  C5A    -   C1B  C2B  C3B  C4B   -    -"),  # SAP2_35
+    "SAP6": (moltype, " C1   C2   C3   C4   PO4   -  P4  P5  GL1  GL2  C1A  D2A  D3A  D4A  C5A    -   C1B  C2B  C3B  C4B   -    -"),  # SAP2_45
+    "SAP3": (moltype, " C1   C2   C3   C4   PO4  P3  P4  P5  GL1  GL2  C1A  D2A  D3A  D4A  C5A    -   C1B  C2B  C3B  C4B   -    -"),  # SAP3_345
+    "PLPI": (moltype, " C1   C2   C3   C4   PO4   -   -   -  GL1  GL2  C1A  D2A  D3A  C4A   -     -   C1B  C2B  C3B  C4B   -    -"),
+    "SDPI": (moltype, " C1   C2   C3   C4   PO4   -   -   -  GL1  GL2  D1A  D2A  D3A  D4A  D5A    -   C1B  C2B  C3B  C4B   -    -"),
 })
-
-moltype = "type_DPG3"
-lipidsx[moltype] = (-7.96, -7.93, -7.75, -7.88, -7.93, -8.21, -7.74, -7.96, -8.44, -8.77, -8.05, -9.09, -8.04, -8.42, -8.02, -7.71, -8.07, -7.97, -7.95, -7.82, -7.66, -7.89, -8.00)
-lipidsy[moltype] = (0.19, -0.09, -0.69, -0.20, -0.35, -0.36, -0.87, -0.53, -0.48, -0.81, -0.92, -0.97, -1.23, -0.74, 0.50, 0.96, 0.32, 0.35, 0.28, 1.18, 1.23, 1.19, 1.16)
-lipidsz[moltype] = (6.84, 7.48, 7.01, 7.11, 8.10, 8.66, 8.86, 8.54, 9.24, 9.70, 9.86, 10.41, 10.40, 9.60, 6.20, 5.77, 5.28, 4.34, 3.41, 4.86, 3.93, 3.02, 2.09)
-lipidsa.update({ "DPG3":(moltype, "AGL BGL CGL VGL AGA BGA CGA VGA ANM BNM CNM DNM ENM VNM AM1 AM2 T1A C2A C3A C1B C2B C3B C4B")})
 
 #Prototopology for longer and branched glycosil and ceramide based glycolipids
 #
@@ -190,6 +182,7 @@ lipidsa.update({	  # 1	 2	3	4	5   6   7   8   9	10	11	12	13	14   15	16	17	18	19 
 	"DXG1": (moltype, "GM1  GM2  GM3  GM4  GM5 GM6 GM7 GM8 GM9  GM10  GM11  GM12  GM13  GM14 GM15  GM16  GM17   AM1   AM2  T1A  C2A  C3A  C4A  C5A   -   C1B  C2B  C3B  C4B  C5B  C6B"),
 	"PNG1": (moltype, "GM1  GM2  GM3  GM4  GM5 GM6 GM7 GM8 GM9  GM10  GM11  GM12  GM13  GM14 GM15  GM16  GM17   AM1   AM2  T1A  C2A  C3A   -	-	-   C1B  C2B  C3B  D4B  C5B  C6B"),
 	"XNG1": (moltype, "GM1  GM2  GM3  GM4  GM5 GM6 GM7 GM8 GM9  GM10  GM11  GM12  GM13  GM14 GM15  GM16  GM17   AM1   AM2  T1A  C2A  C3A  C4A  C5A   -   C1B  C2B  C3B  D4B  C5B  C6B"),
+	"DPG3": (moltype, "GM1  GM2  GM3  GM4  GM5 GM6  -   -   -	-	 -	 -	GM13  GM14 GM15  GM16  GM17   AM1   AM2  T1A  C2A  C3A   -	-	-   C1B  C2B  C3B  C4B   -	- "),
 	"DXG3": (moltype, "GM1  GM2  GM3  GM4  GM5 GM6  -   -   -	-	 -	 -	GM13  GM14 GM15  GM16  GM17   AM1   AM2  T1A  C2A  C3A  C4A  C5A   -   C1B  C2B  C3B  C4B  C5B  C6B"),
 	"PNG3": (moltype, "GM1  GM2  GM3  GM4  GM5 GM6  -   -   -	-	 -	 -	GM13  GM14 GM15  GM16  GM17   AM1   AM2  T1A  C2A  C3A   -	-	-   C1B  C2B  C3B  D4B  C5B  C6B"),
 	"XNG3": (moltype, "GM1  GM2  GM3  GM4  GM5 GM6  -   -   -	-	 -	 -	GM13  GM14 GM15  GM16  GM17   AM1   AM2  T1A  C2A  C3A  C4A  C5A   -   C1B  C2B  C3B  D4B  C5B  C6B"),
@@ -272,6 +265,34 @@ lipidsy[moltype] = (0.73, 0.52, 0.60, 0.62, 0.07, 0.51, 0.27, 0.54, 0.70, 0.96, 
 lipidsz[moltype] = (5.76, 5.32, 5.25, 5.44, 5.95, 4.51, 4.75, 4.25, 3.59, 2.78, 1.97, 4.00, 3.31, 2.47, 1.63, 6.12, 6.82, 6.30, 6.41, 6.10, 5.61, 5.60, 5.04, 4.41, 3.69, 2.97, 2.11, 4.54, 3.72, 2.80, 5.03, 4.58, 3.76, 2.85, 4.46, 3.68, 2.75, 7.59, 8.18, 8.03, 7.93, 7.36, 8.26, 8.81, 9.30, 9.27, 9.13, 8.95, 9.81)
 lipidsa.update({ "KLA":(moltype, "ZM1 ZM2 ZM3 VS1 PO1 ZM4 ZM5 CF C1F C2F C3F CE C1E C2E C3E GM1 GM2 GM3 VS2 PO2 GM4 GM5 CAB C1A C2A C3A C4A C1B C2B C3B CCD C1C C2C C3C C1D C2D C3D KR1 KR2 KR3 VS3 KS1 KS2 KR4 KR5 KR6 VS4 KS3 KS4")})
 
+
+# Prototopology for LPSMB 
+#            
+#           
+#              7--25-26-27-28
+#              | \
+#   41         8-5  29-30-31-32
+#   |          |      
+#   40-42      6  10-11-12-13 
+#   | /        |   | 
+#   38-39  33  3---9-14-15-16
+#    |     /   | \  
+#   36-35-34-4-2  17-22-23-24
+#       |      |   |
+#      37      1  18-19-20-21
+#
+moltype = "LPSMB"
+lipidsx[moltype] = (     0,   0,  1,  0,  2,  1,  2,  2,  1,  1,  1,  1,  1,  1,  1,  1,   0,  0,  0,  0,  0,  0,  0,  0,  2,  2,  2,  2,  2,  2,  2,  2,  1,  0,  0,  0,  0,  1,  1,  1,  2,  1,  0,  0,  0, 0,  0,   0,  1,  0,  0,  1,  2,  2,  2,  2,  0,  1,  0,  0,  1,  1,  1,  1,  2,  1,  1,  1,  0,  0,  0,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2,  0,  0,  1,  1,  2,  2 )
+lipidsy[moltype] = (     0,   1,  0,  1,  1,  1,  0,  1,  0,  1,  1,  1,  1,  0,  0,  0,   0,  1,  1,  1,  1,  0,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0,  0,  1,  1,  1,  0,  0,  0,  1,  1,  1,  1,  0,  1, 0,  1,   1,  0,  1,  0,  1,  1,  0,  0,  0,  1,  0,  1,  1,  0,  0,  1,  1,  1,  0,  0,  1,  1,  1,  0,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1 )
+lipidsz[moltype] = (     5,   5,  5,  6,  5,  5,  5,  6,  4,  4,  3,  2,  1,  3,  2,  1,   4,  4,  3,  2,  1,  3,  2,  1,  4,  3,  2,  1,  4,  3,  2,  1,  6,  7,  8,  9,  8,  9,  8,  9,  9,  8, 10, 11, 11, 12, 11, 12, 12, 13, 13, 13, 13, 13, 12, 14, 14, 14, 15, 16, 16, 15, 15, 16, 16, 17, 18, 17, 17, 18, 17, 21, 21, 21, 20, 20, 20, 20, 20, 20, 19, 19, 19, 19, 19, 19, 21, 21, 21, 22, 22, 22, 22, 22, 22, 23, 23, 23, 23, 23, 23, 24, 24, 24, 24, 24, 24, 25, 25, 25, 25, 25, 25, 26, 26, 26, 26, 26, 26, 27, 27, 27, 27, 27, 27, 28, 28, 28, 29, 29, 29 )
+lipidsa.update({      #  1    2   3   4   5   6   7   8   9  10  11  12  13  14  15  16   17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47  48  49  50  51  52  53  54  55  56  57  58  59  60  61  62  63  64  65  66  67  68  69  70  71  72  73  74  75  76  77  78  79  80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98  99  100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127 128 129 120 121
+    "LIPA": (moltype, " PO1  GM1 GM2 GM3 GM4 GM5 GM6 PO2 GL1 GL2 C1A C2A C3A C1B C2B C3B  GL3 GL4 C1C C2C C3C C1D C2D C3D GL5 GL6 C1E C2E GL7 GL8 C1F C2F  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   - "), 
+    "REMP": (moltype, " PO1  GM1 GM2 GM3 GM4 GM5 GM6 PO2 GL1 GL2 C1A C2A C3A C1B C2B C3B  GL3 GL4 C1C C2C C3C C1D C2D C3D GL5 GL6 C1E C2E GL7 GL8 C1F C2F SO1 SO2 SO3 SO4 SO5 SO6 SO7 SO8 SO9 S10  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   - "), 
+    "RAMP": (moltype, " PO1  GM1 GM2 GM3 GM4 GM5 GM6 PO2 GL1 GL2 C1A C2A C3A C1B C2B C3B  GL3 GL4 C1C C2C C3C C1D C2D C3D GL5 GL6 C1E C2E GL7 GL8 C1F C2F SO1 SO2 SO3 SO4 SO5 SO6 SO7 SO8 SO9 S10 S11 S12 S13 S14 S15 S16 S17 S18 S19 S20 S21 S22 S23 S24 S25 S26 S27 S28 S29 S30 S31 S32 S33 S34 S35 S36 S37 S38 S39  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   - "), 
+    "OANT": (moltype, " PO1  GM1 GM2 GM3 GM4 GM5 GM6 PO2 GL1 GL2 C1A C2A C3A C1B C2B C3B  GL3 GL4 C1C C2C C3C C1D C2D C3D GL5 GL6 C1E C2E GL7 GL8 C1F C2F SO1 SO2 SO3 SO4 SO5 SO6 SO7 SO8 SO9 S10 S11 S12 S13 S14 S15 S16 S17 S18 S19 S20 S21 S22 S23 S24 S25 S26 S27 S28 S29 S30 S31 S32 S33 S34 S35 S36 S37 S38 S39 O40 O41 O42 O43 O44 O45 O46 O47 O48 O49 O50 O51 O52 O53 O54 O55 O56 O57 O58 O59 O60 O61 O62 O63 O64 O65 O66 O67 O68 O69 O70 O71 O72 O73 O74 O75 O76 O77 O78 O79 O80 O81 O82 O83 O84 O85 O86 O87 O88 O89 O90 O91 O92 O93 O94 O95 O96 O97 O98 O99"), 
+})
+
+
 moltype = "LPS2"
 lipidsx[moltype] = (	 0,   0,  1,  0,  0,  0,  0,  1,  2,  2,  1,  2,  1,  1,  0,  0,  0,  0,  1,  1,  1,   1,  1,  1,  1,  1,  1,  1,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  3,  2,  2,  2,  3,  3,  3,  1,  2,  1,  0,  0,  0, 0,  0,   0,  1,  0,  0,  1,  2,  2,  2,  2,  0,  1,  0,  0,  1,  1,  1,  1,  2,  1,  1,  1,  0,  0,  0  )
 lipidsy[moltype] = (	 0,   1,  0,  1,  0,  0,  0,  1,  0,  1,  1,  2,  1,  1,  1,  1,  1,  1,  0,  0,  0,   0,  0,  1,  1,  1,  1,  1,  0,  0,  0,  0,  1,  2,  1,  1,  1,  1,  2,  3,  2,  2,  2,  3,  3,  3,  1,  1,  1,  1,  0,  1, 0,  1,   1,  0,  1,  0,  1,  1,  0,  0,  0,  1,  0,  1,  1,  0,  0,  1,  1,  1,  0,  0,  1,  1,  1,  0  )
@@ -310,16 +331,15 @@ lipidsa.update({		# 1	2	3	4	5	6	7	8	9   10   11   12   13   14   15	16	17	18	19 
 	"MMA":   (moltype, "  -	-	-  C1A  C2A  C3A  C4A  C5A  M1A  C1B  C2B  C3B  C4B	-	-	 -	 -	 -   M1B  C1C  C2C  C3C	-	-  COH  OOH  C1D  C2D  C3D  C4D  C5D  C6D"),
 })
 
-
 # Sterols
 moltype = "sterol"
-lipidsx[moltype] = (	 0,  0,  0,  0,  0, 0,   0,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0,  0)
-lipidsy[moltype] = (	 0,  0,  0,  0,  0, 0,   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0)
-lipidsz[moltype] = (	 0,  0,  0,  0,  0, 0, 5.3,4.5,3.9,3.3, 3 ,2.6,1.4,  0,  0,  0,  0,  0)
+lipidsx[moltype] = (      0,   1,   0,   0,  1,   0, 0.5, 0.5,   0,  0)
+lipidsy[moltype] = (      0,   0,   0,   0,  0,   0,   0,   0,   0,  0)
+lipidsz[moltype] = (    5.3, 4.5, 3.9, 3.3,  3, 2.6, 4.5, 2.6, 1.4,  0)
 lipidsa.update({
-	"CHOL": (moltype, " -   -   -   -   -   -  ROH  R1  R2  R3  R4  R5  C1  C2  -   -   -   - "),
-	"ERGO": (moltype, " -   -   -   -   -   -  ROH  R1  R2  R3  R4  R5  C1  C2  -   -   -   - "),
+    "CHL1": (moltype, " ROH  R1  R2  R3  R4   -  R5  R6  C1  C2 "),
 })
+
 
 
 # Hopanoids
@@ -1131,7 +1151,7 @@ def MC_Glycan_Strands(pbcy,pbcx,zpos,xoff,yoff,prot_coords,gdist,num):
 	testx = np.linspace(0,65,100)
 	plt.plot(test_kde(testx))
 	plt.plot(glycan_dist(testx,gdist))
-	plt.savefig(out_folder+"Dist"+str(num)+".svg")
+	plt.savefig(out_folder+"Dist"+str(num)+".png")
 	plt.clf()
 
 	for l in all_linesT:
@@ -3339,7 +3359,7 @@ if(using_temp or tm):
 								dx = xxs[1]-xxs[0]
 								dy = yys[1]-yys[0]
 								for im in in_mem:
-									gridx,gridy = put_into_grid(im[:2],[xext+4,yext+4],[20,20],[xmin-2,ymin-2])
+									gridx,gridy = put_into_grid(im[:2],[xext+2,yext+2],[20,20],[xmin-1,ymin-1])
 									gridd[gridx,gridy] =1
 
 								gridd = 1-np.array(accessable(1-jnp.array(gridd)))
@@ -3900,8 +3920,8 @@ if lipL:
 					#+leaflet*(0.5+(i-min(az)))*options["-bd"].value
 					
 					xx	   = list(zip( ax,ay ))
-					nx	   = [rcos*i-rsin*j+random.random()*kick for i,j in xx]
-					ny	   = [rsin*i+rcos*j+random.random()*kick for i,j in xx]
+					nx	   = [rcos*i-rsin*j+pos[0]+random.random()*kick for i,j in xx]
+					ny	   = [rsin*i+rcos*j+pos[1]+random.random()*kick for i,j in xx]
 
 					az	   = np.array([ leaflet*-2+pos[2]+leaflet*(0.5+(i-min(az)))*options["-bd"].value for i in az ])
 					if leaflet == 1:
@@ -3917,27 +3937,7 @@ if lipL:
 						indv_p = indv_c-indv
 						pf = path[int(indv_f)]
 						pc = path[int(indv_c)]
-
-						sdirec = pf-pc
-						sdirec /= np.linalg.norm(sdirec)
-						
-						upp = np.array([0,0,1])	
-						sdirec2 = sdirec+1e-4*np.linalg.norm(upp+sdirec)
-						sdirec2 /= np.linalg.norm(sdirec2)			  
-						angl = np.dot(-sdirec2,upp)
-						
-						
-						v = np.cross(-sdirec2,upp)
-						vmat = np.array([[0,-v[2],v[1]],[v[2],0,-v[0]],[-v[1],v[0],0]])
-						rot_mat = np.eye(3)+vmat+np.dot(vmat,vmat)*1/(1+angl)
-						
-						xdir = np.dot(np.array([1,0,0]),rot_mat)
-						ydir = np.dot(np.array([0,1,0]),rot_mat)
-						
-						if np.linalg.norm(xdir)<0.9:
-							print(np.linalg.norm(xdir))
-						
-						new_pos = pf*(1-indv_p)+pc*indv_p+pos[:3]+nx[ai]*xdir+ny[ai]*ydir
+						new_pos = pf*(1-indv_p)+pc*indv_p+np.array([nx[ai],ny[ai],pos[2]])
 						new_poses.append(new_pos)
 						
 						
@@ -4039,7 +4039,7 @@ if solv:
 		zshift = (hz+0.5)*nz - midz # Shift of membrane middle to center of grid layer
 	# Initialize a grid of solvent, spanning the whole cell
 	# Exclude all cells within specified distance from membrane center
-	mem_size = 1.9
+	
 	if(lipL):
 		print("Excluding solvent from membrane(s)...")
 		if(options["-ps"].value > 1e-5):
@@ -4047,9 +4047,9 @@ if solv:
 			for gk in range(2):
 			
 				if(cdirs[gk] < 0):
-					grid   = [[[(pbcz*(i+0.5))/nz <= -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[gk],rcurv_up[gk],ang_exts[gk],add_pore,inner_lengs[gk]-2)[0]-mem_size+mz+zdist*(2*gk-1) or (pbcz*(i+0.5))/nz >= -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[gk],rcurv_lo[gk],ang_exts[gk],add_pore,inner_lengs[gk]+2)[0]+mem_size+mz+zdist*(2*gk-1) for i in range(nz)] for j in range(ny)] for k in range(nx)]
+					grid   = [[[(pbcz*i)/nz < -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[gk],rcurv_up[gk],ang_exts[gk],add_pore,inner_lengs[gk]-2)[0]-2+mz+zdist*(2*gk-1) or (pbcz*i)/nz > -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[gk],rcurv_lo[gk],ang_exts[gk],add_pore,inner_lengs[gk]+2)[0]+2+mz+zdist*(2*gk-1) for i in range(nz)] for j in range(ny)] for k in range(nx)]
 				else:  
-					grid   = [[[(pbcz*(i+0.5))/nz >= leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[gk],rcurv_up[gk],ang_exts[gk],add_pore,inner_lengs[gk]-2)[0]+mem_size+mz+zdist*(2*gk-1) or (pbcz*(i+0.5))/nz <= leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[gk],rcurv_lo[gk],ang_exts[gk],add_pore,inner_lengs[gk]+2)[0]-mem_size+mz+zdist*(2*gk-1) for i in range(nz)] for j in range(ny)] for k in range(nx)]
+					grid   = [[[(pbcz*i)/nz > leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[gk],rcurv_up[gk],ang_exts[gk],add_pore,inner_lengs[gk]-2)[0]+2+mz+zdist*(2*gk-1) or (pbcz*i)/nz < leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[gk],rcurv_lo[gk],ang_exts[gk],add_pore,inner_lengs[gk]+2)[0]-2+mz+zdist*(2*gk-1) for i in range(nz)] for j in range(ny)] for k in range(nx)]
 				grids.append(grid)
 			grids = np.array(grids)
 			grid = grids[0]*grids[1]
@@ -4063,9 +4063,10 @@ if solv:
 				else:
 					rad = 1000
 			if(cdirs[0] < 0):
-				grid   = [[[((pbcx*k)/nx-pbcx/2)*((pbcx*k)/nx-pbcx/2)+((pbcy*j)/ny-pbcy/2)*((pbcy*j)/ny-pbcy/2) > rad*rad or (pbcz*(i+0.5))/nz <= -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]-mem_size+mz or (pbcz*(i+0.5))/nz >= -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]+mem_size+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
+				grid   = [[[((pbcx*k)/nx-pbcx/2)*((pbcx*k)/nx-pbcx/2)+((pbcy*j)/ny-pbcy/2)*((pbcy*j)/ny-pbcy/2) > rad*rad or (pbcz*i)/nz < -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]-2+mz or (pbcz*i)/nz > -leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]+2+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
+
 			else:  
-				grid   = [[[((pbcx*k)/nx-pbcx/2)*((pbcx*k)/nx-pbcx/2)+((pbcy*j)/ny-pbcy/2)*((pbcy*j)/ny-pbcy/2) > rad*rad or (pbcz*(i+0.5))/nz >= leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]+mem_size+mz or (pbcz*(i+0.5))/nz <= leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]-mem_size+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
+				grid   = [[[((pbcx*k)/nx-pbcx/2)*((pbcx*k)/nx-pbcx/2)+((pbcy*j)/ny-pbcy/2)*((pbcy*j)/ny-pbcy/2) > rad*rad or (pbcz*i)/nz > leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_up[0],rcurv_up[0],ang_exts[0],add_pore,inner_lengs[0])[0]+2+mz or (pbcz*i)/nz < leaflet_function((pbcx*k)/nx-pbcx/2+((i+j)%2)*0.5*dx,(pbcy*j)/ny-pbcy/2+(i%2)*0.5*dy,curv_lo[0],rcurv_lo[0],ang_exts[0],add_pore,inner_lengs[0])[0]-2+mz for i in range(nz)] for j in range(ny)] for k in range(nx)]
 	else:
 		grid   =   [[[True for i in range(nz)] for j in range(ny)] for k in range(nx)]
 
@@ -4078,12 +4079,14 @@ if solv:
 		maxz = np.max(pc[:,2])
 		minz = np.min(pc[:,2])
 
+		# print(pc, maxz,minz)
+
 		max_iz = int((maxz/pbcz)*nz)
 		min_iz = int((minz/pbcz)*nz)
-		#print(max_iz,min_iz)
+		# print(max_iz,min_iz)
 
 		for zl in range(min_iz,max_iz):
-			#print(zl)
+			# print(zl)
 			acc_z = (zl/nz)*pbcz
 			lzrange = acc_z-dz
 			uzrange = acc_z+dz
