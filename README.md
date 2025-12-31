@@ -1,5 +1,5 @@
 # MemPrO
-Membrane Protein Orientation in Lipid Bilayers. The paper associated with this code can be found here \[link to be added soon\].
+Membrane Protein Orientation in Lipid Bilayers. The paper associated with this code can be found [here](https://doi.org/10.1021/acs.jctc.5c01433).
 
 Code and parameters from the following were used to help write this code:
 
