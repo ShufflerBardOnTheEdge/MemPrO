@@ -24,16 +24,16 @@ pip install mempro
 
 Clone the GitHub repository. Python 3.11 or later is required, along with the following packages:
 
-* JAX 0.6.0 (CPU). Note: only JAX 0.6.0 is supported — versions 0.6.1 and later introduced breaking changes to the CPU runtime that cause crashes or significant performance regressions:
+* JAX 0.6.0 or later (CPU), tested up to 0.11.2. Recent versions are fastest; JAX 0.11 needs Python 3.12 or later:
 ```
-pip install "jax[cpu]==0.6.0"
+pip install "jax[cpu]>=0.6.0,<0.12"
 ```
 * Matplotlib 3.8.4 or later:
 ```
 pip install "matplotlib>=3.8.4"
 ```
 
-A Martini 3 forcefield file is also required and can be downloaded from [here](https://cgmartini.nl/docs/downloads/force-field-parameters/martini3/particle-definitions.html). When running from source, place the `.itp` file in the same directory as `MemPrO.py`, or supply its path using the `-itp` flag.
+The Martini 3 force field file (`martini_v3.itp`) is included in `mempro/`. To use a different one, supply its path with the `-itp` flag; the standard file can be downloaded from [here](https://cgmartini.nl/docs/downloads/force-field-parameters/martini3/particle-definitions.html).
 
 MemPrO is also accessible on Google Colab via the link [ADD LINK]. The Colab will contain instructions for use. (Currently the Colab is WIP and this will be updated.)
 
