@@ -58,6 +58,19 @@ AtomsToBead = [[["N","C","O"],["CB"]],[["N","C","O","CA"]],[["N","C","O"],["CB",
 				 [["N","C","O"],["CB","CG","ND2"]],[["N","C","O"],["CD","CG","NE2"]],[["N","C","O"],["SG","CB"]],[["N","C","O"],["SD","CE","CG"]],[]]	
 		
 	
+#Device settings have to be known before JAX starts, so -nc and -dev are read here (they override NUM_CPU / MEMPRO_DEVICE)
+def _pre_parse_device_args():
+	import argparse
+	pre = argparse.ArgumentParser(add_help=False)
+	pre.add_argument("-nc","--num_cpus",type=int,default=None)
+	pre.add_argument("-dev","--device",default=None)
+	pre_args,_ = pre.parse_known_args()
+	if pre_args.num_cpus is not None:
+		os.environ["NUM_CPU"] = str(pre_args.num_cpus)
+	if pre_args.device is not None:
+		os.environ["MEMPRO_DEVICE"] = pre_args.device
+_pre_parse_device_args()
+
 #We need to force JAX to fully utilize a multi-core cpu
 no_cpu = int(os.environ.get("NUM_CPU", os.cpu_count()))
 os.environ["XLA_FLAGS"] = (os.environ.get("XLA_FLAGS", "")+" --xla_force_host_platform_device_count="+str(no_cpu)).strip()
@@ -71,7 +84,28 @@ if tuple(int(v) for v in jax.__version__.split(".")[:3] if v.isdigit()) <= (0,6,
 
 #forcing JAX to use x64 floats rather than x32
 config.update("jax_enable_x64",True)
-config.update("jax_platform_name","cpu")
+
+#Device selection: "cpu" (one XLA host device per core), "gpu", or "auto" (GPU if JAX can see one)
+#On GPU no_cpu becomes the number of GPUs and each GPU minimises a whole batch of configurations with vmap
+device_choice = os.environ.get("MEMPRO_DEVICE","auto").lower()
+if device_choice not in ["auto","cpu","gpu"]:
+	raise SystemExit("ERROR: -dev must be one of auto, cpu, gpu (got "+device_choice+")")
+use_gpu = False
+#Don't let JAX grab 75% of GPU memory up front (MemPrO needs little and GPU nodes are often shared)
+os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE","false")
+if device_choice == "cpu":
+	config.update("jax_platforms","cpu")
+else:
+	try:
+		gpus = jax.devices("gpu")
+	except RuntimeError:
+		gpus = []
+	if len(gpus) > 0:
+		use_gpu = True
+		no_cpu = len(gpus)
+	elif device_choice == "gpu":
+		raise SystemExit('ERROR: -dev gpu was requested but JAX cannot see a GPU. Install GPU support with: pip install "mempro[gpu]"')
+config.update("jax_platform_name","gpu" if use_gpu else "cpu")
 
 #Auto sharding (the default up to JAX 0.6) lets XLA infer gather/scatter shardings; newer JAX defaults to Explicit
 mesh = jax.make_mesh((no_cpu,1), ('x', 'y'), axis_types=(jax.sharding.AxisType.Auto,)*2)
@@ -1829,6 +1863,11 @@ class MemBrain:
 	#We turn minimise into a paralelised method
 	@partial(jax.jit,static_argnums=2)
 	def minimise_p(self,starting_pos,max_iter):
+		if use_gpu:
+			#Each GPU minimises its share of the configurations together (rows are split evenly across GPUs)
+			per_dev = starting_pos.reshape(no_cpu,-1,starting_pos.shape[-1])
+			res = jax.pmap(jax.vmap(self.minimise,in_axes=(0,None)),static_broadcasted_argnums=1,in_axes=(0,None))(per_dev,max_iter)
+			return res.reshape(starting_pos.shape[0],-1)
 		return jax.pmap(self.minimise,static_broadcasted_argnums=1,in_axes=(0,None))(starting_pos,max_iter)
 		
 
@@ -1869,16 +1908,18 @@ class MemBrain:
 			pos_grid = pos_grid.at[ind].set(pos)
 			return pos_grid,ind
 			
-		no_runs = jnp.ceil(grid_size/no_cpu).astype(int)
+		#One configuration per CPU device per batch, or every configuration in a single batch on GPU
+		batch_size = no_cpu*int(np.ceil(grid_size/no_cpu)) if use_gpu else no_cpu
+		no_runs = int(np.ceil(grid_size/batch_size))
 		
 		pos_grid,_ = jax.lax.scan(min_plot_fun_1,pos_grid,jnp.arange(grid_size))
 		self.start_grid = pos_grid.copy()
 		no_grid = pos_grid.shape[0]
-		pos_grid =jnp.pad(pos_grid,((0,no_runs*no_cpu - no_grid),(0,0)),mode="edge")
+		pos_grid =jnp.pad(pos_grid,((0,no_runs*batch_size - no_grid),(0,0)),mode="edge")
 
 		result_grid = jnp.zeros_like(pos_grid)
 	
-		print("Batch size:",no_cpu)
+		print("Batch size:",batch_size,"(GPU)" if use_gpu else "")
 		print("Number of batches:",no_runs)
 		times_taken = jnp.zeros(no_runs)
 		#This non JAX for loop is needed beacuse pmap doesn't interact well with scan
@@ -3474,6 +3515,8 @@ def main():
 	parser.set_defaults(grid_size=36)
 	parser.add_argument("-nc","--num_cpus",help="Number of CPU cores to use (Default: all available)",type=int)
 	parser.set_defaults(num_cpus=None)
+	parser.add_argument("-dev","--device",help="Device to run on: auto (GPU if available, otherwise CPU), cpu or gpu (Default: auto)",choices=["auto","cpu","gpu"])
+	parser.set_defaults(device="auto")
 	parser.add_argument("-dm","--dual_membrane",action="store_true",help="Toggle dual membrane orientation")
 	parser.set_defaults(dual_membrane=False)
 	parser.add_argument("-pg","--predict_pg_layer",action="store_true",help="Toggle peptidogylcan call wall prediction")

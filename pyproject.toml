@@ -13,6 +13,10 @@ dependencies = [
     "matplotlib>=3.8.4",
 ]
 
+[project.optional-dependencies]
+# NVIDIA GPU support (Linux, CUDA 12): pip install "mempro[gpu]"
+gpu = ["jax[cuda12]>=0.6.0,<0.12"]
+
 [project.scripts]
 mempro = "mempro._cli:main"
 
