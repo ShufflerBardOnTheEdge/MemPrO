@@ -61,6 +61,8 @@ mempro -f input_file.pdb
 
 No environment variables are required. By default MemPrO will use all available CPU cores and look for `Insane4MemPrO.py` and `martini_v3.itp` in the same directory as the script (or the installed package directory). These paths can be overridden with the `-insane` and `-itp` flags if needed.
 
+Compiled code is cached in `~/.cache/mempro/jax`, so runs after the first one start about 15 s faster. Set `JAX_COMPILATION_CACHE_DIR` to put the cache somewhere else, or `MEMPRO_NO_JAX_CACHE=1` to turn it off.
+
 ## Outputs
 
 MemPrO is intended to be run on PDB files, and will output the following files:
@@ -170,10 +172,10 @@ Orient using 8 CPU cores:
 python PATH/TO/MemPrO.py -f input_file.pdb -o Output_dir/ -nc 8
 ```
 
-Orient using a GPU:
+Orient using a GPU (add `-sp` on consumer GeForce/RTX cards for a large speed-up):
 
 ```
-python PATH/TO/MemPrO.py -f input_file.pdb -o Output_dir/ -p gpu
+python PATH/TO/MemPrO.py -f input_file.pdb -o Output_dir/ -dev gpu
 ```
 
 A more detailed set of tutorials is available [here](MemPrO_tutorials.md).

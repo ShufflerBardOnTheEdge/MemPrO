@@ -94,6 +94,14 @@ if single_precision:
 #Scales dot products away from exactly -1 so z-alignment quaternions never have zero norm (1-1e-8 rounds to 1 in float32)
 rot_ep = 1-1e-6 if single_precision else 1-1e-8
 
+#Keep compiled XLA programs between runs (they take ~15 s to build each time); JAX_COMPILATION_CACHE_DIR overrides
+#the location and MEMPRO_NO_JAX_CACHE=1 turns this off
+if os.environ.get("MEMPRO_NO_JAX_CACHE","0") in ["","0"] and "JAX_COMPILATION_CACHE_DIR" not in os.environ:
+	config.update("jax_compilation_cache_dir",os.path.join(os.environ.get("XDG_CACHE_HOME",os.path.expanduser("~/.cache")),"mempro","jax"))
+	if "JAX_PERSISTENT_CACHE_MIN_COMPILE_TIME_SECS" not in os.environ:
+		#Most of MemPrO's compile time is hundreds of small programs, which the default 1 s threshold would skip
+		config.update("jax_persistent_cache_min_compile_time_secs",0)
+
 #Device selection: "cpu" (one XLA host device per core), "gpu", or "auto" (GPU if JAX can see one)
 #On GPU no_cpu becomes the number of GPUs and each GPU minimises a whole batch of configurations with vmap
 device_choice = os.environ.get("MEMPRO_DEVICE","auto").lower()
