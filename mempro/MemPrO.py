@@ -2796,7 +2796,7 @@ class MemBrain:
 					zpos = c[46:54]
 					ypos = c[38:46]
 					xpos = c[30:38]
-					res = c[17:20].strip()
+					res = c[17:21].strip()
 					atom_num = int(c[22:26].strip())
 					b_val = float(c[60:66].strip())
 					pos = np.array([float(xpos.strip()),float(ypos.strip()),float(zpos.strip())])
@@ -3557,38 +3557,39 @@ def add_Reses(Res, Resitp):
     current_res_no = len(Reses)
     current_beadtype_no = len(Beadtype)
     current_bead_no = len(Beads)
-    
+
     Reses[Res] = current_res_no
-    print("Initial Beads:", Beads)
- 
+
     with open(Resitp, "r") as itpfile:
         itp_lines = itpfile.readlines()
- 
+
     restobead_add = []
+
     for iline in itp_lines:
         iline = iline.strip()
-        if iline.startswith(";"):
-            continue  # Skip comment lines
-        if Res in iline:
-            sline = iline.split()
-            if len(sline) >= 7:
-                bt = sline[1]
-                bead = sline[4]
-                
-                restobead_add.append(bt)
-                
-                # Add bead if it's new
-                if bead not in Beads:
-                    Beads[bead] = current_bead_no
-                    current_bead_no += 1
-                else:
-                    #continue
-                    print(f"Bead '{bead}' already exists with index {Beads[bead]}")
-                
-                # Add bead type if it's new
-                if bt not in Beadtype:
-                    Beadtype[bt] = current_beadtype_no
-                    current_beadtype_no += 1
+
+        # Skip comments and empty lines
+        if not iline or iline.startswith(";"):
+            continue
+
+        sline = iline.split()
+
+        # Require a valid [ atoms ] line
+        if len(sline) >= 7 and sline[3] == Res:
+            bt = sline[1]     # bead type
+            bead = sline[4]   # bead/atom name
+
+            restobead_add.append(bt)
+
+            # Add bead if new
+            if bead not in Beads:
+                Beads[bead] = current_bead_no
+                current_bead_no += 1
+
+            # Add bead type if new
+            if bt not in Beadtype:
+                Beadtype[bt] = current_beadtype_no
+                current_beadtype_no += 1
 
     ResToBead.append(restobead_add)
 
