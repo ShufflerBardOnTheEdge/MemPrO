@@ -20,20 +20,28 @@ Rakesh Vaiwala et al. "Developing a Coarse-Grained Model for Bacterial Cell Wall
 pip install mempro
 ```
 
+For NVIDIA GPU support (Linux with CUDA 12 drivers), install the `gpu` extra instead:
+
+```
+pip install "mempro[gpu]"
+```
+
+MemPrO uses a GPU automatically when JAX can see one, and the CPU otherwise; use `-dev cpu` or `-dev gpu` to choose explicitly.
+
 ### From source
 
 Clone the GitHub repository. Python 3.11 or later is required, along with the following packages:
 
-* JAX 0.6.0 (CPU). Note: only JAX 0.6.0 is supported — versions 0.6.1 and later introduced breaking changes to the CPU runtime that cause crashes or significant performance regressions:
+* JAX 0.6.0 or later (CPU), tested up to 0.11.2. Recent versions are fastest; JAX 0.11 needs Python 3.12 or later:
 ```
-pip install "jax[cpu]==0.6.0"
+pip install "jax[cpu]>=0.6.0,<0.12"
 ```
 * Matplotlib 3.8.4 or later:
 ```
 pip install "matplotlib>=3.8.4"
 ```
 
-A Martini 3 forcefield file is also required and can be downloaded from [here](https://cgmartini.nl/docs/downloads/force-field-parameters/martini3/particle-definitions.html). When running from source, place the `.itp` file in the same directory as `MemPrO.py`, or supply its path using the `-itp` flag.
+The Martini 3 force field file (`martini_v3.itp`) is included in `mempro/`. To use a different one, supply its path with the `-itp` flag; the standard file can be downloaded from [here](https://cgmartini.nl/docs/downloads/force-field-parameters/martini3/particle-definitions.html).
 
 MemPrO is also accessible on Google Colab via the link [ADD LINK]. The Colab will contain instructions for use. (Currently the Colab is WIP and this will be updated.)
 
@@ -52,6 +60,8 @@ mempro -f input_file.pdb
 ```
 
 No environment variables are required. By default MemPrO will use all available CPU cores and look for `Insane4MemPrO.py` and `martini_v3.itp` in the same directory as the script (or the installed package directory). These paths can be overridden with the `-insane` and `-itp` flags if needed.
+
+Compiled code is cached in `~/.cache/mempro/jax`, so runs after the first one start about 15 s faster. Set `JAX_COMPILATION_CACHE_DIR` to put the cache somewhere else, or `MEMPRO_NO_JAX_CACHE=1` to turn it off.
 
 ## Outputs
 
@@ -85,6 +95,10 @@ MemPrO is intended to be run on PDB files, and will output the following files:
 **-ng, --grid_size** — Number of initial starting configurations. Defaults to 36. For best efficiency this should be a multiple of the number of CPUs being used. More starting configurations sample the space of minima better, but there are diminishing returns and generally no more than 40 are needed.
 
 **-nc, --num_cpus** — Number of CPU cores to use. Defaults to all available cores. For best performance with `-ng`, set `-nc` to a value that divides `-ng` evenly.
+
+**-dev, --device** — Device to run on: `auto` (default; GPU if JAX can see one, otherwise CPU), `cpu` or `gpu`. On GPU, all starting configurations are minimised together in a single batch. GPU support needs `pip install "mempro[gpu]"` (Linux, NVIDIA).
+
+**-sp, --single_precision** — Use 32-bit instead of 64-bit floats. Consumer GPUs (GeForce/RTX) have very little 64-bit throughput, so this makes minimisation much faster there; results can differ slightly from the default 64-bit run. Data-centre GPUs (A100/H100) and CPUs gain less.
 
 **-rank, --rank** — Ranking method for minima: `h` ranks by percentage hits, `p` ranks by potential, `auto` (default) ranks by a value calculated from approximate minima depth and potential.
 
@@ -158,10 +172,10 @@ Orient using 8 CPU cores:
 python PATH/TO/MemPrO.py -f input_file.pdb -o Output_dir/ -nc 8
 ```
 
-Orient using a GPU:
+Orient using a GPU (add `-sp` on consumer GeForce/RTX cards for a large speed-up):
 
 ```
-python PATH/TO/MemPrO.py -f input_file.pdb -o Output_dir/ -p gpu
+python PATH/TO/MemPrO.py -f input_file.pdb -o Output_dir/ -dev gpu
 ```
 
 A more detailed set of tutorials is available [here](MemPrO_tutorials.md).
