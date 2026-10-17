@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 from enum import Enum
-from functools import partial
+from functools import partial, lru_cache
 import datetime
 from jax import tree_util
 import shutil
@@ -1872,15 +1872,19 @@ class MemBrain:
 		
 
 	# Calculating the hydrophobic core for each starting configuration	
+	#Equivalent to get_hydro_core_v3_p1 for every starting direction: the neighbour hydrophobicity only depends on
+	#distances between beads, which rotation doesn't change, so the core is found once and then rotated
 	def get_starts(self,angs):
-		starts = []
-		angs_np = np.array(angs)
-		for angs_ind in angs_np:
-			start_zdir = position_point_jit(0,angs_ind[1],angs_ind[0],jnp.array([[0.0,0.0,1.0]]))[0]
-			start_xydir =  position_point_jit(0,angs_ind[1],0.0,jnp.array([[0.0,-1.0,0.0]]))[0,:2]
-			new_start_z = self.get_hydro_core_v3_p1(start_zdir,start_xydir)
-			starts.append(new_start_z)
-		return jnp.array(starts)	
+		sposes = jnp.asarray(self.surface_poses)
+		hydro_val = jnp.array(self.W_B_mins)[jnp.array(jax.device_get(self.bead_types),dtype=int)]
+		in_r = jnp.linalg.norm(sposes[:,None,:]-sposes[None,:,:],axis=-1) < 20
+		nnh = jnp.sum(in_r*hydro_val[None,:],axis=1)/jnp.sum(in_r,axis=1)
+		cut = jnp.percentile(nnh,98)
+		core = jnp.mean(sposes[nnh>=cut],axis=0)
+		angs = jnp.asarray(angs)
+		start_zdirs = jax.vmap(lambda a: position_point_jit(0,a[1],a[0],jnp.array([[0.0,0.0,1.0]]))[0])(angs)
+		start_xydirs = jax.vmap(lambda a: position_point_jit(0,a[1],0.0,jnp.array([[0.0,-1.0,0.0]]))[0,:2])(angs)
+		return jax.vmap(lambda zdir,xydir: position_pointv2(0,zdir,xydir,core[None])[0])(start_zdirs,start_xydirs)
 		
 	#A function that minimises on a set of different starting positions. This is important as there can be local minima
 	def minimise_on_grid(self,grid_size,start_z,zdist,angs,max_iter):
@@ -2045,45 +2049,23 @@ class MemBrain:
 		dtol_z = 5
 		dtol_p = 50
 		ep = 1-1e-6
+		#Two configurations are the same minimum if their direction, insertion depth and potential are all close.
+		#Each configuration takes the type of the first configuration it matches (a new type if that is itself),
+		#as the original nested scan did, but the pairwise tests are done all at once
+		dirs = res_spos[:,0,:]
+		ang_d = jnp.arccos(ep*jnp.sum(dirs[:,None,:]*dirs[None,:,:],axis=-1))
+		z_d = jnp.abs(sposs[:,1][:,None]-sposs[:,1][None,:])
+		p_d = jnp.abs(results[:,4][:,None]-results[:,4][None,:])
+		same = (ang_d < dtol_a)*(z_d < dtol_z)*(p_d < dtol_p)
+		first_match = jnp.where(jnp.any(same,axis=1),jnp.argmax(same,axis=1)+1,0)
 		def calc_no_poses_fun_1(minima_types,ind):
-			def calc_no_poses_fun_2(ind_fix,ind):
-				def is_same(ind_fix):
-					ind_fix = ind_fix.at[1].set(0)
-					ind_fix = ind_fix.at[2].set(ind+1)
-					return ind_fix
-				def is_not_same(ind_fix):
-					return ind_fix
-				distance = jnp.array([10.0,10.0,10.0])
-				def go(distance):
-					spos = sposs[ind]
-					sposf = sposs[ind_fix[0]]
-					distance = distance.at[0].set(jnp.arccos(ep*jnp.dot(res_spos[ind][0],res_spos[ind_fix[0]][0])))
-					distance = distance.at[1].set(jnp.abs(spos[1]-sposf[1]))
-					distance = distance.at[2].set(jnp.abs(results[ind][4]-results[ind_fix[0]][4]))
-					return distance
-				def stop(distance):
-					return distance
-				distance = jax.lax.cond(ind_fix[1] > 0.5,go,stop,distance)
-				ind_fix = jax.lax.cond((distance[0] < dtol_a)*(distance[1] < dtol_z)*(distance[2] < dtol_p),is_same,is_not_same,ind_fix)
-				return ind_fix,ind
-			ind_fix,_ = jax.lax.scan(calc_no_poses_fun_2,jnp.array([ind,1,0],dtype = "int"),jnp.arange(grid_size))
-			ind_type = ind_fix[2]
-			def is_prev(ind_type):
-				ind_type = minima_types[ind_type-1]
-				return ind_type
-			def is_not_prev(ind_type):
-				return ind_type
-			ind_type = jax.lax.cond(ind_type-1<ind,is_prev,is_not_prev,ind_type)
-			def is_big(ind_type,minima_types):
-				minima_types = minima_types.at[-1].set(minima_types[-1]+1)
-				ind_type = minima_types[-1]
-				return ind_type,minima_types
-			def is_not_big(ind_type,minima_types):
-				return ind_type,minima_types
-			ind_type,minima_types = jax.lax.cond(ind_type > minima_types[-1],is_big,is_not_big,ind_type,minima_types)
+			ind_type = first_match[ind]
+			ind_type = jnp.where(ind_type-1 < ind,minima_types[ind_type-1],ind_type)
+			is_big = ind_type > minima_types[-1]
+			minima_types = minima_types.at[-1].add(jnp.array(is_big,dtype=int))
+			ind_type = jnp.where(is_big,minima_types[-1],ind_type)
 			minima_types = minima_types.at[ind].set(ind_type)
 			return minima_types,ind
-			
 		minima_types,_= jax.lax.scan(calc_no_poses_fun_1,minima_types,jnp.arange(grid_size))
 		
 		
@@ -2658,6 +2640,7 @@ class MemBrain:
 		
 		npmem_im = np.array(self.new_memt_im)
 		npmem_om = np.array(self.new_memt_om)
+		npsurf = np.array(self.surface)
 
 		ranks = open(os.path.join(orient_dir,"orientation.txt"),"w")
 		all_orients = open(os.path.join(orient_dir,"orientations.pdb"),"w")
@@ -2710,12 +2693,9 @@ class MemBrain:
 					b_val = float(c[60:66].strip())
 					pos = np.array([float(xpos.strip()),float(ypos.strip()),float(zpos.strip())])
 					if(not np.any(np.isnan(pos))):
-						xp = np.format_float_positional(orient_poses[count][0],precision=3)
-						yp = np.format_float_positional(orient_poses[count][1],precision=3)
-						zp = np.format_float_positional(flip*orient_poses[count][2],precision=3)
-						xp += "0"*(3-len((xp.split(".")[1])))
-						yp += "0"*(3-len((yp.split(".")[1])))
-						zp += "0"*(3-len((zp.split(".")[1])))
+						xp = "%.3f" % (orient_poses[count][0])
+						yp = "%.3f" % (orient_poses[count][1])
+						zp = "%.3f" % (flip*orient_poses[count][2])
 						if(atom_num != prev_num):
 							if(neww):
 								strr += three2one(res)
@@ -2724,23 +2704,21 @@ class MemBrain:
 								strr += three2one(res)
 								strc += "N"
 							neww = False
-						bbp = np.format_float_positional(b_val,precision=3)
+						bbp = "%.3f" % (b_val)
 						if(self.dbmem):
 							if((npmem_im[i]/2 > orient_poses[count][2]+min_zdist[i] >-npmem_im[i]/2) or (npmem_om[i]/2 > orient_poses[count][2]-min_zdist[i] >-npmem_om[i]/2)):
 								neww = True
 						else:
 							if(npmem_im[i]/2 > orient_poses[count][2] >-npmem_im[i]/2):
 								neww = True
-						npsurf = np.array(self.surface)
 						if(not self.curva and self.write_bfac):
 							if(npsurf[self.map_to_beads[count]] == 1):
 								count_pb += 1
 								no_bead = int(np.sum(npsurf[:self.map_to_beads[count]]))
-								bbp = np.format_float_positional(pot_pb[no_bead],precision=3)
+								bbp = "%.3f" % (pot_pb[no_bead])
 							else:
-								bbp = np.format_float_positional(0,precision=3)
+								bbp = "%.3f" % (0)
 						
-						bbp += "0"*(3-len((bbp.split(".")[1])))
 						new_c = c[:30]+(" "*(8-len(xp)))+xp+(" "*(8-len(yp)))+yp+(" "*(8-len(zp))) +zp+c[54:60]+(" "*(8-len(bbp)))+bbp+c[66:]+"\n"						
 						new_file.write(new_c)
 						all_orients.write(new_c)
@@ -2781,8 +2759,8 @@ class MemBrain:
 			ys = np.array(ys)
 			for zind in range(2):
 				zz = (2*zind)-1
-				mem_totals = [self.memt_heads_om+self.new_memt_om[i],self.memt_heads+self.new_memt_im[i]]
-				mem_tails = [self.new_memt_om[i],self.new_memt_im[i]]
+				mem_totals = [float(self.memt_heads_om+npmem_om[i]),float(self.memt_heads+npmem_im[i])]
+				mem_tails = [float(npmem_om[i]),float(npmem_im[i])]
 				if(zz == 1 or abs(min_zdist[i]) > 1e-5):
 					for xi in range(xyz.shape[0]):
 						pos = xyz[xi]
@@ -2792,12 +2770,9 @@ class MemBrain:
 							count += 1
 							count_str = (6-len(str(count)))*" "+str(count)
 							c = "ATOM "+count_str+" BB   DUM Z   1	   0.000   0.000  15.000  1.00  0.00" 
-							xp = np.format_float_positional(pos[0]+xk*norma[0],precision=3)
-							yp = np.format_float_positional(pos[1]+xk*norma[1],precision=3)
-							zp = np.format_float_positional(flip*(pos[2]+xk*norma[2]),precision=3)
-							xp += "0"*(3-len((xp.split(".")[1])))
-							yp += "0"*(3-len((yp.split(".")[1])))
-							zp += "0"*(3-len((zp.split(".")[1])))
+							xp = "%.3f" % (pos[0]+xk*norma[0])
+							yp = "%.3f" % (pos[1]+xk*norma[1])
+							zp = "%.3f" % (flip*(pos[2]+xk*norma[2]))
 							new_c = c[:30]+(" "*(8-len(xp)))+xp+(" "*(8-len(yp)))+yp+(" "*(8-len(zp))) +zp+c[54:]+"\n"	
 							new_file.write(new_c)
 							all_orients.write(new_c)
@@ -2834,12 +2809,10 @@ class MemBrain:
 					count += 1
 					count_str = (6-len(str(count)))*" "+str(count)
 					c = "ATOM "+count_str+" BB   PGL Z   1	   0.000   0.000  15.000  1.00  0.00" 
-					xp = np.format_float_positional(pos[0],precision=3)
-					yp = np.format_float_positional(pos[1],precision=3)
+					xp = "%.3f" % (pos[0])
+					yp = "%.3f" % (pos[1])
 					zpa = np.format_float_positional(flip*(pg_pos+self.pg_thickness/2),precision=3)
 					zpb = np.format_float_positional(flip*(pg_pos-self.pg_thickness/2),precision=3)
-					xp += "0"*(3-len((xp.split(".")[1])))
-					yp += "0"*(3-len((yp.split(".")[1])))
 					zpa += "0"*(3-len((zpa.split(".")[1])))
 					zpb += "0"*(3-len((zpb.split(".")[1])))
 					new_c = c[:30]+(" "*(8-len(xp)))+xp+(" "*(8-len(yp)))+yp+(" "*(8-len(zpa))) +zpa+c[54:]+"\n"	
@@ -3152,14 +3125,19 @@ def create_disk_grid_charg(bsize,rad):
 	theta = _spiral_theta(bsize)
 	return jnp.array(np.stack([phi*np.cos(theta),phi*np.sin(theta),np.zeros(bsize)],axis=1))
 
+#The martini file is read once rather than for every bead pair
+@lru_cache(maxsize=None)
+def read_martini_lines(martini_file):
+	with open(martini_file,"r") as mfile:
+		return tuple(mfile.readlines())
+
 #A fucntion that reads a martini file to get interaction strengths
 def get_int_strength(bead_1,bead_2,martini_file):
 	if(bead_2 == "GHOST"):
 		return 0
 	string = " "*(6-len(bead_1))+bead_1+" "*(6-len(bead_2))+bead_2
 	string2 = " "*(6-len(bead_2))+bead_2+" "*(6-len(bead_1))+bead_1
-	mfile = open(martini_file,"r")
-	content = mfile.readlines()
+	content = read_martini_lines(martini_file)
 	for i,line in enumerate(content):
 		if(string in line or string2 in line):
 			return -float(line[32:45])
