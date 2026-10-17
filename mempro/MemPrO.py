@@ -60,7 +60,10 @@ AtomsToBead = [[["N","C","O"],["CB"]],[["N","C","O","CA"]],[["N","C","O"],["CB",
 	
 #We need to force JAX to fully utilize a multi-core cpu
 no_cpu = int(os.environ.get("NUM_CPU", os.cpu_count()))
-os.environ["XLA_FLAGS"] = "--xla_cpu_use_thunk_runtime=false --xla_force_host_platform_device_count="+str(no_cpu)
+os.environ["XLA_FLAGS"] = (os.environ.get("XLA_FLAGS", "")+" --xla_force_host_platform_device_count="+str(no_cpu)).strip()
+#The legacy (non-thunk) CPU runtime is faster for MemPrO's scan/cond-heavy loops but only exists up to JAX 0.6.0
+if tuple(int(v) for v in jax.__version__.split(".")[:3] if v.isdigit()) <= (0,6,0):
+	os.environ["XLA_FLAGS"] += " --xla_cpu_use_thunk_runtime=false"
 
 
 #This is useful for debugging nans in grad
@@ -70,8 +73,9 @@ os.environ["XLA_FLAGS"] = "--xla_cpu_use_thunk_runtime=false --xla_force_host_pl
 config.update("jax_enable_x64",True)
 config.update("jax_platform_name","cpu")
 
-mesh = jax.make_mesh((no_cpu,1), ('x', 'y'))
-mesh0 = jax.make_mesh((no_cpu,), ('x'))
+#Auto sharding (the default up to JAX 0.6) lets XLA infer gather/scatter shardings; newer JAX defaults to Explicit
+mesh = jax.make_mesh((no_cpu,1), ('x', 'y'), axis_types=(jax.sharding.AxisType.Auto,)*2)
+mesh0 = jax.make_mesh((no_cpu,), ('x'), axis_types=(jax.sharding.AxisType.Auto,))
 sharding = jax.sharding.NamedSharding(mesh, jax.sharding.PartitionSpec('x', 'y'))
 sharding0 = jax.sharding.NamedSharding(mesh0, jax.sharding.PartitionSpec('x'))
 devices = jax.devices()
