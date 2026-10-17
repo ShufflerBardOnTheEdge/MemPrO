@@ -939,18 +939,13 @@ class MemBrain:
 
 		
 	#We define new functions that let us have a double membrane (OM/IM)
+	#dbmem is a static flag, so it is resolved in Python rather than traced as a cond
 	@jax.jit
 	def dmsj(self,x,zdist,grad,bead_num,mem_structure_im,mem_structure_om):
-		def not_zero():
-			def memcon_s():
-				return mem_structure_im.copy()
-			def memcon_d():
-				return mem_structure_om.copy()
-			mem_structure = jax.lax.cond(x > 0,memcon_d,memcon_s)
-			return self.smj(-jnp.abs(x)+zdist,grad,bead_num,mem_structure)
-		def zero():
+		if not self.dbmem:
 			return self.smj(-jnp.abs(x)+zdist,grad,bead_num,mem_structure_im)
-		return jax.lax.cond(not self.dbmem,zero,not_zero)
+		mem_structure = jnp.where(x > 0,mem_structure_om,mem_structure_im)
+		return self.smj(-jnp.abs(x)+zdist,grad,bead_num,mem_structure)
 		
 	#This function plots a cross section of the potential field
 	def plot_potential(self,bead_num):
@@ -977,47 +972,35 @@ class MemBrain:
 
 	
 	#A function to calculate the potential of a bead at a given z position
-	#This is done by calculating the potential of each free direction 
+	#This is done by calculating the potential of each free direction
+	#Vectorised over directions: padded (zero) directions are masked out rather than skipped with a cond
 	@jax.jit
-	def calc_pot_at_z_jit(self,z,zdist,ball,bead_type,curv,mem_structure_im,mem_structure_om):	
-		plmi = jnp.sign(curv)		
+	def calc_pot_at_z_jit(self,z,zdist,ball,bead_type,curv,mem_structure_im,mem_structure_om):
+		plmi = jnp.sign(curv)
 		smoothness = 2
-		tot_pot_count = jnp.zeros(2)
-		def calc_pot_fun_1(tot_pot_count,ind):
-			def pot_cond_0(tot_pot_count):
-				return tot_pot_count
-			def not_pot_cond_0(tot_pot_count):
-				def zero_curv():
-					cenz1 = 1e6
-					cenz2 = -1e6
-					cen1 = jnp.array([0.0,0.0,cenz1])
-					cen2 = jnp.array([0.0,0.0,cenz2])
-					circ_pos = ball[ind,:]+z[:]
-					zpos1 = -(jnp.linalg.norm(circ_pos-cen1)-jnp.abs(cenz1))
-					zpos2 = jnp.linalg.norm(circ_pos-cen2)-jnp.abs(cenz2)		
-					tot_pot1 = self.surf_b_vals[ind]*self.dmsj(zpos1,zdist,smoothness,bead_type,mem_structure_im,mem_structure_om)
-					tot_pot2 = self.surf_b_vals[ind]*self.dmsj(zpos2,zdist,smoothness,bead_type,mem_structure_im,mem_structure_om)
-					adj_tot_pot = ((tot_pot2-tot_pot1)/2e-6)*curv+(tot_pot1+tot_pot2)/2
-					return adj_tot_pot
-				def nzero_curv():
-					cenz = -1.0/(curv+plmi*1e-9)
-					cen = jnp.array([0.0,0.0,cenz])
-					circ_pos = ball[ind,:]+z[:]
-					zpos = jnp.sign(curv)*(jnp.linalg.norm(circ_pos-cen)-jnp.abs(cenz))
-					adj_tot_pot = self.surf_b_vals[ind]*self.dmsj(zpos,zdist,smoothness,bead_type,mem_structure_im,mem_structure_om)
-					return adj_tot_pot
-				adj_tot_pot = jax.lax.cond(jnp.abs(curv) < 1e-6,zero_curv,nzero_curv)				
-				
-				
-				
-				tot_pot_count = tot_pot_count.at[1].set(tot_pot_count[1]+1)
-				tot_pot_count = tot_pot_count.at[0].set(tot_pot_count[0]+adj_tot_pot)
-				return tot_pot_count
-			tot_pot_count = jax.lax.cond(jnp.linalg.norm(ball[ind]) < 1e-5,pot_cond_0,not_pot_cond_0,tot_pot_count)
-			return tot_pot_count,ind
-		tot_pot_count,_ = jax.lax.scan(calc_pot_fun_1,tot_pot_count,jnp.arange(ball.shape[0]))
-		tot_pot = tot_pot_count[0]/(tot_pot_count[1]+1e-5)
-		return tot_pot
+		#NOTE: indexed by direction, as in the original scan (self.surf_b_vals[ind] with ind over ball)
+		b_vals = self.surf_b_vals[jnp.arange(ball.shape[0])]
+		circ_pos = ball+z
+		dmsj_v = jax.vmap(self.dmsj,in_axes=(0,None,None,None,None,None))
+		def zero_curv():
+			cenz1 = 1e6
+			cenz2 = -1e6
+			cen1 = jnp.array([0.0,0.0,cenz1])
+			cen2 = jnp.array([0.0,0.0,cenz2])
+			zpos1 = -(jnp.linalg.norm(circ_pos-cen1,axis=1)-jnp.abs(cenz1))
+			zpos2 = jnp.linalg.norm(circ_pos-cen2,axis=1)-jnp.abs(cenz2)
+			tot_pot1 = b_vals*dmsj_v(zpos1,zdist,smoothness,bead_type,mem_structure_im,mem_structure_om)
+			tot_pot2 = b_vals*dmsj_v(zpos2,zdist,smoothness,bead_type,mem_structure_im,mem_structure_om)
+			return ((tot_pot2-tot_pot1)/2e-6)*curv+(tot_pot1+tot_pot2)/2
+		def nzero_curv():
+			cenz = -1.0/(curv+plmi*1e-9)
+			cen = jnp.array([0.0,0.0,cenz])
+			zpos = jnp.sign(curv)*(jnp.linalg.norm(circ_pos-cen,axis=1)-jnp.abs(cenz))
+			return b_vals*dmsj_v(zpos,zdist,smoothness,bead_type,mem_structure_im,mem_structure_om)
+		adj_tot_pot = jax.lax.cond(jnp.abs(curv) < 1e-6,zero_curv,nzero_curv)
+		used = jnp.linalg.norm(ball,axis=1) >= 1e-5
+		tot_pot = jnp.sum(jnp.where(used,adj_tot_pot,0.0))
+		return tot_pot/(jnp.sum(used)+1e-5)
 		
 	#This is another function to polt the potential but for differing curvatures
 	def show_pfield(self,bead_type,curv):
@@ -1128,29 +1111,20 @@ class MemBrain:
 		charge_val = jax.lax.cond(not self.dbmem,zero,not_zero,charge_val)
 		return charge_val
 	#This is the currently in use charge function. As noted before this may not be the most accurate and further investigation is required.
+	#Vectorised over the charge grid; per-point branches are jnp.where (with a safe divisor so unselected branches stay finite)
 	@jax.jit
-	def new_charge(self,z,zdist,curv,bead_type,mem_structure_im,mem_structure_om,c_scal):		
+	def new_charge(self,z,zdist,curv,bead_type,mem_structure_im,mem_structure_om,c_scal):
 		charge_const = -92.64 #This is hard coded calculated such that units line up with paramters from martini
 		charge_const_im = charge_const*(self.charge_mult)*self.Charge_B_mins[bead_type]
 		charge_const_om = charge_const*(self.charge_mult_om)*self.Charge_B_mins[bead_type]
-		tot_charge = 0
 		zpos = z+zdist
 		grid_ex = 11
 		grid_nums = 50
 		dx = jnp.pi*grid_ex*grid_ex/grid_nums
-		def in_charge(x,msa,msb):
-			return x
-		def not_in_charge(x,msa,msb):
-			def above(x,msa,msb):
-				retval = msa
-				return retval
-			def below(x,msa,msb):
-				retval = msb
-				return retval
-			retval = jax.lax.cond(x>msa,above,below,x,msa,msb)
-			return retval
-		zposa = jax.lax.cond((zpos<mem_structure_im[3])*(zpos>mem_structure_im[0]),in_charge,not_in_charge,zpos,mem_structure_im[3],mem_structure_im[0])
-		zposb = jax.lax.cond((zpos<mem_structure_im[7])*(zpos>mem_structure_im[4]),in_charge,not_in_charge,zpos,mem_structure_im[7],mem_structure_im[4])
+		def clamp(x,msa,msb):
+			return jnp.where((x<msa)*(x>msb),x,jnp.where(x>msa,msa,msb))
+		zposa = clamp(zpos,mem_structure_im[3],mem_structure_im[0])
+		zposb = clamp(zpos,mem_structure_im[7],mem_structure_im[4])
 		
 		def zero_curv():
 			return create_disk_grid_charg(grid_nums,grid_ex),1.0
@@ -1162,7 +1136,7 @@ class MemBrain:
 			
 			acc_end_ang = jnp.arccos(1-(grid_nums+0.5)/end_ang)
 			area_c = 2*jnp.pi*orad*orad*(1-jnp.cos(acc_end_ang))
-			area_mult = area_c/(jnp.pi*grid_ex*grid_ex)		
+			area_mult = area_c/(jnp.pi*grid_ex*grid_ex)
 			grid = jnp.sign(curv)*create_sph_grid_charg(grid_nums,end_ang,orad)
 			return grid,area_mult
 		def nzero_curvb():
@@ -1171,51 +1145,28 @@ class MemBrain:
 			end_ang = (grid_nums+0.5)/(1-jnp.sqrt(1-toobig*toobig))
 			acc_end_ang = jnp.arccos(1-(grid_nums+0.5)/end_ang)
 			area_c = 2*jnp.pi*orad*orad*(1-jnp.cos(acc_end_ang))
-			area_mult = area_c/(jnp.pi*grid_ex*grid_ex)		
+			area_mult = area_c/(jnp.pi*grid_ex*grid_ex)
 			
 			grid = jnp.sign(curv)*create_sph_grid_charg(grid_nums,end_ang,orad)
 			return grid,area_mult
-		grid_a,aream_a = jax.lax.cond(jnp.abs(curv)< 1e-6,zero_curv,nzero_curva)			
-		grid_b,aream_b = jax.lax.cond(jnp.abs(curv)< 1e-6,zero_curv,nzero_curvb)	
-		charge_val = 0
+		grid_a,aream_a = jax.lax.cond(jnp.abs(curv)< 1e-6,zero_curv,nzero_curva)
+		grid_b,aream_b = jax.lax.cond(jnp.abs(curv)< 1e-6,zero_curv,nzero_curvb)
 		acmin = c_scal*1e-2*self.Charge_B_mins[bead_type]
 		bcmin = 0
-		def calc_charge_fun(carry,ind):
-			tot_charge,grid=carry
-			zpos = z+tot_charge[2]
-			point_a = jnp.array([0.0,0.0,zpos])
-			point_b = jnp.array([grid[ind,0],grid[ind,1],grid[ind,2]+tot_charge[1]+1e-5])
-			dist = jnp.linalg.norm(point_a-point_b)
-			def not_cutoff(tot_charge):
-				def lfive(tot_charge):
-					tot_charge = tot_charge.at[0].set(tot_charge[0]+dx*(tot_charge[3]/5.0-tot_charge[3]/grid_ex))
-					return tot_charge
-				def gfive(tot_charge):
-					tot_charge = tot_charge.at[0].set(tot_charge[0]+dx*(tot_charge[3]/(jnp.abs(dist))-tot_charge[3]/grid_ex))
-					return tot_charge
-				tot_charge = jax.lax.cond(dist < 5, lfive,gfive,tot_charge)
-				return tot_charge
-			def cutoff(tot_charge):
-				return tot_charge
-			tot_charge = jax.lax.cond(dist > grid_ex,cutoff,not_cutoff,tot_charge)
-			return (tot_charge,grid),ind
-		(retval,_),_=jax.lax.scan(calc_charge_fun,(jnp.array([0,zposa,zdist,charge_const_im-acmin]),grid_a),jnp.arange(grid_nums))
-		(retvalb,_),_=jax.lax.scan(calc_charge_fun,(jnp.array([0,zposb,zdist,charge_const_im-bcmin]),grid_b),jnp.arange(grid_nums))
-		charge_val = retval[0]*aream_a+retvalb[0]*aream_b
-		def zero(charge_val):
-			return charge_val
-		def not_zero(charge_val):
+		#Sum over grid points of the charge sheet: zero beyond grid_ex, flat inside 5 A
+		def calc_charge(grid,grid_z,z_shift,q):
+			diff = jnp.stack([-grid[:,0],-grid[:,1],(z+z_shift)-(grid[:,2]+grid_z+1e-5)],axis=1)
+			dist = jnp.linalg.norm(diff,axis=1)
+			safe_dist = jnp.where(dist < 5,5.0,dist)
+			inner = jnp.where(dist < 5,dx*(q/5.0-q/grid_ex),dx*(q/jnp.abs(safe_dist)-q/grid_ex))
+			return jnp.sum(jnp.where(dist > grid_ex,0.0,inner))
+		charge_val = calc_charge(grid_a,zposa,zdist,charge_const_im-acmin)*aream_a+calc_charge(grid_b,zposb,zdist,charge_const_im-bcmin)*aream_b
+		if self.dbmem:
 			zpos = z-zdist
 			grid_temp = create_disk_grid_charg(grid_nums,grid_ex)
-			zposa = jax.lax.cond((zpos<mem_structure_om[3])*(zpos>mem_structure_om[0]),in_charge,not_in_charge,zpos,mem_structure_om[3],mem_structure_om[0])
-			zposb = jax.lax.cond((zpos<mem_structure_om[7])*(zpos>mem_structure_om[4]),in_charge,not_in_charge,zpos,mem_structure_om[7],mem_structure_om[4])
-			(retvalc,_),_=jax.lax.scan(calc_charge_fun,(jnp.array([0,zposa,-zdist,charge_const_om-acmin]),grid_temp),jnp.arange(grid_nums))
-			(retvald,_),_=jax.lax.scan(calc_charge_fun,(jnp.array([0,zposb,-zdist,charge_const_om-bcmin]),grid_temp),jnp.arange(grid_nums))
-		
-			charge_val += retvalc[0] + retvald[0]
-			
-			return charge_val
-		charge_val = jax.lax.cond(not self.dbmem,zero,not_zero,charge_val)#?
+			zposa = clamp(zpos,mem_structure_om[3],mem_structure_om[0])
+			zposb = clamp(zpos,mem_structure_om[7],mem_structure_om[4])
+			charge_val += calc_charge(grid_temp,zposa,-zdist,charge_const_om-acmin) + calc_charge(grid_temp,zposb,-zdist,charge_const_om-bcmin)
 		return charge_val
 		
 	#As above but for the PG layer
@@ -1265,145 +1216,58 @@ class MemBrain:
 		return charge_val
 			
 					
+	#Potential of every surface bead for a given position (charge + membrane terms), vectorised over beads
+	def bead_pots(self,position,mem_structure_im,mem_structure_om,c_scal):
+		zdist_temp = position[0]
+		in_depth = position[1]
+		ang1 = position[2:5]
+		ang2 = position[5:7]
+		curv = position[7]/10
+		plmi = jnp.sign(curv)
+		ang1 /= jnp.linalg.norm(ang1)
+		zdist = jnp.abs(zdist_temp*jnp.dot(ang1,jnp.array([0.0,0.0,1.0])))
+		tester_poses = position_pointv2_jit(in_depth,ang1,ang2,self.surface_poses)
+		test_spheres = jax.vmap(position_pointv2_jit,in_axes=(None,None,None,0))(0,ang1,ang2,self.spheres)
+		charge_v = jax.vmap(self.new_charge,in_axes=(0,None,None,0,None,None,None))
+		def zero_curv():
+			cenz1 = 1e6
+			cenz2 = -1e6
+			cen1 = jnp.array([0.0,0.0,cenz1])
+			cen2 = jnp.array([0.0,0.0,cenz2])
+			zpos1 = -(jnp.linalg.norm(tester_poses-cen1,axis=1)-jnp.abs(cenz1))
+			zpos2 = jnp.linalg.norm(tester_poses-cen2,axis=1)-jnp.abs(cenz2)
+			tot_pot1 = self.surf_b_vals*charge_v(zpos1,zdist,-1e-6,self.bead_types,mem_structure_im,mem_structure_om,c_scal)
+			tot_pot2 = self.surf_b_vals*charge_v(zpos2,zdist,1e-6,self.bead_types,mem_structure_im,mem_structure_om,c_scal)
+			return ((tot_pot2-tot_pot1)/2e-6)*curv+(tot_pot1+tot_pot2)/2
+		def nzero_curv():
+			cenz = -1.0/(curv+plmi*1e-9)
+			cen = jnp.array([0.0,0.0,cenz])
+			zpos = jnp.sign(curv)*(jnp.linalg.norm(tester_poses-cen,axis=1)-jnp.abs(cenz))
+			return self.surf_b_vals*charge_v(zpos,zdist,curv,self.bead_types,mem_structure_im,mem_structure_om,c_scal)
+		charge_pot = jax.lax.cond(jnp.abs(curv) < 1e-6,zero_curv,nzero_curv)
+		mem_pot = self.surf_b_vals*jax.vmap(self.calc_pot_at_z_jit,in_axes=(0,None,0,0,None,None,None))(tester_poses,zdist,test_spheres,self.bead_types,curv,mem_structure_im,mem_structure_om)
+		return charge_pot+mem_pot
+		
 	#A function that calculates if a protein is fully ejected from the membrane
 	@jax.jit
 	def calc_in_water_jit(self,position,tol,mem_structure_im,mem_structure_om):
-		zdist_temp = position[0]
-		in_depth = position[1]
-		ang1 = position[2:5]
-		ang2 = position[5:7]
-		curv = position[7]/10
-		ang1 /= jnp.linalg.norm(ang1)
-		plmi = jnp.sign(curv)
-		zdist = jnp.abs(zdist_temp*jnp.dot(ang1,jnp.array([0.0,0.0,1.0])))
-		tester_poses = position_pointv2_jit(in_depth,ang1,ang2,self.surface_poses)
-		def rot_spheres(carry,ind):
-			new_spheres = position_pointv2_jit(0,ang1,ang2,self.spheres[ind])
-			return carry,new_spheres
-		_,test_spheres = jax.lax.scan(rot_spheres,0,jnp.arange(self.spheres.shape[0]))
-		tot_pot = 0
-		def calc_pot_fun_1(tot_pot,ind):
-			def zero_curv(tot_pot):
-				cenz1 = 1e6
-				cenz2 = -1e6
-				cen1 = jnp.array([0.0,0.0,cenz1])
-				cen2 = jnp.array([0.0,0.0,cenz2])
-				circ_pos = tester_poses[ind,:]
-				zpos1 = -(jnp.linalg.norm(circ_pos-cen1)-jnp.abs(cenz1))
-				zpos2 = jnp.linalg.norm(circ_pos-cen2)-jnp.abs(cenz2)		
-				tot_pot1 = self.surf_b_vals[ind]*self.new_charge(zpos1,zdist,-1e-6,self.bead_types[ind],mem_structure_im,mem_structure_om,1)
-				tot_pot2 = self.surf_b_vals[ind]*self.new_charge(zpos2,zdist,1e-6,self.bead_types[ind],mem_structure_im,mem_structure_om,1)
-				adj_tot_pot = ((tot_pot2-tot_pot1)/2e-6)*curv+(tot_pot1+tot_pot2)/2
-				tot_pot += adj_tot_pot
-				return tot_pot
-			def nzero_curv(tot_pot):
-				cenz = -1.0/(curv+plmi*1e-9)
-				cen = jnp.array([0.0,0.0,cenz])
-				circ_pos = tester_poses[ind,:]
-				zpos = jnp.sign(curv)*(jnp.linalg.norm(circ_pos-cen)-jnp.abs(cenz))
-				tot_pot += self.surf_b_vals[ind]*self.new_charge(zpos,zdist,curv,self.bead_types[ind],mem_structure_im,mem_structure_om,1)
-				return tot_pot
-			tot_pot = jax.lax.cond(jnp.abs(curv) < 1e-6,zero_curv,nzero_curv,tot_pot)
-			tot_pot += self.surf_b_vals[ind]*self.calc_pot_at_z_jit(tester_poses[ind,:],zdist,test_spheres[ind],self.bead_types[ind],curv,mem_structure_im,mem_structure_om)
-			
-			return tot_pot,ind
-		tot_pot,_ = jax.lax.scan(calc_pot_fun_1,tot_pot,jnp.arange(tester_poses.shape[0]))
-		return tot_pot<tol
+		return jnp.sum(self.bead_pots(position,mem_structure_im,mem_structure_om,1))<tol
 
 
 	#A function that calculates the potential of the protein for a given position
-	#@jax.jit			
+	#@jax.jit
 	def calc_pot_jit(self,position,mem_structure_im,mem_structure_om,c_scal):
-		disp_penalty = 0.025
-		zdist_temp = position[0]
-		in_depth = position[1]
-		ang1 = position[2:5]
-		ang2 = position[5:7]
 		curv = position[7]/10
-		plmi = jnp.sign(curv)
-		ang1 /= jnp.linalg.norm(ang1)
-		zdist = jnp.abs(zdist_temp*jnp.dot(ang1,jnp.array([0.0,0.0,1.0])))
-		tester_poses = position_pointv2_jit(in_depth,ang1,ang2,self.surface_poses)
-		def rot_spheres(carry,ind):
-			new_spheres = position_pointv2_jit(0,ang1,ang2,self.spheres[ind])
-			return carry,new_spheres
-		_,test_spheres = jax.lax.scan(rot_spheres,0,jnp.arange(self.spheres.shape[0]))
-		tot_pot = 0.0
-		def calc_pot_fun_1(tot_pot,ind):
-			def zero_curv(tot_pot):
-				cenz1 = 1e6
-				cenz2 = -1e6
-				cen1 = jnp.array([0.0,0.0,cenz1])
-				cen2 = jnp.array([0.0,0.0,cenz2])
-				circ_pos = tester_poses[ind,:]
-				zpos1 = -(jnp.linalg.norm(circ_pos-cen1)-jnp.abs(cenz1))	
-				zpos2 = jnp.linalg.norm(circ_pos-cen2)-jnp.abs(cenz2)		
-				tot_pot1 = self.surf_b_vals[ind]*self.new_charge(zpos1,zdist,-1e-6,self.bead_types[ind],mem_structure_im,mem_structure_om,c_scal)
-				tot_pot2 = self.surf_b_vals[ind]*self.new_charge(zpos2,zdist,1e-6,self.bead_types[ind],mem_structure_im,mem_structure_om,c_scal)		
-				adj_tot_pot = ((tot_pot2-tot_pot1)/2e-6)*curv+(tot_pot1+tot_pot2)/2
-				tot_pot += adj_tot_pot
-				return tot_pot
-			def nzero_curv(tot_pot):
-				cenz = -1.0/(curv+plmi*1e-9)
-				cen = jnp.array([0.0,0.0,cenz])
-				circ_pos = tester_poses[ind,:]
-				zpos = jnp.sign(curv)*(jnp.linalg.norm(circ_pos-cen)-jnp.abs(cenz))
-				tot_pot += self.surf_b_vals[ind]*self.new_charge(zpos,zdist,curv,self.bead_types[ind],mem_structure_im,mem_structure_om,c_scal)
-				return tot_pot
-			tot_pot = jax.lax.cond(jnp.abs(curv) < 1e-6,zero_curv,nzero_curv,tot_pot)
-			tot_pot += self.surf_b_vals[ind]*self.calc_pot_at_z_jit(tester_poses[ind,:],zdist,test_spheres[ind],self.bead_types[ind],curv,mem_structure_im,mem_structure_om)
-			
-			return tot_pot,ind
-		tot_pot,_ = jax.lax.scan(calc_pot_fun_1,tot_pot,jnp.arange(tester_poses.shape[0]))
+		tot_pot = jnp.sum(self.bead_pots(position,mem_structure_im,mem_structure_om,c_scal))
 		return tot_pot + 10000*jnp.abs(curv)*sj(jnp.abs(curv)-0.02,10000)
 		
 		
 		
 	#This function calulates the potential as a vector of each bead's contribution. This is used when writing this info to PDB file.
 	#It is particularially useful when trying to understand why certain orientations are not working.
-	@jax.jit			
+	@jax.jit
 	def calc_pot_per_bead(self,position,mem_structure_im,mem_structure_om):
-		zdist_temp = position[0]
-		in_depth = position[1]
-		ang1 = position[2:5]
-		ang2 = position[5:7]
-		curv = position[7]/10
-		plmi = jnp.sign(curv)
-		ang1 /= jnp.linalg.norm(ang1)
-		zdist = jnp.abs(zdist_temp*jnp.dot(ang1,jnp.array([0.0,0.0,1.0])))
-		tester_poses = position_pointv2_jit(in_depth,ang1,ang2,self.surface_poses)
-		def rot_spheres(carry,ind):
-			new_spheres = position_pointv2_jit(0,ang1,ang2,self.spheres[ind])
-			return carry,new_spheres
-		_,test_spheres = jax.lax.scan(rot_spheres,0,jnp.arange(self.spheres.shape[0]))
-		tot_pot = jnp.zeros(tester_poses.shape[0])
-		def calc_pot_fun_1(tot_pot,ind):
-			def zero_curv(tot_pot):
-				cenz1 = 1e6
-				cenz2 = -1e6
-				cen1 = jnp.array([0.0,0.0,cenz1])
-				cen2 = jnp.array([0.0,0.0,cenz2])
-				circ_pos = tester_poses[ind,:]
-				zpos1 = -(jnp.linalg.norm(circ_pos-cen1)-jnp.abs(cenz1))	
-				zpos2 = jnp.linalg.norm(circ_pos-cen2)-jnp.abs(cenz2)		
-				tot_pot1 = self.surf_b_vals[ind]*self.new_charge(zpos1,zdist,-1e-6,self.bead_types[ind],mem_structure_im,mem_structure_om,1)
-				tot_pot2 = self.surf_b_vals[ind]*self.new_charge(zpos2,zdist,1e-6,self.bead_types[ind],mem_structure_im,mem_structure_om,1)
-				adj_tot_pot = ((tot_pot2-tot_pot1)/2e-6)*curv+(tot_pot1+tot_pot2)/2
-				tot_pot = tot_pot.at[ind].set(tot_pot[ind]+adj_tot_pot)
-				return tot_pot
-			def nzero_curv(tot_pot):
-				cenz = -1.0/(curv+plmi*1e-9)
-				cen = jnp.array([0.0,0.0,cenz])
-				circ_pos = tester_poses[ind,:]
-				zpos = jnp.sign(curv)*(jnp.linalg.norm(circ_pos-cen)-jnp.abs(cenz))
-				tot_pot = tot_pot.at[ind].set(tot_pot[ind]+self.surf_b_vals[ind]*self.new_charge(zpos,zdist,curv,self.bead_types[ind],mem_structure_im,mem_structure_om,1))
-				return tot_pot
-			tot_pot = jax.lax.cond(jnp.abs(curv) < 1e-6,zero_curv,nzero_curv,tot_pot)
-			tot_pot = tot_pot.at[ind].set(tot_pot[ind]+self.surf_b_vals[ind]*self.calc_pot_at_z_jit(tester_poses[ind,:],zdist,test_spheres[ind],self.bead_types[ind],curv,mem_structure_im,mem_structure_om))
-			
-			return tot_pot,ind
-		tot_pot,_ = jax.lax.scan(calc_pot_fun_1,tot_pot,jnp.arange(tester_poses.shape[0]))
-		return 100.0*tot_pot
+		return 100.0*self.bead_pots(position,mem_structure_im,mem_structure_om,1)
 		
 	#Function to calculate the potential of the PG layer at a given z
 	@jax.jit			
@@ -3042,18 +2906,7 @@ def write_point(points,fn,orient_dir):
 	
 #A sigmoid function
 def sigmoid(x,grad):
-	ret_val = -x*grad
-	def overflow_pos(ret_val):
-		ret_val = 100.0
-		return ret_val
-	def overflow_neg(ret_val):
-		ret_val = -100.0
-		return ret_val
-	def not_overflow(ret_val):
-		return ret_val
-	
-	ret_val = jax.lax.cond(-x*grad>100,overflow_pos,not_overflow,ret_val)
-	ret_val = jax.lax.cond(-x*grad<-100,overflow_neg,not_overflow,ret_val)
+	ret_val = jnp.clip(-x*grad,-100.0,100.0) #Avoids overflow in exp
 	return 1.0/(1.0+jnp.exp(ret_val))
 	
 sj = jax.jit(sigmoid)
@@ -3204,34 +3057,25 @@ def create_sph_grid(bsize):
 	sgrid,_ = jax.lax.scan(ball_fun_3,sgrid,np.arange(bsize))
 	return sgrid
 	
+#Fibonacci spiral angles, wrapped into [0, 2pi] exactly as the original while loops did (static, so done in numpy)
+def _spiral_theta(bsize):
+	gr = (1+np.sqrt(5))/2
+	thetas = []
+	for ind in range(bsize):
+		theta = np.pi*(ind+0.5)*(gr)*2
+		while theta > np.pi*2:
+			theta = theta - 2*np.pi
+		while theta < 0:
+			theta = theta + 2*np.pi
+		thetas.append(theta)
+	return np.array(thetas)
+
 def create_sph_grid_charg(bsize,end_ang,orad):
 	bsize_true = jnp.array(end_ang,dtype=int)
-	
-	
-	sgrid = jnp.zeros((bsize,3))
-	gr = (1+jnp.sqrt(5))/2
-	def ball_fun_3(sgrid,ind):
-		phi = jnp.arccos(1-2*(ind+0.5)/(bsize_true*2))
-		theta = jnp.pi*(ind+0.5)*(gr)*2
-		def norm_fun_1(theta):
-			theta = theta - 2*jnp.pi
-			return theta
-		def norm_cond_1(theta):
-			return theta > jnp.pi*2
-		
-		def norm_fun_2(theta):
-			theta = theta + 2*jnp.pi
-			return theta
-		def norm_cond_2(theta):
-			return theta < 0
-			
-		theta = jax.lax.while_loop(norm_cond_1,norm_fun_1,theta)
-		theta = jax.lax.while_loop(norm_cond_2,norm_fun_2,theta)
-		sgrid = sgrid.at[ind].set(orad*jnp.array([jnp.cos(theta)*jnp.sin(phi),jnp.sin(theta)*jnp.sin(phi),jnp.cos(phi)-1]))
-		return sgrid, ind
-		
-	sgrid,_ = jax.lax.scan(ball_fun_3,sgrid,np.arange(bsize))
-	return sgrid
+	ind = np.arange(bsize)
+	theta = _spiral_theta(bsize)
+	phi = jnp.arccos(1-2*(ind+0.5)/(bsize_true*2))
+	return orad*jnp.stack([np.cos(theta)*jnp.sin(phi),np.sin(theta)*jnp.sin(phi),jnp.cos(phi)-1],axis=1)
 	
 #A function that returns an array of points on a disk using a fibbonacci spiral lattice
 @partial(jax.jit,static_argnums=(0,1))
@@ -3262,32 +3106,10 @@ def create_disk_grid(bsize,rad):
 	return sgrid
 	
 #A function that returns an array of points on a disk using a fibbonacci spiral lattice
-@partial(jax.jit,static_argnums=(0,1))
 def create_disk_grid_charg(bsize,rad):
-	sgrid = jnp.zeros((bsize,3))
-	gr = (1+jnp.sqrt(5))/2
-	def ball_fun_3(sgrid,ind):
-		phi = rad*jnp.sqrt((ind+1)/(bsize))
-		theta = jnp.pi*(ind+0.5)*(gr)*2
-		def norm_fun_1(theta):
-			theta = theta - 2*jnp.pi
-			return theta
-		def norm_cond_1(theta):
-			return theta > jnp.pi*2
-		
-		def norm_fun_2(theta):
-			theta = theta + 2*jnp.pi
-			return theta
-		def norm_cond_2(theta):
-			return theta < 0
-			
-		theta = jax.lax.while_loop(norm_cond_1,norm_fun_1,theta)
-		theta = jax.lax.while_loop(norm_cond_2,norm_fun_2,theta)
-		sgrid = sgrid.at[ind].set(jnp.array([phi*jnp.cos(theta),phi*jnp.sin(theta),0]))
-		return sgrid, ind
-		
-	sgrid,_ = jax.lax.scan(ball_fun_3,sgrid,np.arange(bsize))
-	return sgrid
+	phi = rad*np.sqrt((np.arange(bsize)+1)/(bsize))
+	theta = _spiral_theta(bsize)
+	return jnp.array(np.stack([phi*np.cos(theta),phi*np.sin(theta),np.zeros(bsize)],axis=1))
 
 #A fucntion that reads a martini file to get interaction strengths
 def get_int_strength(bead_1,bead_2,martini_file):
