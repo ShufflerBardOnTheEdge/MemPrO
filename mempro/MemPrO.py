@@ -64,11 +64,14 @@ def _pre_parse_device_args():
 	pre = argparse.ArgumentParser(add_help=False)
 	pre.add_argument("-nc","--num_cpus",type=int,default=None)
 	pre.add_argument("-dev","--device",default=None)
+	pre.add_argument("-sp","--single_precision",action="store_true")
 	pre_args,_ = pre.parse_known_args()
 	if pre_args.num_cpus is not None:
 		os.environ["NUM_CPU"] = str(pre_args.num_cpus)
 	if pre_args.device is not None:
 		os.environ["MEMPRO_DEVICE"] = pre_args.device
+	if pre_args.single_precision:
+		os.environ["MEMPRO_SINGLE_PRECISION"] = "1"
 _pre_parse_device_args()
 
 #We need to force JAX to fully utilize a multi-core cpu
@@ -82,8 +85,14 @@ if tuple(int(v) for v in jax.__version__.split(".")[:3] if v.isdigit()) <= (0,6,
 #This is useful for debugging nans in grad
 #config.update("jax_debug_nans",True)
 
-#forcing JAX to use x64 floats rather than x32
-config.update("jax_enable_x64",True)
+#forcing JAX to use x64 floats rather than x32, unless -sp asks for single precision (much faster on consumer GPUs)
+single_precision = os.environ.get("MEMPRO_SINGLE_PRECISION","0") not in ["","0"]
+config.update("jax_enable_x64",not single_precision)
+if single_precision:
+	#Explicit float64 requests in the code fall back to float32 with a warning for each one
+	warnings.filterwarnings("ignore",message="Explicitly requested dtype")
+#Scales dot products away from exactly -1 so z-alignment quaternions never have zero norm (1-1e-8 rounds to 1 in float32)
+rot_ep = 1-1e-6 if single_precision else 1-1e-8
 
 #Device selection: "cpu" (one XLA host device per core), "gpu", or "auto" (GPU if JAX can see one)
 #On GPU no_cpu becomes the number of GPUs and each GPU minimises a whole batch of configurations with vmap
@@ -1165,20 +1174,22 @@ class MemBrain:
 		def nzero_curva():
 			orad = (1/(jnp.abs(curv)+1e-9))+jnp.sign(curv)*zposa
 			toobig = jnp.min(jnp.array([1,grid_ex/orad]))
-			end_ang = (grid_nums+0.5)/(1-jnp.sqrt(1-toobig*toobig))
+			#1-sqrt(1-x^2) written as x^2/(1+sqrt(1-x^2)) so it doesn't cancel to 0 for flat membranes in 32-bit floats
+			end_ang = (grid_nums+0.5)*(1+jnp.sqrt(1-toobig*toobig))/(toobig*toobig)
 			
 			
-			acc_end_ang = jnp.arccos(1-(grid_nums+0.5)/end_ang)
-			area_c = 2*jnp.pi*orad*orad*(1-jnp.cos(acc_end_ang))
+			#1-cos(arccos(1-a)) is just a
+			area_c = 2*jnp.pi*orad*orad*(grid_nums+0.5)/end_ang
 			area_mult = area_c/(jnp.pi*grid_ex*grid_ex)
 			grid = jnp.sign(curv)*create_sph_grid_charg(grid_nums,end_ang,orad)
 			return grid,area_mult
 		def nzero_curvb():
 			orad = (1/(jnp.abs(curv)+1e-9))+jnp.sign(curv)*zposb
 			toobig = jnp.min(jnp.array([1,grid_ex/orad]))
-			end_ang = (grid_nums+0.5)/(1-jnp.sqrt(1-toobig*toobig))
-			acc_end_ang = jnp.arccos(1-(grid_nums+0.5)/end_ang)
-			area_c = 2*jnp.pi*orad*orad*(1-jnp.cos(acc_end_ang))
+			#1-sqrt(1-x^2) written as x^2/(1+sqrt(1-x^2)) so it doesn't cancel to 0 for flat membranes in 32-bit floats
+			end_ang = (grid_nums+0.5)*(1+jnp.sqrt(1-toobig*toobig))/(toobig*toobig)
+			#1-cos(arccos(1-a)) is just a
+			area_c = 2*jnp.pi*orad*orad*(grid_nums+0.5)/end_ang
 			area_mult = area_c/(jnp.pi*grid_ex*grid_ex)
 			
 			grid = jnp.sign(curv)*create_sph_grid_charg(grid_nums,end_ang,orad)
@@ -1813,7 +1824,7 @@ class MemBrain:
 		normed2 /= jnp.linalg.norm(normed2)
 		
 		direc1 = jnp.cross(normed2,jnp.array([0.0,0.0,1.0]))
-		ang1 = (1-1e-8)*jnp.dot(normed2,jnp.array([0.0,0.0,1.0]))
+		ang1 = rot_ep*jnp.dot(normed2,jnp.array([0.0,0.0,1.0]))
 		
 		rot1qi = jnp.array([ang1+1,direc1[0],direc1[1],direc1[2]])
 		rot1qi /= jnp.linalg.norm(rot1qi)
@@ -1831,7 +1842,7 @@ class MemBrain:
 		rotated_xydir = position_point_jit(0.0,0.0,jnp.pi,jnp.array([xycrot_p]))[0]
 		
 		direc1 = jnp.cross(rotated_zdir,jnp.array([0.0,0.0,1.0]))
-		ang1 = (1-1e-8)*jnp.dot(rotated_zdir,jnp.array([0.0,0.0,1.0]))
+		ang1 = rot_ep*jnp.dot(rotated_zdir,jnp.array([0.0,0.0,1.0]))
 		
 		rot1q = jnp.array([ang1+1,direc1[0],direc1[1],direc1[2]])
 		rot1q /= jnp.linalg.norm(rot1q)
@@ -2920,8 +2931,8 @@ def write_point(points,fn,orient_dir):
 	
 #A sigmoid function
 def sigmoid(x,grad):
-	ret_val = jnp.clip(-x*grad,-100.0,100.0) #Avoids overflow in exp
-	return 1.0/(1.0+jnp.exp(ret_val))
+	#Clipped as before, but jax.nn.sigmoid is overflow-safe: exp(100) is inf in 32-bit floats and gave NaN gradients
+	return jax.nn.sigmoid(jnp.clip(x*grad,-100.0,100.0))
 	
 sj = jax.jit(sigmoid)
 
@@ -2996,7 +3007,7 @@ def position_point_jit(in_depth,ang1,ang2,poses):
 
 #A function for positioning a set of points (in a smoother manner as this is better for minimisation)
 def position_pointv2(in_depth,zdir,xydir,poses):
-	ep = 1-1e-8
+	ep = rot_ep
 	zdir /= jnp.linalg.norm(zdir)
 	
 	
@@ -3085,11 +3096,15 @@ def _spiral_theta(bsize):
 	return np.array(thetas)
 
 def create_sph_grid_charg(bsize,end_ang,orad):
-	bsize_true = jnp.array(end_ang,dtype=int)
+	#floor rather than an int cast, which overflows int32 for near-flat membranes in single precision
+	bsize_true = jnp.floor(end_ang)
 	ind = np.arange(bsize)
 	theta = _spiral_theta(bsize)
-	phi = jnp.arccos(1-2*(ind+0.5)/(bsize_true*2))
-	return orad*jnp.stack([np.cos(theta)*jnp.sin(phi),np.sin(theta)*jnp.sin(phi),jnp.cos(phi)-1],axis=1)
+	#phi = arccos(1-2t), but sin(phi) and cos(phi)-1 are taken directly from t: for near-flat membranes t is ~1e-9,
+	#which arccos can't resolve in 32-bit floats (and its infinite slope at 1 gives NaN gradients)
+	t = (ind+0.5)/(bsize_true*2)
+	sin_phi = 2*jnp.sqrt(t*(1-t))
+	return orad*jnp.stack([np.cos(theta)*sin_phi,np.sin(theta)*sin_phi,-2*t],axis=1)
 	
 #A function that returns an array of points on a disk using a fibbonacci spiral lattice
 @partial(jax.jit,static_argnums=(0,1))
@@ -3495,6 +3510,8 @@ def main():
 	parser.set_defaults(num_cpus=None)
 	parser.add_argument("-dev","--device",help="Device to run on: auto (GPU if available, otherwise CPU), cpu or gpu (Default: auto)",choices=["auto","cpu","gpu"])
 	parser.set_defaults(device="auto")
+	parser.add_argument("-sp","--single_precision",action="store_true",help="Use 32-bit floats instead of 64-bit. Much faster on consumer GPUs (which have little 64-bit throughput) at some cost in precision")
+	parser.set_defaults(single_precision=False)
 	parser.add_argument("-dm","--dual_membrane",action="store_true",help="Toggle dual membrane orientation")
 	parser.set_defaults(dual_membrane=False)
 	parser.add_argument("-pg","--predict_pg_layer",action="store_true",help="Toggle peptidogylcan call wall prediction")

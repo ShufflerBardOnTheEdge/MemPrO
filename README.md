@@ -96,6 +96,8 @@ MemPrO is intended to be run on PDB files, and will output the following files:
 
 **-dev, --device** — Device to run on: `auto` (default; GPU if JAX can see one, otherwise CPU), `cpu` or `gpu`. On GPU, all starting configurations are minimised together in a single batch. GPU support needs `pip install "mempro[gpu]"` (Linux, NVIDIA).
 
+**-sp, --single_precision** — Use 32-bit instead of 64-bit floats. Consumer GPUs (GeForce/RTX) have very little 64-bit throughput, so this makes minimisation much faster there; results can differ slightly from the default 64-bit run. Data-centre GPUs (A100/H100) and CPUs gain less.
+
 **-rank, --rank** — Ranking method for minima: `h` ranks by percentage hits, `p` ranks by potential, `auto` (default) ranks by a value calculated from approximate minima depth and potential.
 
 **-dm, --dual_membrane** — Toggles dual membrane minimisation. Splits the membrane into an inner and outer membrane and minimises the distance between them. Only use this if your protein spans the periplasm or is a gap junction etc.
