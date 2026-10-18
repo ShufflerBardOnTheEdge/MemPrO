@@ -75,11 +75,27 @@ def _pre_parse_device_args():
 _pre_parse_device_args()
 
 #We need to force JAX to fully utilize a multi-core cpu
-no_cpu = int(os.environ.get("NUM_CPU", os.cpu_count()))
+#By default one device per performance core: each batch of minimisations waits for its slowest device, so on CPUs with
+#efficiency cores (e.g. Apple Silicon, 4P+6E on an M4) using every core is slower (4G1U: 24 s on 10 cores, 16 s on 4)
+def default_device_count():
+	try:
+		import subprocess
+		perf_cores = subprocess.run(["sysctl","-n","hw.perflevel0.physicalcpu"],capture_output=True,text=True,timeout=5)
+		if perf_cores.returncode == 0 and perf_cores.stdout.strip().isdigit():
+			return int(perf_cores.stdout.strip())
+	except (OSError,subprocess.SubprocessError):
+		pass
+	return os.cpu_count()
+no_cpu = int(os.environ.get("NUM_CPU", default_device_count()))
 os.environ["XLA_FLAGS"] = (os.environ.get("XLA_FLAGS", "")+" --xla_force_host_platform_device_count="+str(no_cpu)).strip()
+jax_version = tuple(int(v) for v in jax.__version__.split(".")[:3] if v.isdigit())
 #The legacy (non-thunk) CPU runtime is faster for MemPrO's scan/cond-heavy loops but only exists up to JAX 0.6.0
-if tuple(int(v) for v in jax.__version__.split(".")[:3] if v.isdigit()) <= (0,6,0):
+if jax_version <= (0,6,0):
 	os.environ["XLA_FLAGS"] += " --xla_cpu_use_thunk_runtime=false"
+#XLA's YNNPACK CPU fusions (JAX >= 0.9) intermittently overflow a worker thread's stack on the large vectorised
+#potentials in MemPrO/MemPrOD (SIGBUS in slinky::eval_non_inlined); turning them off costs no measurable speed
+if jax_version >= (0,9,0) and "xla_cpu_experimental_ynn_fusion_type" not in os.environ["XLA_FLAGS"]:
+	os.environ["XLA_FLAGS"] += " --xla_cpu_experimental_ynn_fusion_type="
 
 
 #This is useful for debugging nans in grad
@@ -558,36 +574,19 @@ class PDB_helper:
 		total = get_sph_circ(total,jnp.array([0,0]),jnp.pi)
 		total_area = jnp.sum(total)
 		#jax.debug.print("TA{x}",x=total_area)
-		is_surf = jnp.zeros((points.shape[0]))
-		def sloopv3_1(is_surf,ind):
-			pind = ind
-			ang_grid = jnp.zeros((40,20))
-			def sloopv3_2(ang_grid,ind):
-				direc = points[pind]-points[bpoints[pind,ind]]
-				dist = jnp.linalg.norm(direc)
-				def far(ang_grid):
-					return ang_grid
-				def nfar(ang_grid):
-					#angle = (jnp.pi/3)*srad/jnp.max(jnp.array([4.0,dist]))#jnp.arccos(2*dist/srad)#0.6
-					angle = jnp.arccos(jnp.clip(dist/(2*srad),0,1))
-					cen_y = jnp.arctan2(direc[2],jnp.sqrt(direc[0]*direc[0]+direc[1]*direc[1]))
-					cen_x = jnp.arctan2(direc[1],direc[0])
-					ang_grid = get_sph_circ(ang_grid,jnp.array([cen_x,cen_y]),angle)
-					return ang_grid
-				ang_grid = jax.lax.cond((dist < srad*3)*(dist>1e-5),nfar,far,ang_grid)
-				return ang_grid,ind
-			ang_grid,_ = jax.lax.scan(sloopv3_2,ang_grid,jnp.arange(mrad))
-			perc = jnp.sum(ang_grid)/total_area
-			#jax.debug.print("Perc {x}",x=perc)
-			def gthresh(is_surf):
-				is_surf = is_surf.at[ind].set(1)
-				return is_surf
-			def lthresh(is_surf):
-				return is_surf
-			is_surf = jax.lax.cond(perc<thresh,gthresh,lthresh,is_surf)
-			return is_surf,ind
-		is_surf,_=jax.lax.scan(sloopv3_1,is_surf,jnp.arange(points.shape[0]))
-		return is_surf
+		#Each nearby bead (closer than 3*srad) covers a circle of directions; a bead is on the surface if less than
+		#thresh of its directions are covered. get_sph_circ sets cells, so overlapping circles combine as a logical OR
+		def is_surf_fun(pind):
+			direc = points[pind]-points[bpoints[pind]]
+			dist = jnp.linalg.norm(direc,axis=1)
+			angle = jnp.arccos(jnp.clip(dist/(2*srad),0,1))
+			cen_y = jnp.arctan2(direc[:,2],jnp.sqrt(direc[:,0]*direc[:,0]+direc[:,1]*direc[:,1]))
+			cen_x = jnp.arctan2(direc[:,1],direc[:,0])
+			circles = jax.vmap(get_sph_circ,in_axes=(None,0,0))(jnp.zeros((40,20)),jnp.stack((cen_x,cen_y),axis=1),angle)
+			covered = jnp.any((circles > 0)*((dist < srad*3)*(dist>1e-5))[:,None,None],axis=0)
+			perc = jnp.sum(jnp.where(covered,total,0.0))/total_area
+			return jnp.where(perc<thresh,1.0,0.0)
+		return jax.lax.map(is_surf_fun,jnp.arange(points.shape[0]),batch_size=64)
 		
 	#This function gets the surface residues of a given cg protein
 	def get_surface(self):
@@ -602,26 +601,13 @@ class PDB_helper:
 		
 		#Calculating normals at each point of the cg protein
 		timer = time.time()
-		@partial(jax.vmap)
+		#The normal at a bead points away from the mean of all beads within 32 A (beads processed in batches to bound memory)
 		def normal_fun_2(ind):
-			def normal_fun_1(ind_fix,ind):
-				normal_count = jnp.zeros(4)
-				def in_sphere(normal,posa,posb):
-					normal = normal.at[3].set(normal[3]+1)
-					normal = normal.at[:3].set(normal[:3]+(-posa+posb))
-					return normal
-				def not_in_sphere(normal,posa,posb):
-					return normal
-				normal = jax.lax.cond(jnp.linalg.norm(self.poses[ind]-self.poses[ind_fix])<32,in_sphere,not_in_sphere,normal_count,self.poses[ind],self.poses[ind_fix])#8####################<--------------------------
-				return ind_fix,normal
-				
-			_,normals = jax.lax.scan(normal_fun_1,ind,jnp.arange(self.poses.shape[0]))
-			normals_sum = jnp.sum(normals,axis=0)
-			normal = normals_sum[:3]/normals_sum[3]
+			near = jnp.linalg.norm(self.poses-self.poses[ind],axis=1)<32
+			normal = jnp.sum(jnp.where(near[:,None],self.poses[ind]-self.poses,0.0),axis=0)/jnp.sum(near)
 			normal = normal/jnp.linalg.norm(normal)
 			return normal
-		shard_nns = jax.device_put(jnp.arange(self.poses.shape[0]),sharding0)
-		normals = normal_fun_2(shard_nns)
+		normals = jax.lax.map(normal_fun_2,jnp.arange(self.poses.shape[0]),batch_size=256)
 		
 		self.normals = jnp.array(jax.device_get(normals))#jax.device_put(normals)#jax.device_put_sharded([normals],[devices[0]])
 
@@ -646,27 +632,13 @@ class PDB_helper:
 		timer = time.time()
 		#Each point on the surface had an asocciated sphere indicating directions which are exposed
 		#Here we flag the directions which are free
-		@partial(jax.vmap)
+		#A direction is free if no bead lies within 4 A of the point 4 A out along the normal plus that direction
 		def sphere_fun_3(ind):
-			def sphere_fun_2(ind_fix,ind):
-				def sphere_fun_1(ind_fix,ind):
-					def in_prot():
-							return 0
-					def not_in_prot():
-						return 1
-					return ind_fix,jax.lax.cond(jnp.linalg.norm(self.poses[ind_fix[0]]+normals[ind_fix[0]]*4-self.poses[ind]+self.ball[ind_fix[1]])<4,in_prot,not_in_prot)
-				_,on_surf_arr=jax.lax.scan(sphere_fun_1,jnp.array([ind_fix,ind]),jnp.arange(self.poses.shape[0]))
-				on_surf_arr = jnp.array(jax.device_get(on_surf_arr))
-				
-				on_surf = jnp.prod(on_surf_arr)
-				return ind_fix,on_surf
-			_,on_surf_ball = jax.lax.scan(sphere_fun_2,ind,jnp.arange(self.ball.shape[0]))
-			ball_arr = on_surf_ball*self.surface[ind]
-			return ball_arr
-		
-		
-		shard_nn = jax.device_put(jnp.arange(self.poses.shape[0]),sharding0)
-		spheres = sphere_fun_3(shard_nn)
+			test_points = self.poses[ind]+normals[ind]*4+self.ball
+			dists = jnp.linalg.norm(test_points[:,None,:]-self.poses[None,:,:],axis=2)
+			on_surf_ball = jnp.all(jnp.logical_not(dists<4),axis=1).astype(int)
+			return on_surf_ball*self.surface[ind]
+		spheres = jax.lax.map(sphere_fun_3,jnp.arange(self.poses.shape[0]),batch_size=32)
 		
 		self.poses = self.poses[:pos_num]
 		self.surface = self.surface[:pos_num,0]
@@ -680,12 +652,8 @@ class PDB_helper:
 		jax.block_until_ready(self.poses)
 		
 		#Here we set the cartesean directions for each sphere (as before we only had flags)
-		self.spheres = jnp.zeros((surface_number,self.ball.shape[0],3))
-		def set_sphere_poses_fun_2(sphere_poses,ind):
-			timeser = jnp.transpose(jnp.array([surface_sphere[ind],surface_sphere[ind],surface_sphere[ind]]))
-			sphere_poses = sphere_poses.at[ind].set(sphere_poses[ind,:]+timeser*self.ball)
-			return sphere_poses,ind
-		self.spheres,_ = jax.lax.scan(set_sphere_poses_fun_2,self.spheres,jnp.arange(surface_sphere.shape[0]))
+		#surface_number counts the padding rows too (they match surface_poses), and their spheres stay zero
+		self.spheres = jnp.zeros((surface_number,self.ball.shape[0],3)).at[:surface_sphere.shape[0]].set(surface_sphere[:,:,None]*self.ball[None,:,:])
 		surf_mean = jnp.mean(self.surface_poses,axis=0)
 		self.surface_poses = self.surface_poses-surf_mean
 		self.poses = self.poses-surf_mean
@@ -3154,13 +3122,28 @@ def read_martini_lines(martini_file):
 	with open(martini_file,"r") as mfile:
 		return tuple(mfile.readlines())
 
-#A fucntion that reads a martini file to get interaction strengths
+#Index of the first line starting with each 12-character "%6s%6s" bead pair, as in [ nonbond_params ]
+@lru_cache(maxsize=None)
+def martini_pair_index(martini_file):
+	index = {}
+	for i,line in enumerate(read_martini_lines(martini_file)):
+		index.setdefault(line[:12],i)
+	return index
+
+#A fucntion that reads a martini file to get interaction strengths (memoised: each pair is looked up once per run)
+#Pairs are found through martini_pair_index (one pass over the file); any pair not found at the start of a line
+#falls back to the original search for the first line containing it
+@lru_cache(maxsize=None)
 def get_int_strength(bead_1,bead_2,martini_file):
 	if(bead_2 == "GHOST"):
 		return 0
 	string = " "*(6-len(bead_1))+bead_1+" "*(6-len(bead_2))+bead_2
 	string2 = " "*(6-len(bead_2))+bead_2+" "*(6-len(bead_1))+bead_1
 	content = read_martini_lines(martini_file)
+	index = martini_pair_index(martini_file)
+	found = [index[s] for s in (string,string2) if s in index]
+	if found:
+		return -float(content[min(found)][32:45])
 	for i,line in enumerate(content):
 		if(string in line or string2 in line):
 			return -float(line[32:45])
@@ -3405,21 +3388,9 @@ def get_sph_circ(grid,cen,angle):
 	dy = jnp.pi/n
 	xs = jnp.linspace(0,2*jnp.pi-dx,2*n)+dx/2
 	ys = jnp.linspace(0,jnp.pi-dy,n)+dy/2
-	def scloop1(grid,ind):
-		ind1 = ind
-		def scloop2(grid,ind):
-			dist = jnp.arccos(jnp.cos(cen[0])*jnp.cos(xs[ind1])+jnp.sin(cen[0])*jnp.sin(xs[ind1])*jnp.cos(cen[1]-ys[ind]))
-			def langle(grid):
-				grid = grid.at[ind1,ind].set(dx*(jnp.cos(ys[ind]-dy/2)-jnp.cos(ys[ind]+dy/2)))
-				return grid
-			def gangle(grid):
-				return grid
-			grid = jax.lax.cond(dist<angle,langle,gangle,grid)
-			return grid,ind
-		grid,_ = jax.lax.scan(scloop2,grid,jnp.arange(n))
-		return grid,ind
-	grid,_ = jax.lax.scan(scloop1,grid,jnp.arange(2*n))
-	return grid
+	dist = jnp.arccos(jnp.cos(cen[0])*jnp.cos(xs)[:,None]+jnp.sin(cen[0])*jnp.sin(xs)[:,None]*jnp.cos(cen[1]-ys)[None,:])
+	cell_area = dx*(jnp.cos(ys-dy/2)-jnp.cos(ys+dy/2))
+	return jnp.where(dist<angle,jnp.broadcast_to(cell_area[None,:],grid.shape),grid)
 	
 def add_Reses(Res, Resitp):
     current_res_no = len(Reses)
