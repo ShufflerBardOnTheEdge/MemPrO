@@ -3111,7 +3111,17 @@ def read_martini_lines(martini_file):
 	with open(martini_file,"r") as mfile:
 		return tuple(mfile.readlines())
 
+#Index of the first line starting with each 12-character "%6s%6s" bead pair, as in [ nonbond_params ]
+@lru_cache(maxsize=None)
+def martini_pair_index(martini_file):
+	index = {}
+	for i,line in enumerate(read_martini_lines(martini_file)):
+		index.setdefault(line[:12],i)
+	return index
+
 #A fucntion that reads a martini file to get interaction strengths (memoised: each pair is looked up once per run)
+#Pairs are found through martini_pair_index (one pass over the file); any pair not found at the start of a line
+#falls back to the original search for the first line containing it
 @lru_cache(maxsize=None)
 def get_int_strength(bead_1,bead_2,martini_file):
 	if(bead_2 == "GHOST"):
@@ -3119,6 +3129,10 @@ def get_int_strength(bead_1,bead_2,martini_file):
 	string = " "*(6-len(bead_1))+bead_1+" "*(6-len(bead_2))+bead_2
 	string2 = " "*(6-len(bead_2))+bead_2+" "*(6-len(bead_1))+bead_1
 	content = read_martini_lines(martini_file)
+	index = martini_pair_index(martini_file)
+	found = [index[s] for s in (string,string2) if s in index]
+	if found:
+		return -float(content[min(found)][32:45])
 	for i,line in enumerate(content):
 		if(string in line or string2 in line):
 			return -float(line[32:45])
