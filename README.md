@@ -1,6 +1,8 @@
 # MemPrO
 Membrane Protein Orientation in Lipid Bilayers. The paper associated with this code can be found [here](https://doi.org/10.1021/acs.jctc.5c01433).
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/pstansfeld/MemPrO/blob/main/MemPrO_Colab.ipynb)
+
 Code and parameters from the following were used to help write this code:
 
 **Insane:**
@@ -42,6 +44,10 @@ pip install "matplotlib>=3.8.4"
 ```
 
 The Martini 3 force field file (`martini_v3.itp`) is included in `mempro/`. To use a different one, supply its path with the `-itp` flag; the standard file can be downloaded from [here](https://cgmartini.nl/docs/downloads/force-field-parameters/martini3/particle-definitions.html).
+
+### Google Colab
+
+MemPrO can also be run without installing anything locally, using the [MemPrO Colab notebook](https://colab.research.google.com/github/pstansfeld/MemPrO/blob/main/MemPrO_Colab.ipynb). It installs MemPrO from PyPI, orients a structure from the PDB, AlphaFold DB or your own upload, shows the results (including a 3D view of the top-ranked orientation), and can optionally predict membrane deformations with MemPrOD. It runs on both CPU and GPU runtimes.
 
 ## Running MemPrO
 
