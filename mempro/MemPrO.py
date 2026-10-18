@@ -77,9 +77,14 @@ _pre_parse_device_args()
 #We need to force JAX to fully utilize a multi-core cpu
 no_cpu = int(os.environ.get("NUM_CPU", os.cpu_count()))
 os.environ["XLA_FLAGS"] = (os.environ.get("XLA_FLAGS", "")+" --xla_force_host_platform_device_count="+str(no_cpu)).strip()
+jax_version = tuple(int(v) for v in jax.__version__.split(".")[:3] if v.isdigit())
 #The legacy (non-thunk) CPU runtime is faster for MemPrO's scan/cond-heavy loops but only exists up to JAX 0.6.0
-if tuple(int(v) for v in jax.__version__.split(".")[:3] if v.isdigit()) <= (0,6,0):
+if jax_version <= (0,6,0):
 	os.environ["XLA_FLAGS"] += " --xla_cpu_use_thunk_runtime=false"
+#XLA's YNNPACK CPU fusions (JAX >= 0.9) intermittently overflow a worker thread's stack on the large vectorised
+#potentials in MemPrO/MemPrOD (SIGBUS in slinky::eval_non_inlined); turning them off costs no measurable speed
+if jax_version >= (0,9,0) and "xla_cpu_experimental_ynn_fusion_type" not in os.environ["XLA_FLAGS"]:
+	os.environ["XLA_FLAGS"] += " --xla_cpu_experimental_ynn_fusion_type="
 
 
 #This is useful for debugging nans in grad
