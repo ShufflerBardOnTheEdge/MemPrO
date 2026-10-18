@@ -3111,7 +3111,8 @@ def read_martini_lines(martini_file):
 	with open(martini_file,"r") as mfile:
 		return tuple(mfile.readlines())
 
-#A fucntion that reads a martini file to get interaction strengths
+#A fucntion that reads a martini file to get interaction strengths (memoised: each pair is looked up once per run)
+@lru_cache(maxsize=None)
 def get_int_strength(bead_1,bead_2,martini_file):
 	if(bead_2 == "GHOST"):
 		return 0
