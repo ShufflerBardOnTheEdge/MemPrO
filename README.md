@@ -43,8 +43,6 @@ pip install "matplotlib>=3.8.4"
 
 The Martini 3 force field file (`martini_v3.itp`) is included in `mempro/`. To use a different one, supply its path with the `-itp` flag; the standard file can be downloaded from [here](https://cgmartini.nl/docs/downloads/force-field-parameters/martini3/particle-definitions.html).
 
-MemPrO is also accessible on Google Colab via the link [ADD LINK]. The Colab will contain instructions for use. (Currently the Colab is WIP and this will be updated.)
-
 ## Running MemPrO
 
 ### From source
