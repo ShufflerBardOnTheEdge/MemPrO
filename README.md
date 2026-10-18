@@ -69,6 +69,8 @@ MemPrO is intended to be run on PDB files, and will output the following files:
 
 * **orientation.txt** — Contains general information about all of the final minima. In general rank 1 is the best orientation, however there are cases where this is not true. `orientation.txt` can then be used to determine the best orientation.
 
+* **orientations.pdb** — All final orientations in a single PDB file, one model per rank, ordered by rank.
+
 * **local_minima_orientation.png** — A representation of how spread out the local minima are. The more white the image, the more confidence can be placed in rank 1. This is only true in general and there are some cases where this can be safely ignored.
 
 * **local_minima_potential.png** — A representation of the potential of the final configuration from a given starting configuration. This complements `local_minima_orientation.png` but in general does not provide much additional information.
@@ -318,7 +320,7 @@ More detailed tutorials are available [here](Insane4MemPrO_tutorials.md).
 
 If your protein hasn't oriented correctly there are a number of things to try:
 
-* Check all orientations by loading `orientations.pdb` and reviewing `orientations.txt`. The correct orientation may not be rank 1.
+* Check all orientations by loading `orientations.pdb` and reviewing `orientation.txt`. The correct orientation may not be rank 1.
 * Check `curv_potential_curve.png` to see if your protein prefers a curved membrane. If so, using `-c` will help.
 * Check the PDB file for missing atoms or residues, which can cause the surface to be incorrectly evaluated. Missing atoms should be fixed before orientation.
 * Using `-wb` can be helpful for diagnosing missing atoms — it writes the potential contribution of each residue as a b-factor, viewable in PyMOL.
