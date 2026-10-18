@@ -94,7 +94,7 @@ MemPrO is intended to be run on PDB files, and will output the following files:
 
 **-ng, --grid_size** — Number of initial starting configurations. Defaults to 36. For best efficiency this should be a multiple of the number of CPUs being used. More starting configurations sample the space of minima better, but there are diminishing returns and generally no more than 40 are needed.
 
-**-nc, --num_cpus** — Number of CPU cores to use. Defaults to all available cores. For best performance with `-ng`, set `-nc` to a value that divides `-ng` evenly.
+**-nc, --num_cpus** — Number of CPU cores to use. Defaults to the number of performance cores where the system reports them (e.g. 4 on an Apple M4, whose 6 efficiency cores would slow each batch down), otherwise all available cores. For best performance with `-ng`, set `-nc` to a value that divides `-ng` evenly.
 
 **-dev, --device** — Device to run on: `auto` (default; GPU if JAX can see one, otherwise CPU), `cpu` or `gpu`. On GPU, all starting configurations are minimised together in a single batch. GPU support needs `pip install "mempro[gpu]"` (Linux, NVIDIA).
 

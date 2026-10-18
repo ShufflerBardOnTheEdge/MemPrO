@@ -75,7 +75,18 @@ def _pre_parse_device_args():
 _pre_parse_device_args()
 
 #We need to force JAX to fully utilize a multi-core cpu
-no_cpu = int(os.environ.get("NUM_CPU", os.cpu_count()))
+#By default one device per performance core: each batch of minimisations waits for its slowest device, so on CPUs with
+#efficiency cores (e.g. Apple Silicon, 4P+6E on an M4) using every core is slower (4G1U: 24 s on 10 cores, 16 s on 4)
+def default_device_count():
+	try:
+		import subprocess
+		perf_cores = subprocess.run(["sysctl","-n","hw.perflevel0.physicalcpu"],capture_output=True,text=True,timeout=5)
+		if perf_cores.returncode == 0 and perf_cores.stdout.strip().isdigit():
+			return int(perf_cores.stdout.strip())
+	except (OSError,subprocess.SubprocessError):
+		pass
+	return os.cpu_count()
+no_cpu = int(os.environ.get("NUM_CPU", default_device_count()))
 os.environ["XLA_FLAGS"] = (os.environ.get("XLA_FLAGS", "")+" --xla_force_host_platform_device_count="+str(no_cpu)).strip()
 jax_version = tuple(int(v) for v in jax.__version__.split(".")[:3] if v.isdigit())
 #The legacy (non-thunk) CPU runtime is faster for MemPrO's scan/cond-heavy loops but only exists up to JAX 0.6.0
