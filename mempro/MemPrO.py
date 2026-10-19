@@ -13,6 +13,8 @@ from functools import partial, lru_cache
 import datetime
 from jax import tree_util
 import shutil
+import shlex
+import sys
 from collections import defaultdict
 
 PATH_TO_INSANE = os.environ.get("PATH_TO_INSANE", "")
@@ -2571,7 +2573,7 @@ class MemBrain:
 		
 		
 	#Builds a CG system using insane
-	def build_oriented(self,orient_dir,build_args):
+	def build_oriented(self,orient_dir,build_args,insane_path):
 		mins = np.array(self.minima)
 		no_mins = (mins.shape[0]//5)
 		min_poses = mins[:no_mins]
@@ -2594,14 +2596,14 @@ class MemBrain:
 			curv_str = " -curv "+str(10*np.abs(min_curvs[i]))+",0.1,"+str(np.sign(min_curvs[i]-1e-9))
 			print("Building rank "+str(i+1)+" with Insane4MemPrO:")
 			cg_sys_dir = rank_dir+"CG_System_rank_"+str(i+1)+"/"
-			run_str = "python "+PATH_TO_INSANE+" "+build_args.strip()+" -o "+cg_sys_dir+"CG-system.gro -p "+cg_sys_dir+"topol.top -f "+cg_sys_dir+"protein-cg.pdb "+"-x "+str(x_range)+" -y "+str(y_range)+" -z "+str(z_range)+curv_str
+			run_str = shlex.quote(sys.executable)+" "+shlex.quote(insane_path)+" "+build_args.strip()+" -o "+shlex.quote(cg_sys_dir+"CG-system.gro")+" -p "+shlex.quote(cg_sys_dir+"topol.top")+" -f "+shlex.quote(cg_sys_dir+"protein-cg.pdb")+" -x "+str(x_range)+" -y "+str(y_range)+" -z "+str(z_range)+curv_str
 			if(zdist > 1e-6):
 				run_str += " -ps "+str(zdist)
 			if(self.pg_layer_pred):
 				ps = self.pg_poses[i][0]
 				xs_pg = self.pg_poses[i][1]
 				pg_pos = -xs_pg[jnp.argmin(ps)]
-				run_str += " -pgl_z "+str(pg_pos/10.0)+" -o_f "+cg_sys_dir
+				run_str += " -pgl_z "+str(pg_pos/10.0)+" -o_f "+shlex.quote(cg_sys_dir)
 				#print()
 			err_val = os.system(run_str)
 			if(err_val != 0):
@@ -3508,7 +3510,7 @@ def main():
 	parser.add_argument("-itp","--itp_file",help="Path to force field (martini_v3.itp)")
 	parser.set_defaults(itp_file=_default_itp)
 	parser.add_argument("-insane","--insane_path",help="Path to Insane4MemPrO.py")
-	parser.set_defaults(insane_path=_default_insane)
+	parser.set_defaults(insane_path=PATH_TO_INSANE or _default_insane)
 	parser.add_argument("-bd","--build_system",help = "Build a MD ready CG-system for ranks < n (Default: n=0)")
 	parser.set_defaults(build_system=0)
 	parser.add_argument("-bd_args","--build_arguments",help="Arguments to pass to insane when building system")
