@@ -3528,11 +3528,20 @@ def main():
 	parser.set_defaults(write_bfactors=False)
 	parser.add_argument("-rank","--rank",help="Ranking method: auto (default), h (hits), p (potential)")
 	parser.set_defaults(rank="auto")
+	parser.add_argument("-seed","--seed",type=int,help="Seed for the random number generators, for reproducible runs. Results also depend on the number of devices (-nc) (Default: unseeded)")
+	parser.set_defaults(seed=None)
 	args = parser.parse_args()
 
 	if args.file_name is None:
 		parser.print_help()
 		sys.exit(0)
+
+	#All random draws in MemPrO use NumPy's global generator
+	if args.seed is not None:
+		if not 0 <= args.seed < 2**32:
+			print("ERROR: Could not read value of -seed. Must be an integer between 0 and 2^32-1.")
+			exit()
+		np.random.seed(args.seed)
 
 	fliper = 1
 	if args.flip:
