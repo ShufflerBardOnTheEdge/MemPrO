@@ -63,7 +63,7 @@ python PATH/TO/MemPrO.py -f input_file.pdb
 mempro -f input_file.pdb
 ```
 
-No environment variables are required. By default MemPrO will use all available CPU cores and look for `Insane4MemPrO.py` and `martini_v3.itp` in the same directory as the script (or the installed package directory). These paths can be overridden with the `-insane` and `-itp` flags if needed.
+No environment variables are required. By default MemPrO will use a GPU if JAX can see one, otherwise one CPU device per performance core (see `-nc`), and will look for `Insane4MemPrO.py` and `martini_v3.itp` in the same directory as the script (or the installed package directory). These paths can be overridden with the `-insane` and `-itp` flags if needed.
 
 Compiled code is cached in `~/.cache/mempro/jax`, so runs after the first one start about 15 s faster. Set `JAX_COMPILATION_CACHE_DIR` to put the cache somewhere else, or `MEMPRO_NO_JAX_CACHE=1` to turn it off.
 
@@ -86,7 +86,7 @@ MemPrO is intended to be run on PDB files, and will output the following files:
   * `PG_potential_curve.png` — The potential curve for the position of the PG cell wall. Only produced with `-pg`.
   * `cross-section_area_curve.png` — The cross-sectional area of the segment of the protein passing through the PG layer. Only produced with `-pg`.
   * `Z_potential_curve.png` — Potential against Z position of the final orientation. Gives an idea of the nature of the minima.
-  * `curv_potential_curve.png` — Potential against global membrane curvature for the final orientation. Can indicate whether curvature minimisation should be used.
+  * `curv_potential_curve.png` — Potential against global membrane curvature for the final orientation. Can indicate whether curvature minimisation should be used. Not produced with `-dm`.
 
 ## Flags
 
@@ -100,7 +100,7 @@ MemPrO is intended to be run on PDB files, and will output the following files:
 
 **-ng, --grid_size** — Number of initial starting configurations. Defaults to 36. For best efficiency this should be a multiple of the number of CPUs being used. More starting configurations sample the space of minima better, but there are diminishing returns and generally no more than 40 are needed.
 
-**-nc, --num_cpus** — Number of CPU cores to use. Defaults to the number of performance cores where the system reports them (e.g. 4 on an Apple M4, whose 6 efficiency cores would slow each batch down), otherwise all available cores. For best performance with `-ng`, set `-nc` to a value that divides `-ng` evenly.
+**-nc, --num_cpus** — Number of CPU cores to use. Defaults to the number of performance cores where the system reports them (currently macOS, e.g. 4 on an Apple M4, whose 6 efficiency cores would slow each batch down), otherwise all available cores. For best performance with `-ng`, set `-nc` to a value that divides `-ng` evenly.
 
 **-dev, --device** — Device to run on: `auto` (default; GPU if JAX can see one, otherwise CPU), `cpu` or `gpu`. On GPU, all starting configurations are minimised together in a single batch. GPU support needs `pip install "mempro[gpu]"` (Linux, NVIDIA).
 
@@ -140,7 +140,7 @@ MemPrO is intended to be run on PDB files, and will output the following files:
 
 **-insane, --insane_path** — Path to `Insane4MemPrO.py`. Defaults to the same directory as `MemPrO.py` (or the installed package directory). Only required when using `-bd`.
 
-**-bd, --build_system** — Number of final ranked configurations to build as CG MD-ready systems using Insane4MemPrO. Currently only works with coarse grain input files.
+**-bd, --build_system** — Number of final ranked configurations to build as CG MD-ready systems using Insane4MemPrO. Default is 0 (no systems built). Currently only works with coarse grain input files.
 
 **-bd_args, --build_arguments** — Arguments to pass to Insane4MemPrO, primarily lipid composition, solvent type etc. Required when using `-bd`.
 
@@ -160,10 +160,16 @@ Orient `input_file.pdb` on a grid of 40 starting configurations with 150 minimis
 python PATH/TO/MemPrO.py -f input_file.pdb -o Output_dir/ -ng 40 -ni 150
 ```
 
-Orient with global curvature minimisation and write per-bead potentials to b-factors:
+Orient with global curvature minimisation:
 
 ```
-python PATH/TO/MemPrO.py -f input_file.pdb -o Output_dir/ -ng 40 -ni 150 -c -wb
+python PATH/TO/MemPrO.py -f input_file.pdb -o Output_dir/ -ng 40 -ni 150 -c
+```
+
+Orient and write per-bead potentials to b-factors (`-wb` is not compatible with `-c`):
+
+```
+python PATH/TO/MemPrO.py -f input_file.pdb -o Output_dir/ -ng 40 -ni 150 -wb
 ```
 
 Orient with a dual membrane system, then build the top 2 ranked configurations as CG systems. The inner membrane contains POPE, POPG and CARD; the outer membrane contains LIPA:
@@ -248,29 +254,29 @@ MemPrO comes with Insane4MemPrO, a CG system builder based on [Insane](https://g
 
 #### Peptidoglycan layer options
 
-**-pgl** — (Optional) Number of PG layers to place at `-pgl_z`.
+**-pgl** — (Default: 0) Number of PG layers to place at `-pgl_z`.
 
-**-pgl_z** — (Optional) Z position of the PG layer relative to the centre of the periplasmic space.
+**-pgl_z** — (Default: 0) Z position of the PG layer relative to the centre of the periplasmic space.
 
-**-cper** — (Optional) Percentage of cross-links.
+**-cper** — (Default: 0.4) Percentage of cross-links.
 
-**-lper** — (Optional) Percentage of cross-links that are between layers.
+**-lper** — (Default: 0.1) Percentage of cross-links that are between layers.
 
-**-per33** — (Optional) Percentage of 3-3 cross-links; all other cross-links will be 3-4.
+**-per33** — (Default: 0.03) Percentage of 3-3 cross-links; all other cross-links will be 3-4.
 
-**-oper** — (Optional) Percentage chance of a monomer linking with an oligomer. (Actual chance of link is `cper * oper`.)
+**-oper** — (Default: 1) Percentage chance of a monomer linking with an oligomer. (Actual chance of link is `cper * oper`.)
 
 **-gdist** — (Default: 0.75,4,8.9,0.25,10,45) Distribution of glycan strand lengths. Format as `weight1,stddev1,mean1,weight2,...` where each triple describes a Gaussian. The sum of these Gaussians forms the distribution.
 
 #### Protein options
 
-**-fudge** — (Default: 0.3) Fudge factor for allowing lipid-protein overlap.
+**-fudge** — (Default: 0.3) Fudge factor for allowing lipid-protein overlap. A value of 0.15 is recommended when using `-def`.
 
 #### Solvent options
 
 **-sol** — (Required) Solvent type.
 
-**-sold** — (Default: 0.5) Solvent packing density.
+**-sold** — (Default: 0.5) Solvent diameter.
 
 **-solr** — (Default: 0.1) Magnitude of random deviations to solvent positions.
 
