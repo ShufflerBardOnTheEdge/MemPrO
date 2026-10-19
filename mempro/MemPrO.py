@@ -367,17 +367,21 @@ class PDB_helper:
 		with open(os.path.join(self.fn), "r") as lfile:
 			content = lfile.read().split("\n")
 
-		# Group atom lines by (residue name, residue ID)
-		residue_atoms = defaultdict(list)
+		# Group consecutive atom lines into residues. A residue ends when the residue name, chain or
+		# number changes, so repeated residue numbers in a chain (e.g. martinize2's default
+		# renumbering of multi-chain proteins) stay separate residues. write_oriented() writes one
+		# line per bead in file order, so there must be exactly one bead per valid ATOM line.
+		residues = []
+		prev_key = None
 		for c in content:
 			if len(c) > 54 and "[" not in c and c.startswith("ATOM"):
-				resname = c[17:21].strip()
-				resid = int(c[22:26].strip())
-				chain_id = c[21].strip()
-				residue_atoms[(resname, chain_id, resid)].append(c)
+				key = (c[17:21].strip(), c[21].strip(), c[22:27])
+				if key != prev_key:
+					residues.append((key[0], int(c[22:26].strip()), []))
+					prev_key = key
+				residues[-1][2].append(c)
 
-		for (resname, chain_id, resid), atoms in residue_atoms.items():
-			original_resname = resname
+		for resname, resid, atoms in residues:
 			if resname not in Reses:
 				print(f"Unknown residue {resname}, using UNK")
 				resname = "UNK"
@@ -387,7 +391,7 @@ class PDB_helper:
 			# Collect atom positions
 			atom_pos_list = []
 			atom_bval_list = []
-			atom_nums = []
+			atom_names = []
 
 			for c in atoms:
 				try:
@@ -395,13 +399,12 @@ class PDB_helper:
 					y = float(c[38:46].strip())
 					z = float(c[46:54].strip())
 					b = float(c[60:66].strip())
-					atom_num = int(c[22:26].strip())
 					pos = np.array([x, y, z])
 
 					if not np.any(np.isnan(pos)):
 						atom_pos_list.append(pos)
 						atom_bval_list.append(b)
-						atom_nums.append(atom_num)
+						atom_names.append(c[12:16].strip())
 				except ValueError:
 					continue
 
@@ -409,36 +412,25 @@ class PDB_helper:
 				print(f"Skipping residue {resname} {resid} due to no valid positions.")
 				continue
 
-			# Fallback mean values
-			mean_pos = np.mean(atom_pos_list, axis=0)
-			mean_b = np.mean(atom_bval_list) if atom_bval_list else 0.0
-
-			# Use quick hack: match bead types with atom positions by order
-			if len(bead_list) != len(atom_pos_list):
-				#print(f"Mismatch in bead count vs atom count for {resname} {resid}. Using mean positions. Expecting {len(bead_list)}, found {len(atom_pos_list)}")
-				if resname == "UNK":
-					bead_list = np.arange(len(atom_pos_list))
-				else:
-					print(atom_pos_list)
-					print(f"Mismatch in bead count vs atom count for {resname} {resid}. Using mean positions. Expecting {len(bead_list)}, found {len(atom_pos_list)}")
-				for bead_type in bead_list:
-					if resname == "UNK":
-						bead_index == 22
+			if resname == "UNK":
+				res_bead_types = ["GHOST"]*len(atom_pos_list)
+			elif len(bead_list) == len(atom_pos_list):
+				res_bead_types = bead_list
+			else:
+				# Match beads by Martini name (BB, SC1, SC2, ...), falling back to file order
+				print(f"Mismatch in bead count vs atom count for {resname} {resid}. Expecting {len(bead_list)}, found {len(atom_pos_list)}. Matching beads by name.")
+				res_bead_types = []
+				for j, name in enumerate(atom_names):
+					if name == "BB":
+						k = 0
+					elif name.startswith("SC") and name[2:].isdigit():
+						k = int(name[2:])
 					else:
-						bead_index = Beadtype.get(bead_type, -1)
-					if bead_index == -1:
-						raise ValueError(f"Unknown bead type: {bead_type}")
-					self.bead_types.append(bead_index)
-					self.reses.append(res_index)
-					if resname == "UNK":
-						self.poses.append(atom_pos_list[bead_type])
-						self.b_vals.append(atom_bval_list[bead_type])
-					else:
-						self.poses.append(mean_pos)
-						self.b_vals.append(mean_b)
-				continue
+						k = j
+					res_bead_types.append(bead_list[min(k, len(bead_list)-1)])
 
-			for bead_type, pos, b_val in zip(bead_list, atom_pos_list, atom_bval_list):
+			in_range = self.ranges.size != 0 and self.in_ranges(resid)
+			for bead_type, pos, b_val in zip(res_bead_types, atom_pos_list, atom_bval_list):
 				bead_index = Beadtype.get(bead_type, -1)
 				if bead_index == -1:
 					raise ValueError(f"Unknown bead type: {bead_type}")
@@ -447,7 +439,6 @@ class PDB_helper:
 				self.poses.append(pos)
 
 				if self.ranges.size != 0:
-					in_range = any(self.in_ranges(num) for num in atom_nums)
 					self.b_vals.append(1.0 if in_range else 0.0)
 				else:
 					self.b_vals.append(b_val)
