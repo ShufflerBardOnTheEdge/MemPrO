@@ -3478,14 +3478,14 @@ def main():
 	os.environ["TF_CPP_MIN_LOG_LEVEL"]="3"
 
 	#Reading command line args
-	parser = argparse.ArgumentParser(prog="MemPrO",description="Orients a protein in a membrane. Currently only for E-coli membranes, but this will change in future updates. Currently flags -c -c_ni -ps -fc are WIP, these can still be used at the your own peril.")
+	parser = argparse.ArgumentParser(prog="MemPrO",description="Orients a protein in a membrane. Currently only for E-coli membranes, but this will change in future updates.")
 	parser.add_argument("-f", "--file_name",help = "Input file name (.pdb)")
 	parser.add_argument("-o","--output",help="Name of the output directory (Default: Orient)")
 	parser.add_argument("-ni","--iters",help="Number of minimisation iterations (Default: 150)")
 	parser.set_defaults(iters=150)
 	parser.add_argument("-ng","--grid_size",help="Number of starting configurations (Default: 36)")
 	parser.set_defaults(grid_size=36)
-	parser.add_argument("-nc","--num_cpus",help="Number of CPU cores to use (Default: all available)",type=int)
+	parser.add_argument("-nc","--num_cpus",help="Number of CPU cores to use (Default: performance cores on macOS, otherwise all available)",type=int)
 	parser.set_defaults(num_cpus=None)
 	parser.add_argument("-dev","--device",help="Device to run on: auto (GPU if available, otherwise CPU), cpu or gpu (Default: auto)",choices=["auto","cpu","gpu"])
 	parser.set_defaults(device="auto")

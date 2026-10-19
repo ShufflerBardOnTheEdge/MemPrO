@@ -18,7 +18,7 @@ We will now run MemPrO:
 python PATH/TO/MemPrO.py -f 4g1u.pdb -ng 16 -ni 150
 ```
 
-Here we are using an initial grid of 16 starting configurations (the more the better, though 16 is sufficient) and 150 minimisation iterations (again the more the better, but 150 is enough for most cases). By default MemPrO will use all available CPU cores. To limit this, add `-nc N` where N is the number of cores you want to use.
+Here we are using an initial grid of 16 starting configurations (the more the better, though 16 is sufficient) and 150 minimisation iterations (again the more the better, but 150 is enough for most cases). By default MemPrO will use a GPU if JAX can see one, otherwise one CPU device per performance core (all cores where performance cores are not reported). To change this, add `-nc N` where N is the number of cores you want to use.
 
 Once the code has finished running, which should take around 20 seconds on a modern machine (the very first run takes longer while JAX compiles), you should find a folder called "Orient" in Tutorial1. Opening this folder you should find several files and folders. First look at `orientation.txt`, which contains all the orientations found by MemPrO. MemPrO can be a little variable between runs so your results may differ slightly from what is shown here, but they should be very similar.
 
@@ -136,7 +136,7 @@ python PATH/TO/MemPrO.py -f 5nik-cg.pdb -ng 16 -ni 150 -dm -bd 1 -bd_args "-l PO
 
 The `-bd` flag indicates we want to build a CG system for the top n (here n=1) ranked configurations. The `-bd_args` flag is a string of additional arguments to pass to Insane4MemPrO. MemPrO handles naming of all output files, the type of system to build (in this case a double membrane system), and the simulation cell size. Everything else must go in the `-bd_args` string. Here `-l` indicates the lipid type and relative abundance (POPE and POPG in a ratio of 8:2) in the lower leaflet of the inner membrane; without `-u`, `-uo`, or `-lo` this composition is used for all leaflets. `-negi_c0` and `-posi_c0` specify the negative and positive ions (Cl⁻ and Na⁺), and `-sol` specifies the solvent (water). For a full explanation of all flags, refer to the [Insane4MemPrO documentation](README.md#insane4mempro).
 
-Looking in "Orient", the familiar output files from MemPrO are present. Checking `orientation.txt` and `orientations.pdb` should confirm that orientation has gone well and the rank 1 orientation looks sensible. In "Rank_1" there is an additional folder "CG_System_rank_1" containing three files: `CG_system.gro`, `protein-cg.pdb`, and `topol.top`. `topol.top` is a basic topology file that may need minor editing but will contain the correct molecule counts. `protein-cg.pdb` is a copy of the oriented protein without dummy membranes. `CG_system.gro` is the full CG system built according to the arguments passed to MemPrO.
+Looking in "Orient", the familiar output files from MemPrO are present. Checking `orientation.txt` and `orientations.pdb` should confirm that orientation has gone well and the rank 1 orientation looks sensible. In "Rank_1" there is an additional folder "CG_System_rank_1" containing three files: `CG-system.gro`, `protein-cg.pdb`, and `topol.top`. `topol.top` is a basic topology file that may need minor editing but will contain the correct molecule counts. `protein-cg.pdb` is a copy of the oriented protein without dummy membranes. `CG-system.gro` is the full CG system built according to the arguments passed to MemPrO.
 
 ![Alt text](Tutorial_pics/Fig11.svg)
 
