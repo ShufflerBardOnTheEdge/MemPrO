@@ -108,6 +108,8 @@ MemPrO is intended to be run on PDB files, and will output the following files:
 
 **-rank, --rank** — Ranking method for minima: `h` ranks by percentage hits, `p` ranks by potential, `auto` (default) ranks by a value calculated from approximate minima depth and potential.
 
+**-seed, --seed** — Seed for the random number generators. Runs with the same seed, input and flags give identical results, provided the number of devices (`-nc`, or the number of GPUs) is also the same. Default is unseeded.
+
 **-dm, --dual_membrane** — Toggles dual membrane minimisation. Splits the membrane into an inner and outer membrane and minimises the distance between them. Only use this if your protein spans the periplasm or is a gap junction etc.
 
 **-ch, --charge** — Partial charge of the (inner) membrane. The value corresponds to the average charge on a lipid divided by the average area per lipid, representing the average charge across the bilayer sheet. For an E. coli inner membrane this is around -0.008. Default is 0, which gives the best performance in most cases.
