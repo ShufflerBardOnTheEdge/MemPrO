@@ -3796,8 +3796,8 @@ if lipL:
 						path_top = [poser+si+direc*tailsUs[gi][1]]
 						for _ in range(50):
 							path_top.append(path_top[-1]+direc*tailsUs[gi][1])
-						for i in range(49):
-							path.append(path_top[-i-1])
+						for k in range(49):	# not i: i is the lipid index used just below
+							path.append(path_top[-k-1])
 						break
 				if(not coll):
 					 upper_tmp.append((random.random(),up_grids[gi][i][0],up_grids[gi][i][1],up_grids[gi][i][2],direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2],path))
@@ -3846,8 +3846,8 @@ if lipL:
 						path_top = [poser+si+direc*tailsUs[gi][1]]
 						for _ in range(50):
 							path_top.append(path_top[-1]+direc*tailsUs[gi][1])
-						for i in range(49):
-							path.append(path_top[-i-1])
+						for k in range(49):	# not i: i is the lipid index used just below
+							path.append(path_top[-k-1])
 						break
 					
 				if(not coll):
