@@ -19,6 +19,7 @@ gpu = ["jax[cuda12]>=0.6.0,<0.12"]
 
 [project.scripts]
 mempro = "mempro._cli:main"
+mempro-leaflets = "mempro.leaflet_check:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

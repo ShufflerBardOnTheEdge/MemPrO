@@ -381,6 +381,7 @@ lipidsa.update({	# 1	2   3   4   5   6   7   8   9   10  11  12  13   14  15  16
 charges = {"HPPA":-1,"4HPA":-1,"UDP2":-2,"UDP1":-1, "GLYP":-1, "GLYM":-1, "ARG":1, "LYS":1, "ASP":-1, "GLU":-1, "DOPG":-1, "POPG":-1, "DOPS":-1, "POPS":-1, "DSSQ":-1, "KPG":+1, "LIPA":-2, "PGIN":-1, "REMP":-6, "RAMP":-10, "OANT":-10, "CARD":-2, "A2P2":-1, "APM2":-1, "APM6":-1, "LIP2":-4, "LIP4":-6, "LIP6":-8, "LIP8":-10, "LI10":-12, "LI12":-14, "LI14":-16, "LI16":-18, "LI18":-20, "LI20":-22, "LI22":-24,"UPEP":-1,"SPEP":-2,"UUPEP":-1,"KLA":-6}
 ion_charges = {"NA" :1,"CL":-1,"CA":2}
 
+# BEGIN LIPID AREAS (also read by leaflet_check.py; keep this block self-contained, using only numpy)
 # Default area per lipid (nm^2) for each lipid type. Unless -a/-au/-ao/-auo are given, the grid density of each
 # leaflet is set from the number-weighted mean of these over its composition. Lipids not listed fall back to their
 # headgroup class (last two letters of the name), then to DEFAULT_APL. Entries can be overridden with -apl NAME:AREA.
@@ -443,6 +444,7 @@ def get_apl(name):
 	if base in lipid_apl:
 		return lipid_apl[base]
 	return lipid_apl_class.get(base[-2:],DEFAULT_APL)
+# END LIPID AREAS
 
 
 a,  b  = math.sqrt(2)/20, math.sqrt(2)/60
@@ -4030,9 +4032,12 @@ if lipL:
 					lower_tmp = lower_tmp[:int(round(len(upper_tmp)*w_up/w_lo))]
 
 			# Extract coordinates, taking asymmetry in account
+			#-asym is a number of lipids; entries here are grid sites, of which large lipids take several
 			asym  = options["-asym"].value or 0
-			upper_tmp = [i[1:] for i in upper_tmp[max(0, asym):]]
-			lower_tmp = [i[1:] for i in lower_tmp[max(0,-asym):]]
+			asym_up = int(round(max(0, asym)*[area_u,area_uo][gi]/apl_up))
+			asym_lo = int(round(max(0,-asym)*[area_l,area_lo][gi]/apl_lo))
+			upper_tmp = [i[1:] for i in upper_tmp[asym_up:]]
+			lower_tmp = [i[1:] for i in lower_tmp[asym_lo:]]
 
 			#A large difference in lipid area between leaflets can induce curvature, though some is expected
 			#where the protein occupies more of one leaflet than the other

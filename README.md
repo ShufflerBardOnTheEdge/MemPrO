@@ -338,6 +338,16 @@ Ensure all membrane-relevant values match the template command. `-in_t` supplies
 
 More detailed tutorials are available [here](Insane4MemPrO_tutorials.md).
 
+### Matching leaflets after equilibration
+
+Lipids don't flip between leaflets in Martini (except sterols), so if one leaflet starts more crowded than the other the mismatch persists and can bend the membrane. This matters most for asymmetric membranes (e.g. LPS over phospholipids) and around proteins that occupy more of one leaflet than the other. After a short NPT equilibration, check the leaflets with:
+
+```
+mempro-leaflets eq.gro
+```
+
+(or `python PATH/TO/leaflet_check.py eq.gro`; several frames or a multi-frame `.gro` from `gmx trjconv` can be given and are averaged). For each membrane it reports each leaflet's available area (box area minus the protein's largest cross-section within that leaflet), the area its lipids should occupy (from the Insane4MemPrO table, with the same `-apl`, `-temp` and `-apl_ff` options), how stretched or compressed each leaflet is, and a suggested `-asym` to rebuild with so both are equally strained. This is area matching, an approximation to zero differential stress between the leaflets; the protein cross-section depends on the bead radius (`-radius`, default 0.26 nm), so treat the suggestion as a guide, rebuild and check again. `-asym` applies to every membrane in the system.
+
 ## My protein didn't orient correctly
 
 If your protein hasn't oriented correctly there are a number of things to try:
