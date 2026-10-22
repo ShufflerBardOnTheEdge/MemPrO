@@ -242,6 +242,8 @@ MemPrO comes with Insane4MemPrO, a CG system builder based on [Insane](https://g
 
 **-apl** — (Optional, repeatable) Area per lipid (nm²) for one lipid type (`NAME:AREA`), overriding the built-in value. Built-in values are in `lipid_apl` in `Insane4MemPrO.py`; lipids not listed there use a value for their headgroup class (PC, PE, PG, PS) or 0.6 nm².
 
+**-grid** — (Default: circular) Lipid grid for flat membranes filling the box. `circular` places lipids on concentric rings; `square` uses a square lattice that is continuous across the periodic boundaries, avoiding close contacts where clipped rings meet at the box edges. Either way a flat leaflet gets (box area)/(area per lipid) lipids before any are removed around the protein. Curved membranes and `-radius` disks always use rings.
+
 **-balance** — (Default: off) Balance the two leaflets of each membrane after lipids clashing with the protein have been removed, by removing lipids at random from the fuller leaflet. `area` matches the total lipid area of the leaflets (number × area per lipid), `number` matches the lipid counts. The lipid area of each leaflet is always printed, with a warning if they differ by more than 5%, as a large mismatch can induce curvature. Some difference is expected where the protein occupies more of one leaflet than the other, in which case balancing would leave the fuller leaflet under-packed.
 
 **-ps** — (Default: 0) Distance between inner and outer membrane.

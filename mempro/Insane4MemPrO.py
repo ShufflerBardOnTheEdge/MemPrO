@@ -1950,8 +1950,23 @@ def write_all_itp(itp_str,out_folder):
 			
 	
 #Function that creates a leaflet using all of the above
-def create_leaflet(den,xbox,ybox,curv_A,curv_B,ch_ang,pore,leng,keep_end,mem_outer_red): 
+#Square grid filling a box of half-widths xbox,ybox, spaced so it is continuous across the periodic boundaries.
+#The lattice is made at least as dense as den and random surplus points are removed to give (box area)/(area per lipid)
+def SquareGrid(den,xbox,ybox):
+	spacing = np.pi/(2*den)
+	nx = int(np.ceil(2*xbox/spacing))
+	ny = int(np.ceil(2*ybox/spacing))
+	xs = -xbox+(np.arange(nx)+0.5)*2*xbox/nx
+	ys = -ybox+(np.arange(ny)+0.5)*2*ybox/ny
+	grid_points = np.array([[x,y,0] for x in xs for y in ys])
+	target = min(int(round(4*xbox*ybox/(spacing*spacing))),len(grid_points))
+	keep = sorted(random.sample(range(len(grid_points)),target))
+	return grid_points[keep],np.tile([0.0,0.0,1.0],(target,1))
+
+def create_leaflet(den,xbox,ybox,curv_A,curv_B,ch_ang,pore,leng,keep_end,mem_outer_red,square=False): 
 	if(curv_A < 1e-5 or curv_B < 1e-5):
+		if(square and mem_outer_red < 0):
+			return SquareGrid(den,xbox,ybox)
 		gpoints3,direcs3 = np.array(DiskGrid(den,0,xbox,ybox,mem_outer_red))
 		#Rings don't tile the box exactly, so for a flat leaflet filling the box make the number of points
 		#(box area)/(area per lipid): densify slightly if short, then remove random surplus points
@@ -2816,6 +2831,7 @@ are not specified. Curvature can be specified using -curv.
 	("-u_loc",	  Option(lipU_loc.append, 1,   None, "Currently WIP do not use. Lipid type for localisation")),
 	("-micelle",		Option(bool,		0,		  None, "Builds a micelle around a protein instead of a bilayer")),
 	("-radius",		Option(float,		1,		  -1, "Radius of membrane outer disk. This is by default the whole cell")),
+	("-grid",		Option(str,		1,		  "circular", "Lipid grid for flat membranes filling the box: circular (concentric rings) or square (continuous across the periodic boundaries). Curved membranes and -radius disks always use rings")),
 	("-no_lipids",		Option(int,		1,		  -1, "Number of lipids that make up a micelle, this will override area per lipid. Only for use with -micelle")),
 	("-def",	  Option(str,		 1,		None, "Input folder containing deformation data from MemPrOD, This cannot be used with -ps or -curv.")),
 	"""
@@ -3004,6 +3020,10 @@ if options["-box"].value:
 	
 	
 mem_outer_red = options["-radius"].value
+if options["-grid"].value not in ("circular","square"):
+	print("ERROR: -grid must be circular or square")
+	exit()
+square_grid = options["-grid"].value == "square"
 
 Num_PGL =  options["-pgl"].value
 Pos_PGL =  options["-pgl_z"].value
@@ -3754,8 +3774,8 @@ if lipL:
 			else:
 				#The two grids are swapped below when the curvature is reversed, so each is built with the density of the leaflet it ends up as
 				den_up, den_lo = (density_u[i],density_l[i]) if cdirs[i] >= 0 else (density_l[i],density_u[i])
-				up_grid,direcs = create_leaflet(den_up,pbcx/2,pbcy/2,curv_up[i],rcurv_up[i],ang_exts[i],add_pore,inner_leng,trufal[i],mem_outer_red)
-				lo_grid,direcs2 = create_leaflet(den_lo,pbcx/2,pbcy/2,curv_lo[i],rcurv_lo[i],ang_exts[i],add_pore,inner_leng,trufal[i],mem_outer_red)
+				up_grid,direcs = create_leaflet(den_up,pbcx/2,pbcy/2,curv_up[i],rcurv_up[i],ang_exts[i],add_pore,inner_leng,trufal[i],mem_outer_red,square_grid)
+				lo_grid,direcs2 = create_leaflet(den_lo,pbcx/2,pbcy/2,curv_lo[i],rcurv_lo[i],ang_exts[i],add_pore,inner_leng,trufal[i],mem_outer_red,square_grid)
 				up_grid[:,2] = -up_grid[:,2]+2
 				lo_grid[:,2] = -lo_grid[:,2]-2
 
