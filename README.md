@@ -244,6 +244,10 @@ MemPrO comes with Insane4MemPrO, a CG system builder based on [Insane](https://g
 
 **-grid** — (Default: circular) Lipid grid for flat membranes filling the box. `circular` places lipids on concentric rings; `square` uses a square lattice that is continuous across the periodic boundaries, avoiding close contacts where clipped rings meet at the box edges. Either way a flat leaflet gets (box area)/(area per lipid) lipids before any are removed around the protein. Curved membranes and `-radius` disks always use rings.
 
+**-temp** — (Optional) Temperature (K) for the built-in phospholipid, cardiolipin and phosphoinositide areas, which otherwise refer to ~303 K (DPPC 323 K, sphingomyelin 318 K). Areas are scaled by 0.25% per K, the typical fluid-phase expansion. LPS, sterol and hopanoid values are not scaled. Below a lipid's melting temperature (e.g. DPPC, sphingomyelin) the scaled value is not meaningful.
+
+**-apl_ff** — (Default: exp) `exp` uses experimental areas; `m3` scales the same lipids to Martini 3 equilibrium areas (0.94 × experimental, as found for PO lipids in the Martini 3 lipidome benchmark), so the box starts closer to its relaxed size. Total box area relaxes in NPT either way; this mainly reduces the initial shrinkage. Cholesterol is not corrected for condensing: it keeps a steric 0.40 nm², and as it flips between leaflets in Martini any resulting imbalance relaxes.
+
 **-balance** — (Default: off) Balance the two leaflets of each membrane after lipids clashing with the protein have been removed, by removing lipids at random from the fuller leaflet. `area` matches the total lipid area of the leaflets (number × area per lipid), `number` matches the lipid counts. The lipid area of each leaflet is always printed, with a warning if they differ by more than 5%, as a large mismatch can induce curvature. Some difference is expected where the protein occupies more of one leaflet than the other, in which case balancing would leave the fuller leaflet under-packed.
 
 **-ps** — (Default: 0) Distance between inner and outer membrane.

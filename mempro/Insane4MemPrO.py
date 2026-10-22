@@ -413,6 +413,28 @@ lipid_apl = {
 }
 lipid_apl_class = {"PC":0.64, "PE":0.58, "PG":0.64, "PS":0.63, "SM":0.60}	# SM: PSM, Doktorova et al. 2020 JPCB
 
+# -temp and -apl_ff adjust the phospholipid-like values above (not LPS, sterols or hopanoids). Values refer to 303 K
+# except DPPC (323 K) and SM (318 K). Fluid areas grow ~0.25%/K and Martini 3 phospholipids equilibrate at ~0.94 of
+# experiment (0.93-0.95 for PO lipids at 303-323 K; Martini 3 lipidome benchmark, PMC12464760).
+APL_TEMP_COEF = 0.0025
+APL_M3_FACTOR = 0.94
+apl_ref_temp = {"DPPC":323.0, "SM":318.0}
+apl_fixed = {"LIPA","KLA","REMP","RAMP","OANT","CHL1","HOPR","HHOP","HDPT","HBHT"}
+
+def adjust_apls(temp,ff):
+	def adj(name,val,cls=None):
+		if name in apl_fixed:
+			return val
+		if temp is not None:
+			val *= 1+APL_TEMP_COEF*(temp-apl_ref_temp.get(name,apl_ref_temp.get(cls,303.0)))
+		if ff == "m3":
+			val *= APL_M3_FACTOR
+		return val
+	for n in lipid_apl:
+		lipid_apl[n] = adj(n,lipid_apl[n],n[-2:])
+	for c in lipid_apl_class:
+		lipid_apl_class[c] = adj(c,lipid_apl_class[c],c)
+
 def get_apl(name):
 	if name in lipid_apl:
 		return lipid_apl[name]
@@ -2884,6 +2906,8 @@ are not specified. Curvature can be specified using -curv.
 	("-ao",	  Option(float,	   1,		None, "Area per lipid (nm*nm) for outer membrane")),
 	("-auo",	 Option(float,	   1,		None, "Area per lipid (nm*nm) for outer membrane upper layer")),
 	("-apl",	 Option(apl_user.append, 1,   None, "Area per lipid (nm*nm) for a lipid type, overriding the built-in table (NAME:AREA)")),
+	("-temp",	 Option(float,	   1,		None, "Temperature (K) for the built-in phospholipid areas per lipid (default: values at ~303 K)")),
+	("-apl_ff",	 Option(str,	   1,		"exp", "Built-in phospholipid areas per lipid: exp (experimental) or m3 (Martini 3 equilibrium, ~0.94 of experimental)")),
 	("-balance",	 Option(str,	   1,		"off", "Balance the leaflets of each membrane after removing lipids that clash with the protein: off, area (equal total lipid area) or number (equal lipid count)")),
 	("-asym",   Option(int,		 1,		None, "Membrane asymmetry (number of lipids)")),
 	("-rand",   Option(float,	   1,		 0.1, "Random kick size (maximum atom displacement)")),
@@ -3773,6 +3797,12 @@ mi_rad = 0
 if lipL:
 	print("Begining to build lipid bilayer(s)...")
 	#reading inputs
+	if options["-apl_ff"].value not in ("exp","m3"):
+		print("ERROR: -apl_ff must be exp or m3")
+		exit()
+	if(options["-temp"].value is not None or options["-apl_ff"].value == "m3"):
+		adjust_apls(options["-temp"].value,options["-apl_ff"].value)
+		print("Areas per lipid adjusted for"+(" %.0f K"%options["-temp"].value if options["-temp"].value is not None else "")+(" Martini 3 equilibrium areas" if options["-apl_ff"].value == "m3" else ""))
 	for ap in apl_user:
 		ap_name, ap_val = ap.split(":")
 		lipid_apl[ap_name] = float(ap_val)
