@@ -405,7 +405,11 @@ lipid_apl_class = {"PC":0.64, "PE":0.58, "PG":0.64, "PS":0.63, "SM":0.60}	# SM: 
 def get_apl(name):
 	if name in lipid_apl:
 		return lipid_apl[name]
-	return lipid_apl_class.get(name[-2:],DEFAULT_APL)
+	#Variants such as POPC.o share the area of the parent lipid
+	base = name.split(".")[0]
+	if base in lipid_apl:
+		return lipid_apl[base]
+	return lipid_apl_class.get(base[-2:],DEFAULT_APL)
 
 
 a,  b  = math.sqrt(2)/20, math.sqrt(2)/60
