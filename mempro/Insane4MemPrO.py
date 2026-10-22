@@ -4,6 +4,7 @@ import sys,math,random,os
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy as sp
+from scipy.spatial import cKDTree
 import jax
 import jax.numpy as jnp
 from functools import partial
@@ -2113,6 +2114,14 @@ def get_box_slice(points,p,r):
 	return pslice
 	
 	
+#Protein beads a lipid's path could reach: the path starts at poser+si and moves at most one tail step
+#per step, and get_box_slice looks up to sqrt(3)*exprot from each point
+def near_protein(prot_tree,prot_coords,poser,si,tails,exprot):
+	if prot_tree is None:
+		return prot_coords
+	reach = np.linalg.norm(si)+len(tails)*tails[1]+np.sqrt(3)*exprot+1e-6
+	return prot_coords[prot_tree.query_ball_point(poser,reach)]
+	
 #This is a function for sorting atoms for a neater topology file
 def reorder_atoms(atoms,coords):
 	lip_names = []
@@ -3827,6 +3836,8 @@ if lipL:
 	
 	#removing lipids within -fudge of protein
 	prot_coords = np.array(protein_lip.coord)
+	#Lipids whose path can't reach the protein skip the bead-by-bead clash checks below (same result, much faster)
+	prot_tree = cKDTree(prot_coords) if len(prot_coords) > 0 else None
 	#write_point(prot_coords*10,"Protein_filled.pdb")
 	
 	tailsU = np.linspace(0,av_liplenU*1.5,50)
@@ -3840,6 +3851,54 @@ if lipL:
 	zdist = float(options["-ps"].value)
 	print("Calculating lipid positions...")
 	
+	#Tests whether a lipid can be placed at grid point gp with normal direc, tracing its tails past the protein.
+	#sgn is 1 for upper leaflets (tails along -direc) and -1 for lower. Returns whether it can be placed and the path.
+	def place_lipid(gp,direc,tails,sgn,gi,test_pts):
+		zdef = 0
+		mtdef = 1.0
+		coll = False
+		for si in test_pts:
+			if memdata:
+				xtest = (gp[0]+si[0]-pbcx/2)*10
+				ytest = (gp[1]+si[1]-pbcy/2)*10
+				xind = int(((xtest-xlin_def[0])/(xlin_def[-1]-xlin_def[0]))*xlin_def.shape[0])
+				yind = int(((ytest-ylin_def[0])/(ylin_def[-1]-ylin_def[0]))*ylin_def.shape[0])
+				if xind < 0 or yind < 0 or xind >= xlin_def.shape[0] or yind >= ylin_def.shape[0]:
+					zdef = 0
+				else:
+					defor = membrane_pos[xind,yind]/10.0
+					zdef = defor[0]
+					mtdef = (10*defor[1]/membrane_pos[0,0,1])
+			poser = np.array([gp[0],gp[1],mtdef*gp[2]+zdist*(gi*2-1)+zdef])
+			coll = False
+			path = [poser+si]
+			near_prot = near_protein(prot_tree,prot_coords,poser,si,tails,exprot) if tm else prot_coords
+			for it,dr in enumerate(tails):
+				if tm:
+					prot_sliceb = get_box_slice(near_prot,path[-1],[exprot,exprot,exprot])
+				else:
+					prot_sliceb = jnp.empty((0,3))
+				if not prot_sliceb.size == 0:
+					path_bead,can_place = place_bead(jnp.array(path[-1]),tails[1],sgn*jnp.array(direc),SpGrid,jnp.array(prot_sliceb),exprot)
+				else:
+					path_bead = path[-1]-sgn*direc*tails[1]
+					can_place =True
+				path.append(np.array(path_bead))
+				if(not can_place):
+					coll = True
+					break
+			if not coll:
+				for _ in range(10):
+					path_bead = path[-1]-sgn*direc*tails[1]
+					path.append(np.array(path_bead))
+				path_top = [poser+si+direc*tailsUs[gi][1]]
+				for _ in range(50):
+					path_top.append(path_top[-1]+direc*tailsUs[gi][1])
+				for k in range(49):
+					path.append(path_top[-k-1])
+				break
+		return (not coll), path
+
 	for gi in range(2):
 		test_pts = DiskGridFib(20,np.sqrt(area_ls[gi])/1.5)
 		total_up_lips = up_grids[gi].shape[0]
@@ -3847,104 +3906,15 @@ if lipL:
 		if(options["-ps"].value > 1e-5 or gi == 0):
 			upper_tmp, lower_tmp = [], []
 			for i in range(total_up_lips):
-				zdef = 0
-				mtdef = 1.0
-				
 				direc = np.array([direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2]])
-				coll = False
-				for si in test_pts:
-					if memdata:
-						xtest = (up_grids[gi][i][0]+si[0]-pbcx/2)*10
-						ytest = (up_grids[gi][i][1]+si[1]-pbcy/2)*10
-						xind = int(((xtest-xlin_def[0])/(xlin_def[-1]-xlin_def[0]))*xlin_def.shape[0])
-						yind = int(((ytest-ylin_def[0])/(ylin_def[-1]-ylin_def[0]))*ylin_def.shape[0])
-						if xind < 0 or yind < 0 or xind >= xlin_def.shape[0] or yind >= ylin_def.shape[0]:
-							zdef = 0
-						else:
-							defor = membrane_pos[xind,yind]/10.0
-							zdef = defor[0]
-							mtdef = (10*defor[1]/membrane_pos[0,0,1])
-					poser = np.array([up_grids[gi][i][0],up_grids[gi][i][1],mtdef*up_grids[gi][i][2]+zdist*(gi*2-1)+zdef])
-					coll = False
-					path = [poser+si]
-					for it,dr in enumerate(tailsUs[gi]):
-						#prot_slice = get_box_slice(prot_coords,poser-dr*direc*mtdef,[exprot,exprot,exprot])
-						if tm:
-							prot_sliceb = get_box_slice(prot_coords,path[-1],[exprot,exprot,exprot])
-						else:
-							prot_sliceb = jnp.empty((0,3))
-						if not prot_sliceb.size == 0:
-							path_bead,can_place = place_bead(jnp.array(path[-1]),tailsUs[gi][1],jnp.array(direc),SpGrid,jnp.array(prot_sliceb),exprot)
-						else:
-							path_bead = path[-1]-direc*tailsUs[gi][1]
-							can_place =True
-						path.append(np.array(path_bead))
-						if(not can_place):
-							coll = True
-							break
-					if not coll:
-						for _ in range(10):
-							path_bead = path[-1]-direc*tailsUs[gi][1]
-							path.append(np.array(path_bead))
-						path_top = [poser+si+direc*tailsUs[gi][1]]
-						for _ in range(50):
-							path_top.append(path_top[-1]+direc*tailsUs[gi][1])
-						for k in range(49):	# not i: i is the lipid index used just below
-							path.append(path_top[-k-1])
-						break
-				if(not coll):
+				placed, path = place_lipid(up_grids[gi][i],direc,tailsUs[gi],1,gi,test_pts)
+				if(placed):
 					 upper_tmp.append((random.random(),up_grids[gi][i][0],up_grids[gi][i][1],up_grids[gi][i][2],direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2],path))
 					 upper.append((random.random(),up_grids[gi][i][0],up_grids[gi][i][1],up_grids[gi][i][2],direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2],path))
 			for i in range(total_lo_lips):
-				zdef = 0
-				mtdef = 1.0
 				direc = np.array([direcs2s[gi][i][0],direcs2s[gi][i][1],direcs2s[gi][i][2]])
-				coll = False				
-				for si in test_pts:
-					if memdata:
-						xtest = (lo_grids[gi][i][0]+si[0]-pbcx/2)*10
-						ytest = (lo_grids[gi][i][1]+si[1]-pbcy/2)*10
-						xind = int(((xtest-xlin_def[0])/(xlin_def[-1]-xlin_def[0]))*xlin_def.shape[0])
-						yind = int(((ytest-ylin_def[0])/(ylin_def[-1]-ylin_def[0]))*ylin_def.shape[0])
-						if xind < 0 or yind < 0 or xind >= xlin_def.shape[0] or yind >= ylin_def.shape[0]:
-							zdef = 0
-						else:
-							defor = membrane_pos[xind,yind]/10.0
-							zdef = defor[0]
-							mtdef = (10*defor[1]/membrane_pos[0,0,1])
-					poser = np.array([lo_grids[gi][i][0],lo_grids[gi][i][1],mtdef*lo_grids[gi][i][2]+zdist*(gi*2-1)+zdef])
-				
-					coll = False
-					path = [poser+si]
-					#if tm:
-					for it,dr in enumerate(tailsLs[gi]):
-						#prot_slice = get_box_slice(prot_coords,poser+dr*direc*mtdef,[exprot,exprot,exprot])
-						if tm:
-							prot_sliceb = get_box_slice(prot_coords,path[-1],[exprot,exprot,exprot])
-						else:
-							prot_sliceb = jnp.empty((0,3))
-						if not prot_sliceb.size == 0:
-							path_bead,can_place = place_bead(jnp.array(path[-1]),tailsLs[gi][1],-jnp.array(direc),SpGrid,jnp.array(prot_sliceb),exprot)
-						else:
-							path_bead = path[-1]+direc*tailsLs[gi][1]
-							can_place =True
-						path.append(np.array(path_bead))
-						if(not can_place):
-							coll = True
-							break
-					if not coll:
-						for _ in range(10):
-							path_bead = path[-1]+direc*tailsLs[gi][1]
-							path.append(np.array(path_bead))
-						path_top = [poser+si+direc*tailsUs[gi][1]]
-						for _ in range(50):
-							path_top.append(path_top[-1]+direc*tailsUs[gi][1])
-						for k in range(49):	# not i: i is the lipid index used just below
-							path.append(path_top[-k-1])
-						break
-					
-				if(not coll):
-
+				placed, path = place_lipid(lo_grids[gi][i],direc,tailsLs[gi],-1,gi,test_pts)
+				if(placed):
 					lower_tmp.append((random.random(),lo_grids[gi][i][0],lo_grids[gi][i][1],lo_grids[gi][i][2],direcs2s[gi][i][0],direcs2s[gi][i][1],direcs2s[gi][i][2],path))
 					lower.append((random.random(),lo_grids[gi][i][0],lo_grids[gi][i][1],lo_grids[gi][i][2],direcs2s[gi][i][0],direcs2s[gi][i][1],direcs2s[gi][i][2],path))
 
