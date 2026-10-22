@@ -232,13 +232,17 @@ MemPrO comes with Insane4MemPrO, a CG system builder based on [Insane](https://g
 
 **-uo** — (Optional) Lipid type and relative abundance (`NAME[:N]`) in the outer membrane upper leaflet.
 
-**-a** — (Default: 0.6) Area per lipid (nm²) in the membrane (or lower leaflet if `-au` is used).
+**-a** — (Optional) Area per lipid (nm²) in the membrane (or lower leaflet if `-au` is used). By default the area per lipid of each leaflet is the abundance-weighted mean of the built-in per-lipid values (see `-apl`), so for example `-l POPE:7 -l POPG:2 -l CARD:1` gives about 0.67 nm² and `-uo LIPA` 1.56 nm². Built-in values are fluid-phase experimental areas (~303 K) where available, otherwise from simulation; sources are noted beside `lipid_apl` in `Insane4MemPrO.py`. The areas used are printed when building.
 
 **-au** — (Optional) Area per lipid (nm²) in the upper leaflet.
 
 **-ao** — (Optional) Area per lipid (nm²) in the outer membrane (or lower leaflet if `-auo` is used).
 
 **-auo** — (Optional) Area per lipid (nm²) in the outer membrane upper leaflet.
+
+**-apl** — (Optional, repeatable) Area per lipid (nm²) for one lipid type (`NAME:AREA`), overriding the built-in value. Built-in values are in `lipid_apl` in `Insane4MemPrO.py`; lipids not listed there use a value for their headgroup class (PC, PE, PG, PS) or 0.6 nm².
+
+**-balance** — (Default: off) Balance the two leaflets of each membrane after lipids clashing with the protein have been removed, by removing lipids at random from the fuller leaflet. `area` matches the total lipid area of the leaflets (number × area per lipid), `number` matches the lipid counts. The lipid area of each leaflet is always printed, with a warning if they differ by more than 5%, as a large mismatch can induce curvature. Some difference is expected where the protein occupies more of one leaflet than the other, in which case balancing would leave the fuller leaflet under-packed.
 
 **-ps** — (Default: 0) Distance between inner and outer membrane.
 

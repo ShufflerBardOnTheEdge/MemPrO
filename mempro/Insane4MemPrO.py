@@ -379,6 +379,34 @@ lipidsa.update({	# 1	2   3   4   5   6   7   8   9   10  11  12  13   14  15  16
 charges = {"HPPA":-1,"4HPA":-1,"UDP2":-2,"UDP1":-1, "GLYP":-1, "GLYM":-1, "ARG":1, "LYS":1, "ASP":-1, "GLU":-1, "DOPG":-1, "POPG":-1, "DOPS":-1, "POPS":-1, "DSSQ":-1, "KPG":+1, "LIPA":-2, "PGIN":-1, "REMP":-6, "RAMP":-10, "OANT":-10, "CARD":-2, "A2P2":-1, "APM2":-1, "APM6":-1, "LIP2":-4, "LIP4":-6, "LIP6":-8, "LIP8":-10, "LI10":-12, "LI12":-14, "LI14":-16, "LI16":-18, "LI18":-20, "LI20":-22, "LI22":-24,"UPEP":-1,"SPEP":-2,"UUPEP":-1,"KLA":-6}
 ion_charges = {"NA" :1,"CL":-1,"CA":2}
 
+# Default area per lipid (nm^2) for each lipid type. Unless -a/-au/-ao/-auo are given, the grid density of each
+# leaflet is set from the number-weighted mean of these over its composition. Lipids not listed fall back to their
+# headgroup class (last two letters of the name), then to DEFAULT_APL. Entries can be overridden with -apl NAME:AREA.
+# Values are fluid-phase experimental areas (~303 K) where available, otherwise from simulation as noted.
+DEFAULT_APL = 0.60
+lipid_apl = {
+	# Phosphatidylcholines: Kucerka et al. 2008 BJ, 2011 BBA (DPPC at 323 K)
+	"POPC":0.643, "DOPC":0.674, "DPPC":0.631, "DLPC":0.608,
+	# Phosphatidylethanolamines: POPE Kucerka et al. 2015 JPCB; DOPE has no lamellar value, CHARMM36/Martini 3 ~0.62
+	"POPE":0.580, "DOPE":0.62,
+	# Phosphatidylglycerols: Pan et al. 2014 BBA; phosphatidylserines: Pan et al. 2014 Soft Matter, Petrache et al. 2004 BJ
+	"POPG":0.643, "DOPG":0.691, "POPS":0.627, "DOPS":0.653,
+	# Cardiolipins (four tails): TOCL, Pan et al. 2015 Soft Matter
+	"CARD":1.30, "CDL0":1.30, "CDL1":1.30, "CDL2":1.30, "CL4P":1.30, "CL4M":1.30,
+	# Lipid A: Snyder et al. 1999 Biochemistry; Re-LPS (Kdo2-lipid A): CHARMM36m, Brandner et al. 2024 JCTC;
+	# smooth LPS: CHARMM36, Park et al. 2023 JCIM and Martini 3 LPS 2026 JPCB; Ra-LPS taken between Re and smooth
+	"LIPA":1.56, "KLA":1.67, "REMP":1.67, "RAMP":1.80, "OANT":1.85,
+	# Sterols: steric area for placement (the partial area is ~0.26 at >30 mol%, Edholm & Nagle 2005 BJ);
+	# hopanoids assumed sterol-like
+	"CHL1":0.40, "HOPR":0.40, "HHOP":0.40, "HDPT":0.40, "HBHT":0.40,
+}
+lipid_apl_class = {"PC":0.64, "PE":0.58, "PG":0.64, "PS":0.63, "SM":0.60}	# SM: PSM, Doktorova et al. 2020 JPCB
+
+def get_apl(name):
+	if name in lipid_apl:
+		return lipid_apl[name]
+	return lipid_apl_class.get(name[-2:],DEFAULT_APL)
+
 
 a,  b  = math.sqrt(2)/20, math.sqrt(2)/60
 ct, st = math.cos(math.pi*109.47/180), math.sin(math.pi*109.47/180) # Tetrahedral
@@ -690,6 +718,21 @@ def parse_mol(x):
 	l = x.split(":")
 	return l[0], len(l) == 1 and 1 or float(l[1])
 
+# Number-weighted mean area per lipid of a leaflet composition (list of LIPID[:NUMBER])
+def leaflet_apl(lips):
+	names, nums = list(zip(*[ parse_mol(i) for i in lips ]))
+	return sum(get_apl(n)*c for n,c in zip(names,nums))/float(sum(nums))
+
+# Splits n lipids between types in proportion to their abundance, giving the remainder to the types
+# with the largest fractional parts so the counts add up to n
+def split_counts(n,nums):
+	tot = float(sum(nums))
+	exact = [n*i/tot for i in nums]
+	counts = [int(e) for e in exact]
+	for j in sorted(range(len(nums)),key=lambda k: exact[k]-counts[k],reverse=True)[:n-sum(counts)]:
+		counts[j] += 1
+	return counts
+
 ## MIJN EIGEN ROUTINE ##
 
 # Quite short piece of code for diagonalizing symmetric 3x3 matrices :)
@@ -837,8 +880,9 @@ def DiskGrid(den,inner_rad,xbox,ybox,outer_rad):
 		new_den =2*den/np.pi
 		new_den = new_den*new_den
 		return DiskGridFB(new_den,outer_rad)
-	frden = int(den*2*(outer_rad-inner_rad)/np.pi)
-	rings = np.linspace(inner_rad,outer_rad,frden)
+	#frden rings spaced sqrt(area per lipid) apart (linspace needs one more point than gaps)
+	frden = int(round(den*2*(outer_rad-inner_rad)/np.pi))
+	rings = np.linspace(inner_rad,outer_rad,frden+1)
 	for xr,r in enumerate(rings[1:]):
 		rad = r
 		rden = int(rad*den)+1
@@ -1896,6 +1940,16 @@ def write_all_itp(itp_str,out_folder):
 def create_leaflet(den,xbox,ybox,curv_A,curv_B,ch_ang,pore,leng,keep_end,mem_outer_red): 
 	if(curv_A < 1e-5 or curv_B < 1e-5):
 		gpoints3,direcs3 = np.array(DiskGrid(den,0,xbox,ybox,mem_outer_red))
+		#Rings don't tile the box exactly, so for a flat leaflet filling the box make the number of points
+		#(box area)/(area per lipid): densify slightly if short, then remove random surplus points
+		if(mem_outer_red < 0):
+			target = int(round(4*xbox*ybox*(2*den/np.pi)**2))
+			fill_den = den
+			while(len(gpoints3) < target):
+				fill_den *= 1.01
+				gpoints3,direcs3 = np.array(DiskGrid(fill_den,0,xbox,ybox,mem_outer_red))
+			keep = sorted(random.sample(range(len(gpoints3)),target))
+			gpoints3,direcs3 = gpoints3[keep],direcs3[keep]
 		return gpoints3,direcs3
 	rad_A = 1.0/curv_A
 	rad_B = 1.0/curv_B 
@@ -2668,6 +2722,7 @@ lipL_loc = []
 lipU_loc = []
 lipLO = []
 lipUO = []
+apl_user = []
 solv = []
 pos_ions = [[],[],[]]
 neg_ions = [[],[],[]]
@@ -2729,10 +2784,12 @@ are not specified. Curvature can be specified using -curv.
 	("-u",	  Option(lipU.append, 1,   None, "Lipid type and relative abundance (NAME[:#])")),
 	("-lo",	  Option(lipLO.append, 1,   None, "Lipid type and relative abundance (For double membrane definitions) (NAME[:#])")),
 	("-uo",	  Option(lipUO.append, 1,   None, "Lipid type and relative abundance (For double membrane definitions) (NAME[:#])")),
-	("-a",	  Option(float,	   1,		0.60, "Area per lipid (nm*nm)")),
+	("-a",	  Option(float,	   1,		None, "Area per lipid (nm*nm). By default set for each leaflet from its composition (see -apl)")),
 	("-au",	 Option(float,	   1,		None, "Area per lipid (nm*nm) for upper layer")),
 	("-ao",	  Option(float,	   1,		None, "Area per lipid (nm*nm) for outer membrane")),
 	("-auo",	 Option(float,	   1,		None, "Area per lipid (nm*nm) for outer membrane upper layer")),
+	("-apl",	 Option(apl_user.append, 1,   None, "Area per lipid (nm*nm) for a lipid type, overriding the built-in table (NAME:AREA)")),
+	("-balance",	 Option(str,	   1,		"off", "Balance the leaflets of each membrane after removing lipids that clash with the protein: off, area (equal total lipid area) or number (equal lipid count)")),
 	("-asym",   Option(int,		 1,		None, "Membrane asymmetry (number of lipids)")),
 	("-rand",   Option(float,	   1,		 0.1, "Random kick size (maximum atom displacement)")),
 	("-bd",	 Option(float,	   1,		 0.3, "Bead distance unit for scaling z-coordinates (nm)")),
@@ -3616,26 +3673,25 @@ mi_rad = 0
 if lipL:
 	print("Begining to build lipid bilayer(s)...")
 	#reading inputs
-	area_l = float(options["-a"].value)
-	if(not options["-au"].value is None):
-		area_u = float(options["-au"].value)
-	else:
-		area_u = float(options["-a"].value)
+	for ap in apl_user:
+		ap_name, ap_val = ap.split(":")
+		lipid_apl[ap_name] = float(ap_val)
 
-	if(not options["-ao"].value is None):
-		area_lo = float(options["-ao"].value)
-	else:
-		area_lo = float(options["-a"].value)
-	
-	
-	if(not options["-auo"].value is None):
-		area_uo = float(options["-auo"].value)
-	else:
-		if(not options["-ao"].value is None):
-			area_uo = float(options["-ao"].value)
-		else:
-			area_uo = float(options["-a"].value)
-	
+	#Each leaflet takes the first area flag given, otherwise the mean area per lipid of its composition
+	#(compositions fall back in the same way as when lipids are assigned below)
+	def pick_area(flags,lips):
+		for f in flags:
+			if(not options[f].value is None):
+				return float(options[f].value)
+		return leaflet_apl(lips)
+	area_l = pick_area(["-a"],lipL)
+	area_u = pick_area(["-au","-a"],lipU or lipL)
+	area_lo = pick_area(["-ao","-a"],lipLO or lipL)
+	area_uo = pick_area(["-auo","-ao","-a"],lipUO or lipLO or lipL)
+	print("Area per lipid (nm^2): upper %.3f, lower %.3f"%(area_u,area_l))
+	if(options["-ps"].value > 1e-5):
+		print("Area per lipid (nm^2) in outer membrane: upper %.3f, lower %.3f"%(area_uo,area_lo))
+
 	density_l = [np.pi/2*np.sqrt(1/area_l),np.pi/2*np.sqrt(1/area_lo)]
 	density_u = [np.pi/2*np.sqrt(1/area_u),np.pi/2*np.sqrt(1/area_uo)]
 	area_ls = [area_l,area_lo]
@@ -3683,8 +3739,10 @@ if lipL:
 				lo_grid = np.zeros((0,3))
 				direcs2 = np.zeros((0,3))
 			else:
-				up_grid,direcs = create_leaflet(density_u[i],pbcx/2,pbcy/2,curv_up[i],rcurv_up[i],ang_exts[i],add_pore,inner_leng,trufal[i],mem_outer_red)
-				lo_grid,direcs2 = create_leaflet(density_l[i],pbcx/2,pbcy/2,curv_lo[i],rcurv_lo[i],ang_exts[i],add_pore,inner_leng,trufal[i],mem_outer_red)
+				#The two grids are swapped below when the curvature is reversed, so each is built with the density of the leaflet it ends up as
+				den_up, den_lo = (density_u[i],density_l[i]) if cdirs[i] >= 0 else (density_l[i],density_u[i])
+				up_grid,direcs = create_leaflet(den_up,pbcx/2,pbcy/2,curv_up[i],rcurv_up[i],ang_exts[i],add_pore,inner_leng,trufal[i],mem_outer_red)
+				lo_grid,direcs2 = create_leaflet(den_lo,pbcx/2,pbcy/2,curv_lo[i],rcurv_lo[i],ang_exts[i],add_pore,inner_leng,trufal[i],mem_outer_red)
 				up_grid[:,2] = -up_grid[:,2]+2
 				lo_grid[:,2] = -lo_grid[:,2]-2
 
@@ -3863,27 +3921,48 @@ if lipL:
 			
 	
 	
+			# Balance the leaflets by removing (random) lipids from the fuller one
+			apl_up = [area_u,area_uo][gi]
+			apl_lo = [area_l,area_lo][gi]
+			balance = options["-balance"].value
+			if balance not in ("off","area","number"):
+				print("ERROR: -balance must be off, area or number")
+				exit()
+			if balance != "off":
+				w_up, w_lo = (apl_up,apl_lo) if balance == "area" else (1.0,1.0)
+				if len(upper_tmp)*w_up > len(lower_tmp)*w_lo:
+					upper_tmp = upper_tmp[:int(round(len(lower_tmp)*w_lo/w_up))]
+				else:
+					lower_tmp = lower_tmp[:int(round(len(upper_tmp)*w_up/w_lo))]
+
 			# Extract coordinates, taking asymmetry in account
 			asym  = options["-asym"].value or 0
 			upper_tmp = [i[1:] for i in upper_tmp[max(0, asym):]]
 			lower_tmp = [i[1:] for i in lower_tmp[max(0,-asym):]]
 			print("; %d lipids in upper leaflet, %d lipids in lower leaflet"%(len(upper_tmp),len(lower_tmp)),file=sys.stderr )
-	
+
+			#A large difference in lipid area between leaflets can induce curvature, though some is expected
+			#where the protein occupies more of one leaflet than the other
+			area_up_leaf = len(upper_tmp)*apl_up
+			area_lo_leaf = len(lower_tmp)*apl_lo
+			area_diff = abs(area_up_leaf-area_lo_leaf)/max(area_up_leaf,area_lo_leaf,1e-9)
+			print("Lipid area (nm^2): upper leaflet %.0f, lower leaflet %.0f (%.1f%% difference)"%(area_up_leaf,area_lo_leaf,100*area_diff))
+			if area_diff > 0.05:
+				print("WARNING: The leaflet lipid areas differ by more than 5%, which may induce curvature. Some difference is expected where the protein occupies more of one leaflet; otherwise consider -balance area or -asym.")
+
 			# Types of lipids, relative numbers, fractions and numbers
-			
+
 			# Upper leaflet (+1)
 			lipU_new, numU = list(zip(*[ parse_mol(i) for i in lipUs[gi] ]))
-			totU	   = float(sum(numU))
-			num_up	 = [int(len(upper_tmp)*i/totU) for i in numU]
-			
+			num_up	 = split_counts(len(upper_tmp),numU)
+
 			lip_up	 = [l for i,l in list(zip(num_up,lipU_new)) for j in range(i)]
 
 			leaf_up	= ( 1,list(zip(lip_up,upper_tmp)))
 			
 			# Lower leaflet (-1)
 			lipL_new, numL = list(zip(*[ parse_mol(i) for i in lipLs[gi] ]))
-			totL	   = float(sum(numL))
-			num_lo	 = [int(len(lower_tmp)*i/totL) for i in numL]
+			num_lo	 = split_counts(len(lower_tmp),numL)
 			lip_lo	 = [l for i,l in list(zip(num_lo,lipL_new)) for j in range(i)]
 			
 			#lower_tmp = LocBias(lower_tmp,num_lo,lipL_new,10000,lipL_loc,loc_grid[0])
