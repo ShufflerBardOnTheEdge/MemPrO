@@ -382,15 +382,16 @@ ion_charges = {"NA" :1,"CL":-1,"CA":2}
 # Default area per lipid (nm^2) for each lipid type. Unless -a/-au/-ao/-auo are given, the grid density of each
 # leaflet is set from the number-weighted mean of these over its composition. Lipids not listed fall back to their
 # headgroup class (last two letters of the name), then to DEFAULT_APL. Entries can be overridden with -apl NAME:AREA.
-# Values are fluid-phase experimental areas (~303 K) where available, otherwise from simulation as noted.
+# Values are fluid-phase experimental areas (~303 K) where available, otherwise from simulation as noted, rounded
+# to 0.01 nm^2 (roughly their accuracy; LPS values are less certain, ~0.1 nm^2).
 DEFAULT_APL = 0.60
 lipid_apl = {
 	# Phosphatidylcholines: Kucerka et al. 2008 BJ, 2011 BBA (DPPC at 323 K)
-	"POPC":0.643, "DOPC":0.674, "DPPC":0.631, "DLPC":0.608,
+	"POPC":0.64, "DOPC":0.67, "DPPC":0.63, "DLPC":0.61,
 	# Phosphatidylethanolamines: POPE Kucerka et al. 2015 JPCB; DOPE has no lamellar value, CHARMM36/Martini 3 ~0.62
-	"POPE":0.580, "DOPE":0.62,
+	"POPE":0.58, "DOPE":0.62,
 	# Phosphatidylglycerols: Pan et al. 2014 BBA; phosphatidylserines: Pan et al. 2014 Soft Matter, Petrache et al. 2004 BJ
-	"POPG":0.643, "DOPG":0.691, "POPS":0.627, "DOPS":0.653,
+	"POPG":0.64, "DOPG":0.69, "POPS":0.63, "DOPS":0.65,
 	# Cardiolipins (four tails): TOCL, Pan et al. 2015 Soft Matter
 	"CARD":1.30, "CDL0":1.30, "CDL1":1.30, "CDL2":1.30, "CL4P":1.30, "CL4M":1.30,
 	# Lipid A: Snyder et al. 1999 Biochemistry; Re-LPS (Kdo2-lipid A): CHARMM36m, Brandner et al. 2024 JCTC;
