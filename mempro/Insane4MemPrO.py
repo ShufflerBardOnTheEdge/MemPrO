@@ -738,6 +738,71 @@ def leaflet_apl(lips):
 	names, nums = list(zip(*[ parse_mol(i) for i in lips ]))
 	return sum(get_apl(n)*c for n,c in zip(names,nums))/float(sum(nums))
 
+# Lipids much larger than the smallest in a leaflet (e.g. cardiolipin among PE) take several grid sites,
+# k = area / smallest area in the leaflet (rounded). Returns names, abundances, areas and sites per lipid.
+def lipid_sites(lips):
+	names, nums = list(zip(*[ parse_mol(i) for i in lips ]))
+	apls = [get_apl(n) for n in names]
+	return names, nums, apls, [max(1,int(round(a/min(apls)))) for a in apls]
+
+# Area per grid site of a leaflet (total lipid area / total sites)
+def leaflet_site_area(lips):
+	names, nums, apls, ks = lipid_sites(lips)
+	return sum(a*c for a,c in zip(apls,nums))/float(sum(k*c for k,c in zip(ks,nums)))
+
+# Assigns lipid types to placed sites (entries x,y,z,dx,dy,dz,path). A lipid taking k sites keeps one site and
+# removes its k-1 nearest unused neighbours. Returns the lipid names, their sites (grouped by type, in the order
+# of lips) and the count of each type.
+def assign_lipids(sites,lips,use_sites,box_xy):
+	names, nums, apls, ks = lipid_sites(lips)
+	if not use_sites:
+		ks = [1]*len(names)
+	nsites = len(sites)
+	exact = [nsites*c/float(sum(k*n for k,n in zip(ks,nums))) for c in nums]
+	counts = split_counts(int(sum(exact)),nums)
+	#Rounding can leave the sites slightly over- or under-used; correct with the types furthest from their share
+	while sum(k*c for k,c in zip(ks,counts)) > nsites:
+		j = max([j for j in range(len(counts)) if counts[j] > 0],key=lambda j: counts[j]-exact[j])
+		counts[j] -= 1
+	singles = [j for j in range(len(ks)) if ks[j] == 1]
+	while singles and sum(k*c for k,c in zip(ks,counts)) < nsites:
+		j = min(singles,key=lambda j: counts[j]-exact[j])
+		counts[j] += 1
+	used = np.zeros(nsites,dtype=bool)
+	chosen = [[] for _ in names]
+	if max(ks) > 1 and nsites > 0:
+		xyz = np.array([s_[:3] for s_ in sites],dtype=float)
+		xyz[:,0] %= box_xy[0]
+		xyz[:,1] %= box_xy[1]
+		zspan = np.ptp(xyz[:,2])*2+10
+		xyz[:,2] -= xyz[:,2].min()
+		tree = cKDTree(xyz,boxsize=[box_xy[0],box_xy[1],zspan])
+	nxt = 0
+	for j in sorted(range(len(names)),key=lambda j: -ks[j]):
+		for _ in range(counts[j]):
+			while used[nxt]:
+				nxt += 1
+			used[nxt] = True
+			if ks[j] == 1:
+				chosen[j].append(sites[nxt])
+				continue
+			claimed = [nxt]
+			for nb in tree.query(xyz[nxt],k=min(nsites,8*ks[j]))[1]:
+				if len(claimed) == ks[j]:
+					break
+				if not used[nb]:
+					used[nb] = True
+					claimed.append(nb)
+			#Centre the lipid on the sites it takes (minimum image in x,y), moving its path with it
+			rel = xyz[claimed]-xyz[nxt]
+			rel[:,:2] -= np.round(rel[:,:2]/np.array(box_xy))*np.array(box_xy)
+			off = rel.mean(axis=0)
+			st = sites[nxt]
+			chosen[j].append((st[0]+off[0],st[1]+off[1],st[2]+off[2],st[3],st[4],st[5],[np.asarray(pp)+off for pp in st[6]]))
+	lip_names = [names[j] for j in range(len(names)) for _ in chosen[j]]
+	lip_sites = [s_ for j in range(len(names)) for s_ in chosen[j]]
+	return lip_names, lip_sites, counts
+
 # Splits n lipids between types in proportion to their abundance, giving the remainder to the types
 # with the largest fractional parts so the counts add up to n
 def split_counts(n,nums):
@@ -3714,21 +3779,23 @@ if lipL:
 
 	#Each leaflet takes the first area flag given, otherwise the mean area per lipid of its composition
 	#(compositions fall back in the same way as when lipids are assigned below)
+	#Returns the mean area per lipid, the area per grid site (smaller where large lipids take several sites)
+	#and whether large lipids take several sites (not when an area is given, which means one lipid per site)
 	def pick_area(flags,lips):
 		for f in flags:
 			if(not options[f].value is None):
-				return float(options[f].value)
-		return leaflet_apl(lips)
-	area_l = pick_area(["-a"],lipL)
-	area_u = pick_area(["-au","-a"],lipU or lipL)
-	area_lo = pick_area(["-ao","-a"],lipLO or lipL)
-	area_uo = pick_area(["-auo","-ao","-a"],lipUO or lipLO or lipL)
+				return float(options[f].value), float(options[f].value), False
+		return leaflet_apl(lips), leaflet_site_area(lips), True
+	area_l, site_l, sites_l = pick_area(["-a"],lipL)
+	area_u, site_u, sites_u = pick_area(["-au","-a"],lipU or lipL)
+	area_lo, site_lo, sites_lo = pick_area(["-ao","-a"],lipLO or lipL)
+	area_uo, site_uo, sites_uo = pick_area(["-auo","-ao","-a"],lipUO or lipLO or lipL)
 	print("Area per lipid (nm^2): upper %.3f, lower %.3f"%(area_u,area_l))
 	if(options["-ps"].value > 1e-5):
 		print("Area per lipid (nm^2) in outer membrane: upper %.3f, lower %.3f"%(area_uo,area_lo))
 
-	density_l = [np.pi/2*np.sqrt(1/area_l),np.pi/2*np.sqrt(1/area_lo)]
-	density_u = [np.pi/2*np.sqrt(1/area_u),np.pi/2*np.sqrt(1/area_uo)]
+	density_l = [np.pi/2*np.sqrt(1/site_l),np.pi/2*np.sqrt(1/site_lo)]
+	density_u = [np.pi/2*np.sqrt(1/site_u),np.pi/2*np.sqrt(1/site_uo)]
 	area_ls = [area_l,area_lo]
 
 
@@ -3918,14 +3985,15 @@ if lipL:
 	
 	
 			# Balance the leaflets by removing (random) lipids from the fuller one
-			apl_up = [area_u,area_uo][gi]
-			apl_lo = [area_l,area_lo][gi]
+			#Each placed entry is a grid site; large lipids take several
+			apl_up = [site_u,site_uo][gi]
+			apl_lo = [site_l,site_lo][gi]
 			balance = options["-balance"].value
 			if balance not in ("off","area","number"):
 				print("ERROR: -balance must be off, area or number")
 				exit()
 			if balance != "off":
-				w_up, w_lo = (apl_up,apl_lo) if balance == "area" else (1.0,1.0)
+				w_up, w_lo = (apl_up,apl_lo) if balance == "area" else (apl_up/[area_u,area_uo][gi],apl_lo/[area_l,area_lo][gi])
 				if len(upper_tmp)*w_up > len(lower_tmp)*w_lo:
 					upper_tmp = upper_tmp[:int(round(len(lower_tmp)*w_lo/w_up))]
 				else:
@@ -3935,7 +4003,6 @@ if lipL:
 			asym  = options["-asym"].value or 0
 			upper_tmp = [i[1:] for i in upper_tmp[max(0, asym):]]
 			lower_tmp = [i[1:] for i in lower_tmp[max(0,-asym):]]
-			print("; %d lipids in upper leaflet, %d lipids in lower leaflet"%(len(upper_tmp),len(lower_tmp)),file=sys.stderr )
 
 			#A large difference in lipid area between leaflets can induce curvature, though some is expected
 			#where the protein occupies more of one leaflet than the other
@@ -3950,16 +4017,14 @@ if lipL:
 
 			# Upper leaflet (+1)
 			lipU_new, numU = list(zip(*[ parse_mol(i) for i in lipUs[gi] ]))
-			num_up	 = split_counts(len(upper_tmp),numU)
-
-			lip_up	 = [l for i,l in list(zip(num_up,lipU_new)) for j in range(i)]
+			lip_up, upper_tmp, num_up = assign_lipids(upper_tmp,lipUs[gi],[sites_u,sites_uo][gi],(pbcx,pbcy))
 
 			leaf_up	= ( 1,list(zip(lip_up,upper_tmp)))
 			
 			# Lower leaflet (-1)
 			lipL_new, numL = list(zip(*[ parse_mol(i) for i in lipLs[gi] ]))
-			num_lo	 = split_counts(len(lower_tmp),numL)
-			lip_lo	 = [l for i,l in list(zip(num_lo,lipL_new)) for j in range(i)]
+			lip_lo, lower_tmp, num_lo = assign_lipids(lower_tmp,lipLs[gi],[sites_l,sites_lo][gi],(pbcx,pbcy))
+			print("; %d lipids in upper leaflet, %d lipids in lower leaflet"%(len(upper_tmp),len(lower_tmp)),file=sys.stderr )
 			
 			#lower_tmp = LocBias(lower_tmp,num_lo,lipL_new,10000,lipL_loc,loc_grid[0])
 			leaf_lo	= (-1,list(zip(lip_lo,lower_tmp)))

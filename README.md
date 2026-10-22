@@ -232,7 +232,7 @@ MemPrO comes with Insane4MemPrO, a CG system builder based on [Insane](https://g
 
 **-uo** — (Optional) Lipid type and relative abundance (`NAME[:N]`) in the outer membrane upper leaflet.
 
-**-a** — (Optional) Area per lipid (nm²) in the membrane (or lower leaflet if `-au` is used). By default the area per lipid of each leaflet is the abundance-weighted mean of the built-in per-lipid values (see `-apl`), so for example `-l POPE:7 -l POPG:2 -l CARD:1` gives about 0.67 nm² and `-uo LIPA` 1.56 nm². Built-in values are fluid-phase experimental areas (~303 K) where available, otherwise from simulation; sources are noted beside `lipid_apl` in `Insane4MemPrO.py`. The areas used are printed when building.
+**-a** — (Optional) Area per lipid (nm²) in the membrane (or lower leaflet if `-au` is used). By default the area per lipid of each leaflet is the abundance-weighted mean of the built-in per-lipid values (see `-apl`), so for example `-l POPE:7 -l POPG:2 -l CARD:1` gives about 0.67 nm² and `-uo LIPA` 1.56 nm². Built-in values are fluid-phase experimental areas (~303 K) where available, otherwise from simulation; sources are noted beside `lipid_apl` in `Insane4MemPrO.py`. The areas used are printed when building. In mixed leaflets, lipids much larger than the smallest one take several grid sites (area / smallest area, rounded), so for example cardiolipin among PE takes two sites and sits between them, and cholesterol among POPC takes half the space of a POPC. Giving `-a`/`-au`/`-ao`/`-auo` explicitly places one lipid per site, as before.
 
 **-au** — (Optional) Area per lipid (nm²) in the upper leaflet.
 
