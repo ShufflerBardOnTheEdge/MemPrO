@@ -30,7 +30,8 @@ def load_lipid_areas(insane_path=None):
     """Loads the area-per-lipid table block from Insane4MemPrO.py so both use the same values."""
     if insane_path is None:
         insane_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Insane4MemPrO.py")
-    src = open(insane_path).read()
+    with open(insane_path) as f:
+        src = f.read()
     start = src.index("# BEGIN LIPID AREAS")
     end = src.index("# END LIPID AREAS")
     ns = {}
