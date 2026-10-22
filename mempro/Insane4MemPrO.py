@@ -8,6 +8,7 @@ from scipy.spatial import cKDTree
 import jax
 import jax.numpy as jnp
 from functools import partial
+from collections import deque
 
 jax.config.update("jax_enable_x64",True)
 jax.config.update("jax_platform_name","cpu")
@@ -2663,31 +2664,21 @@ def relax_pg(gposes,box_size,tol,all_p):
 
 #This function uses a flood fill algorithm to identifiy the inside of a protein. This works better than the basic method used in ring.
 def flood_fill(grid,add_in):
-	to_test = [[0,0]]
-	done = []
+	#Each cell is queued at most once (seen), so this is linear in the grid size
+	to_test = deque([(0,0)])
+	seen = np.zeros(grid.shape,dtype=bool)
+	seen[0,0] = True
 	flagged = np.zeros_like(grid)
 	while len(to_test) > 0:
-		ct = to_test[0]
+		cx,cy = to_test.popleft()
 		if add_in:
-			flagged[ct[0],ct[1]] = 1
-		if grid[ct[0],ct[1]] == 0:
-			flagged[ct[0],ct[1]] = 1
-			poss_tests = [[ct[0]-1,ct[1]],[ct[0]+1,ct[1]],[ct[0],ct[1]+1],[ct[0],ct[1]-1]]
-			for i in poss_tests:
-				if i[0] >= 0 and i[1] >= 0 and i[0] < grid.shape[0] and i[1] < grid.shape[1]:
-					already_done = False
-					for d in done:
-						if d[0] == i[0] and d[1] == i[1]:
-							already_done = True
-							break
-					for d in to_test:
-						if d[0] == i[0] and d[1] == i[1]:
-							already_done = True
-							break
-					if not already_done:
-						to_test.append(i)
-		done.append(to_test[0])
-		del to_test[0]
+			flagged[cx,cy] = 1
+		if grid[cx,cy] == 0:
+			flagged[cx,cy] = 1
+			for nx_,ny_ in ((cx-1,cy),(cx+1,cy),(cx,cy+1),(cx,cy-1)):
+				if nx_ >= 0 and ny_ >= 0 and nx_ < grid.shape[0] and ny_ < grid.shape[1] and not seen[nx_,ny_]:
+					seen[nx_,ny_] = True
+					to_test.append((nx_,ny_))
 	return flagged
 
 @jax.jit
@@ -3879,7 +3870,7 @@ if lipL:
 				else:
 					prot_sliceb = jnp.empty((0,3))
 				if not prot_sliceb.size == 0:
-					path_bead,can_place = place_bead(jnp.array(path[-1]),tails[1],sgn*jnp.array(direc),SpGrid,jnp.array(prot_sliceb),exprot)
+					path_bead,can_place = place_bead(np.asarray(path[-1]),tails[1],sgn*direc,SpGrid,prot_sliceb,exprot)
 				else:
 					path_bead = path[-1]-sgn*direc*tails[1]
 					can_place =True
