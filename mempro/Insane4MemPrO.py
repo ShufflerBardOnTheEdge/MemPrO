@@ -2003,6 +2003,8 @@ def create_leaflet(den,xbox,ybox,curv_A,curv_B,ch_ang,pore,leng,keep_end,mem_out
 		
 	gpoints2,direcs2 = np.array(InvSphereGrid(den,in_rad,(np.pi/2-ch_ang),rad_B))
 	gpoints3,direcs3 = np.array(DiskGrid(den,rad_B+in_rad,xbox,ybox,mem_outer_red))
+	#A section can have no points (e.g. a return arc shorter than one lipid spacing), so keep every array (n,3)
+	gpoints,direcs,gpoints2,direcs2,gpoints3,direcs3 = [np.reshape(np.asarray(g,dtype=float),(-1,3)) for g in (gpoints,direcs,gpoints2,direcs2,gpoints3,direcs3)]
 	shift = -gpoints[-1,2]+s2*rad_B-rad_B
 	if(pore):
 		 gpoints[:,2] = gpoints[:,2]-rad_B
@@ -4420,7 +4422,17 @@ if solv:
 			total_posi += icount
 
 
-		if(total_negc-(total_negi/total_posi) == 0):
+		#Compartments given no ions, or ions of only one sign, would otherwise divide by zero below
+		if(total_negi == 0 and total_posi == 0):
+			A_pos = 0
+			A_neg = 0
+		elif(total_negi == 0):
+			A_neg = 0
+			A_pos = cperi/total_posc
+		elif(total_posi == 0):
+			A_pos = 0
+			A_neg = cperi/total_negc
+		elif(total_negc-(total_negi/total_posi) == 0):
 			A_pos = (cperi-total_negc/total_negi)/(total_posc-total_negc*(total_posi/total_negi))
 			A_neg = (cperi-total_posc*A_pos)/total_negc
 		elif(total_posc-(total_posi/total_negi) == 0):
@@ -4432,10 +4444,10 @@ if solv:
 
 		if(A_pos < 0):
 			A_pos = 0
-			A_neg = cperi/total_negc
+			A_neg = cperi/total_negc if total_negc != 0 else 0
 		if(A_neg < 0):
 			A_neg = 0
-			A_pos = cperi/total_posc
+			A_pos = cperi/total_posc if total_posc != 0 else 0
 
 		A_pos = max(0,A_pos)*total_ions
 		A_neg = max(0,A_neg)*total_ions
@@ -4481,6 +4493,11 @@ if solv:
 				if(ion_charges[inn] == 1):
 					ion_nums[ind] -= cdiff
 					break
+
+		#Without a monovalent ion of the right sign the compartment can't be neutralised
+		residual = ncharges[ci]+sum(ion_charges[inn]*ion_nums[ind] for ind,inn in enumerate(ion_names))
+		if(abs(residual) > 0.5):
+			print("WARNING: Compartment "+str(ci)+" is left with a net charge of "+str(round(residual))+". Add monovalent ions of the opposite sign with -posi_c"+str(ci)+"/-negi_c"+str(ci)+" to neutralise it.")
   
 
 		ngrid   = cn - np.sum(ion_nums)
