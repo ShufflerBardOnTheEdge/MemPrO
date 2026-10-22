@@ -397,6 +397,14 @@ lipid_apl = {
 	# Lipid A: Snyder et al. 1999 Biochemistry; Re-LPS (Kdo2-lipid A): CHARMM36m, Brandner et al. 2024 JCTC;
 	# smooth LPS: CHARMM36, Park et al. 2023 JCIM and Martini 3 LPS 2026 JPCB; Ra-LPS taken between Re and smooth
 	"LIPA":1.56, "KLA":1.67, "REMP":1.67, "RAMP":1.80, "OANT":1.85,
+	# Phosphoinositides (Martini 3 naming: 1/4/5 = PI(3)P/PI(4)P/PI(5)P, 2/6/7 = PI(3,4)P2/PI(4,5)P2/PI(3,5)P2, 3 = PIP3).
+	# No bilayer experiment exists; values are consensus of monolayer areas at 30 mN/m (Levental et al. 2008 JACS),
+	# CHARMM36/Martini 3 areas at 5% in POPC (Borges-Araujo et al. 2022 JCTC) and Martini 3 lipidome bilayers.
+	# Uncertain to ~0.05 nm^2, and PIP2 areas depend strongly on salt and divalent cations.
+	"POPI":0.60, "PLPI":0.62, "SAPI":0.64, "SDPI":0.67,
+	"POP1":0.64, "POP4":0.64, "POP5":0.64, "SAP1":0.66, "SAP4":0.66, "SAP5":0.66,
+	"POP2":0.66, "POP6":0.66, "POP7":0.68, "SAP2":0.68, "SAP6":0.68, "SAP7":0.70,
+	"POP3":0.67, "SAP3":0.70,
 	# Sterols: steric area for placement (the partial area is ~0.26 at >30 mol%, Edholm & Nagle 2005 BJ);
 	# hopanoids assumed sterol-like
 	"CHL1":0.40, "HOPR":0.40, "HHOP":0.40, "HDPT":0.40, "HBHT":0.40,
