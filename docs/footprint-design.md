@@ -62,7 +62,7 @@ Option: `-footprint map|clash` (default `clash`, the current behaviour), so the 
    - Target: the upper/lower densities match to within 1–2%. Compare `clash` against `map`.
 3. **Test proteins:**
    - 4G1U MemPrO build (about 42k beads, roughly 10 min/ns on an M4 Mac);
-   - QmcA, 234k beads, best run on a GPU machine;
+   - QmcA, 234k beads, best run on a GPU machine (inputs and commands in `tests/data/QmcA/`);
    - optionally a simple TM helix bundle.
    - Protein topologies come from martinize2 (available in the CCD2MD or compstrucbio conda envs on the Mac).
 
