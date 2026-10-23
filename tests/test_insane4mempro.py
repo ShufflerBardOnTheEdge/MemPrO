@@ -195,6 +195,11 @@ class TestLipidome(unittest.TestCase):
         self.assertEqual(membrane_charge(log), -4 * counts["POP6"] - counts["SAPI"])
         self.assertEqual(residue_beads(gro, "POP6"), "C1 C2 C3 C4 PO4 P4 P5 GL1 GL2 C1A D2A C3A C4A C1B C2B C3B C4B".split())
 
+    def test_lipid_a_and_cardiolipin_charges(self):
+        log, counts, _ = build(["-x", "12", "-y", "12", "-z", "12", "-l", "POPE:6", "-l", "CDL0:1", "-l", "CDL1:1", "-l", "CDL2:1",
+                                "-u", "LIPA", "-posi_c0", "CA"])
+        self.assertEqual(membrane_charge(log), -4 * counts["LIPA"] - counts["CDL1"] - 2 * counts["CDL2"])
+
     def test_lipid_itp_definitions_and_warning(self):
         tmp = tempfile.mkdtemp(prefix="insane_itp_")
         TMP_DIRS.append(tmp)
