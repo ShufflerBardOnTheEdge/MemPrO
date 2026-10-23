@@ -2,7 +2,7 @@
 
 Note that these tutorials assume a Linux OS, however as MemPrO is a Python script it should also work on any other OS as long as you can run Python. PyMOL will be used as the molecular visualisation program throughout, however VMD or any other such program can be used. It is recommended to look at the [first MemPrO tutorial](MemPrO_tutorials.md#tutorial-1---a-basic-example) before starting these.
 
-Commands below use `python PATH/TO/MemPrO.py` and `python PATH/TO/Insane4MemPrO.py`; if MemPrO is installed via pip, replace these with `mempro` and `python -m mempro.Insane4MemPrO` respectively.
+Commands below use `python PATH/TO/MemPrO.py` and `python PATH/TO/Insane4MemPrO.py`; if MemPrO is installed via pip, replace these with `mempro` and `insane4mempro` respectively.
 
 ## Tutorial 1 - A Basic Example
 
