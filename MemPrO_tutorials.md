@@ -18,9 +18,9 @@ We will now run MemPrO:
 python PATH/TO/MemPrO.py -f 4g1u.pdb -ng 16 -ni 150
 ```
 
-Here we are using an initial grid of 16 starting configurations (the more the better, though 16 is sufficient) and 150 minimisation iterations (again the more the better, but 150 is enough for most cases). By default MemPrO will use all available CPU cores. To limit this, add `-nc N` where N is the number of cores you want to use.
+Here we are using an initial grid of 16 starting configurations (the more the better, though 16 is sufficient) and 150 minimisation iterations (again the more the better, but 150 is enough for most cases). By default MemPrO will use a GPU if JAX can see one, otherwise one CPU device per performance core (all cores where performance cores are not reported). To change this, add `-nc N` where N is the number of cores you want to use.
 
-Once the code has finished running, which should take around 90 seconds on a modern machine, you should find a folder called "Orient" in Tutorial1. Opening this folder you should find several files and folders. First look at `orientations.txt`, which contains all the orientations found by MemPrO. MemPrO can be a little variable between runs so your results may differ slightly from what is shown here, but they should be very similar.
+Once the code has finished running, which should take around 20 seconds on a modern machine (the very first run takes longer while JAX compiles), you should find a folder called "Orient" in Tutorial1. Opening this folder you should find several files and folders. First look at `orientation.txt`, which contains all the orientations found by MemPrO. MemPrO can be a little variable between runs so your results may differ slightly from what is shown here, but they should be very similar.
 
 ![Alt text](Tutorial_pics/Fig2.svg)
 
@@ -52,7 +52,7 @@ python PATH/TO/MemPrO.py -f 5nik.pdb -ng 16 -ni 150 -dm
 
 The only difference from Tutorial 1 is the addition of `-dm`, which tells MemPrO to use two membranes.
 
-Once the code has finished running (around 140 seconds) you should find a folder called "Orient" in Tutorial2. The structure is very similar to before with a few differences. The ranking method is different for double membrane proteins, which is reflected in `orientations.txt` — the final 3 values for each rank will be 0. Double membrane orientations are ranked on relative potential only, due to the different nature of such orientations.
+Once the code has finished running (around two minutes) you should find a folder called "Orient" in Tutorial2. The structure is very similar to before with a few differences. The ranking method is different for double membrane proteins, which is reflected in `orientation.txt` — the final 3 values for each rank will be 0. Double membrane orientations are ranked on relative potential only, due to the different nature of such orientations.
 
 ![Alt text](Tutorial_pics/Fig4.svg)
 
@@ -94,7 +94,7 @@ Create a folder called "Tutorial4" and place `6bpz.pdb` in it. We will start wit
 python PATH/TO/MemPrO.py -f 6bpz.pdb -ng 16 -ni 150 -o Orient_NoCurv/
 ```
 
-Looking in "Orient_NoCurv" there are many more ranks than in previous examples. Looking at `orientations.txt` we see none of the orientations have a negative potential, which can be indicative of a problematic orientation. The first few ranks have a final ranking value much higher than the others. Looking at those orientations in `orientations.pdb`, the transmembrane regions are placed roughly within the membrane but with a lot of variance in position, indicating either a highly mobile or unstable orientation.
+Looking in "Orient_NoCurv" there are many more ranks than in previous examples. Looking at `orientation.txt` we see none of the orientations have a negative potential, which can be indicative of a problematic orientation. The first few ranks have a final ranking value much higher than the others. Looking at those orientations in `orientations.pdb`, the transmembrane regions are placed roughly within the membrane but with a lot of variance in position, indicating either a highly mobile or unstable orientation.
 
 ![Alt text](Tutorial_pics/Fig7.svg)
 
@@ -106,7 +106,7 @@ Looking in "Rank_1", `Z_potential_curve.png` shows an extremely deep minima sugg
 python PATH/TO/MemPrO.py -f 6bpz.pdb -ng 16 -ni 150 -o Orient_Curv/ -c
 ```
 
-Looking in "Orient_Curv" we can immediately see fewer final orientations. `orientations.txt` shows only one orientation with negative potential and a deep minima, indicating a much more stable prediction. `oriented_rank_1.pdb` shows the protein placed in a highly curved membrane. `curv_potential_curve.png` shows the minima has actually shifted further — this is because without curvature prediction there is greater error in the placement which affects the curvature calculations.
+Looking in "Orient_Curv" we can immediately see fewer final orientations. `orientation.txt` shows only one orientation with negative potential and a deep minima, indicating a much more stable prediction. `oriented_rank_1.pdb` shows the protein placed in a highly curved membrane. `curv_potential_curve.png` shows the minima has actually shifted further — this is because without curvature prediction there is greater error in the placement which affects the curvature calculations.
 
 ![Alt text](Tutorial_pics/Fig9.svg)
 
@@ -136,7 +136,7 @@ python PATH/TO/MemPrO.py -f 5nik-cg.pdb -ng 16 -ni 150 -dm -bd 1 -bd_args "-l PO
 
 The `-bd` flag indicates we want to build a CG system for the top n (here n=1) ranked configurations. The `-bd_args` flag is a string of additional arguments to pass to Insane4MemPrO. MemPrO handles naming of all output files, the type of system to build (in this case a double membrane system), and the simulation cell size. Everything else must go in the `-bd_args` string. Here `-l` indicates the lipid type and relative abundance (POPE and POPG in a ratio of 8:2) in the lower leaflet of the inner membrane; without `-u`, `-uo`, or `-lo` this composition is used for all leaflets. `-negi_c0` and `-posi_c0` specify the negative and positive ions (Cl⁻ and Na⁺), and `-sol` specifies the solvent (water). For a full explanation of all flags, refer to the [Insane4MemPrO documentation](README.md#insane4mempro).
 
-Looking in "Orient", the familiar output files from MemPrO are present. Checking `orientations.txt` and `orientations.pdb` should confirm that orientation has gone well and the rank 1 orientation looks sensible. In "Rank_1" there is an additional folder "CG_System_rank_1" containing three files: `CG_system.gro`, `protein-cg.pdb`, and `topol.top`. `topol.top` is a basic topology file that may need minor editing but will contain the correct molecule counts. `protein-cg.pdb` is a copy of the oriented protein without dummy membranes. `CG_system.gro` is the full CG system built according to the arguments passed to MemPrO.
+Looking in "Orient", the familiar output files from MemPrO are present. Checking `orientation.txt` and `orientations.pdb` should confirm that orientation has gone well and the rank 1 orientation looks sensible. In "Rank_1" there is an additional folder "CG_System_rank_1" containing three files: `CG-system.gro`, `protein-cg.pdb`, and `topol.top`. `topol.top` is a basic topology file that may need minor editing but will contain the correct molecule counts. `protein-cg.pdb` is a copy of the oriented protein without dummy membranes. `CG-system.gro` is the full CG system built according to the arguments passed to MemPrO.
 
 ![Alt text](Tutorial_pics/Fig11.svg)
 

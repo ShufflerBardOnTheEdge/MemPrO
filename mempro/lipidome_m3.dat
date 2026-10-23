@@ -1,0 +1,665 @@
+# Martini 3 lipidome build definitions for Insane4MemPrO
+# Taken from the ;@INSANE lines of the itp files in https://github.com/Martini-Force-Field-Initiative/M3-Lipid-Parameters (ITPs/, commit 2121527)
+# Pedersen et al. (2025) ACS Cent. Sci., doi:10.1021/acscentsci.5c00755. Use those itp files for the topology.
+# name | head beads | linker beads | tails | charge
+# martini_v3.0.0_ceramides_v2.itp
+UCER | COH | A1 A2 | tCCC CCC | 0
+MCER | COH | A1 A2 | tCCC CCC | 0
+PCER | COH | A1 A2 | tCCC CCCC | 0
+SCER | COH | A1 A2 | tCCC CCCC | 0
+KCER | COH | A1 A2 | tCCC CCCCC | 0
+BCER | COH | A1 A2 | tCCC CCCCC | 0
+XCER | COH | A1 A2 | tCCC CCCCCC | 0
+CCER | COH | A1 A2 | tCCC CCCCCC | 0
+OCER | COH | A1 A2 | tCCC CDCC | 0
+NCER | COH | A1 A2 | tCCC CCCDCC | 0
+# martini_v3.0.0_etherphospholipids_PA_v2.itp
+DTEA | P | E E | CC CC | -1
+DJEA | P | E E | CC CC | -1
+DUEA | P | E E | CCC CCC | -1
+DMEA | P | E E | CCC CCC | -1
+DPEA | P | E E | CCCC CCCC | -1
+DSEA | P | E E | CCCC CCCC | -1
+DKEA | P | E E | CCCCC CCCCC | -1
+DBEA | P | E E | CCCCC CCCCC | -1
+DXEA | P | E E | CCCCCC CCCCCC | -1
+DCEA | P | E E | CCCCCC CCCCCC | -1
+DREA | P | E E | CDC CDC | -1
+DYEA | P | E E | CCDC CCDC | -1
+DOEA | P | E E | CDCC CDCC | -1
+DVEA | P | E E | CCDC CCDC | -1
+DGEA | P | E E | CCDCC CCDCC | -1
+DEEA | P | E E | CCDCC CCDCC | -1
+DNEA | P | E E | CCCDCC CCCDCC | -1
+DLEA | P | E E | CDDC CDDC | -1
+DFEA | P | E E | CDDD CDDD | -1
+DAEA | P | E E | CDDDC CDDDC | -1
+DDEA | P | E E | DDDDD DDDDD | -1
+PYEA | P | E E | CCDC CCCC | -1
+PSEA | P | E E | CCCC CCCC | -1
+POEA | P | E E | CDCC CCCC | -1
+PLEA | P | E E | CDDC CCCC | -1
+PFEA | P | E E | CDDD CCCC | -1
+PIEA | P | E E | CCDDC CCCC | -1
+PQEA | P | E E | CDDDC CCCC | -1
+PAEA | P | E E | CDDDC CCCC | -1
+PEEA | P | E E | CCDCC CCCC | -1
+PDEA | P | E E | DDDDD CCCC | -1
+YOEA | P | E E | CDCC CCDC | -1
+SOEA | P | E E | CDCC CCCC | -1
+SLEA | P | E E | CDDC CCCC | -1
+SAEA | P | E E | CDDDC CCCC | -1
+SDEA | P | E E | DDDDD CCCC | -1
+OLEA | P | E E | CDDC CDCC | -1
+OEEA | P | E E | CCDCC CDCC | -1
+ODEA | P | E E | DDDDD CDCC | -1
+LFEA | P | E E | CDDD CDDC | -1
+# martini_v3.0.0_etherphospholipids_PC_v2.itp
+DTEC | C P | E E | CC CC | 0
+DJEC | C P | E E | CC CC | 0
+DUEC | C P | E E | CCC CCC | 0
+DMEC | C P | E E | CCC CCC | 0
+DPEC | C P | E E | CCCC CCCC | 0
+DSEC | C P | E E | CCCC CCCC | 0
+DKEC | C P | E E | CCCCC CCCCC | 0
+DBEC | C P | E E | CCCCC CCCCC | 0
+DXEC | C P | E E | CCCCCC CCCCCC | 0
+DCEC | C P | E E | CCCCCC CCCCCC | 0
+DREC | C P | E E | CDC CDC | 0
+DYEC | C P | E E | CCDC CCDC | 0
+DOEC | C P | E E | CDCC CDCC | 0
+DVEC | C P | E E | CCDC CCDC | 0
+DGEC | C P | E E | CCDCC CCDCC | 0
+DEEC | C P | E E | CCDCC CCDCC | 0
+DNEC | C P | E E | CCCDCC CCCDCC | 0
+DLEC | C P | E E | CDDC CDDC | 0
+DFEC | C P | E E | CDDD CDDD | 0
+DAEC | C P | E E | CDDDC CDDDC | 0
+DDEC | C P | E E | DDDDD DDDDD | 0
+PYEC | C P | E E | CCDC CCCC | 0
+PSEC | C P | E E | CCCC CCCC | 0
+POEC | C P | E E | CDCC CCCC | 0
+PLEC | C P | E E | CDDC CCCC | 0
+PFEC | C P | E E | CDDD CCCC | 0
+PIEC | C P | E E | CCDDC CCCC | 0
+PQEC | C P | E E | CDDDC CCCC | 0
+PAEC | C P | E E | CDDDC CCCC | 0
+PEEC | C P | E E | CCDCC CCCC | 0
+PDEC | C P | E E | DDDDD CCCC | 0
+YOEC | C P | E E | CDCC CCDC | 0
+SOEC | C P | E E | CDCC CCCC | 0
+SLEC | C P | E E | CDDC CCCC | 0
+SAEC | C P | E E | CDDDC CCCC | 0
+SDEC | C P | E E | DDDDD CCCC | 0
+OLEC | C P | E E | CDDC CDCC | 0
+OEEC | C P | E E | CCDCC CDCC | 0
+ODEC | C P | E E | DDDDD CDCC | 0
+LFEC | C P | E E | CDDD CDDC | 0
+# martini_v3.0.0_etherphospholipids_PE_v2.itp
+DTEE | E P | E E | CC CC | 0
+DJEE | E P | E E | CC CC | 0
+DUEE | E P | E E | CCC CCC | 0
+DMEE | E P | E E | CCC CCC | 0
+DPEE | E P | E E | CCCC CCCC | 0
+DSEE | E P | E E | CCCC CCCC | 0
+DKEE | E P | E E | CCCCC CCCCC | 0
+DBEE | E P | E E | CCCCC CCCCC | 0
+DXEE | E P | E E | CCCCCC CCCCCC | 0
+DCEE | E P | E E | CCCCCC CCCCCC | 0
+DREE | E P | E E | CDC CDC | 0
+DYEE | E P | E E | CCDC CCDC | 0
+DOEE | E P | E E | CDCC CDCC | 0
+DVEE | E P | E E | CCDC CCDC | 0
+DGEE | E P | E E | CCDCC CCDCC | 0
+DEEE | E P | E E | CCDCC CCDCC | 0
+DNEE | E P | E E | CCCDCC CCCDCC | 0
+DLEE | E P | E E | CDDC CDDC | 0
+DFEE | E P | E E | CDDD CDDD | 0
+DAEE | E P | E E | CDDDC CDDDC | 0
+DDEE | E P | E E | DDDDD DDDDD | 0
+PYEE | E P | E E | CCDC CCCC | 0
+PSEE | E P | E E | CCCC CCCC | 0
+POEE | E P | E E | CDCC CCCC | 0
+PLEE | E P | E E | CDDC CCCC | 0
+PFEE | E P | E E | CDDD CCCC | 0
+PIEE | E P | E E | CCDDC CCCC | 0
+PQEE | E P | E E | CDDDC CCCC | 0
+PAEE | E P | E E | CDDDC CCCC | 0
+PEEE | E P | E E | CCDCC CCCC | 0
+PDEE | E P | E E | DDDDD CCCC | 0
+YOEE | E P | E E | CDCC CCDC | 0
+SOEE | E P | E E | CDCC CCCC | 0
+SLEE | E P | E E | CDDC CCCC | 0
+SAEE | E P | E E | CDDDC CCCC | 0
+SDEE | E P | E E | DDDDD CCCC | 0
+OLEE | E P | E E | CDDC CDCC | 0
+OEEE | E P | E E | CCDCC CDCC | 0
+ODEE | E P | E E | DDDDD CDCC | 0
+LFEE | E P | E E | CDDD CDDC | 0
+# martini_v3.0.0_etherphospholipids_PG_v2.itp
+DTEG | G P | E E | CC CC | -1
+DJEG | G P | E E | CC CC | -1
+DUEG | G P | E E | CCC CCC | -1
+DMEG | G P | E E | CCC CCC | -1
+DPEG | G P | E E | CCCC CCCC | -1
+DSEG | G P | E E | CCCC CCCC | -1
+DKEG | G P | E E | CCCCC CCCCC | -1
+DBEG | G P | E E | CCCCC CCCCC | -1
+DXEG | G P | E E | CCCCCC CCCCCC | -1
+DCEG | G P | E E | CCCCCC CCCCCC | -1
+DREG | G P | E E | CDC CDC | -1
+DYEG | G P | E E | CCDC CCDC | -1
+DOEG | G P | E E | CDCC CDCC | -1
+DVEG | G P | E E | CCDC CCDC | -1
+DGEG | G P | E E | CCDCC CCDCC | -1
+DEEG | G P | E E | CCDCC CCDCC | -1
+DNEG | G P | E E | CCCDCC CCCDCC | -1
+DLEG | G P | E E | CDDC CDDC | -1
+DFEG | G P | E E | CDDD CDDD | -1
+DAEG | G P | E E | CDDDC CDDDC | -1
+DDEG | G P | E E | DDDDD DDDDD | -1
+PYEG | G P | E E | CCDC CCCC | -1
+PSEG | G P | E E | CCCC CCCC | -1
+POEG | G P | E E | CDCC CCCC | -1
+PLEG | G P | E E | CDDC CCCC | -1
+PFEG | G P | E E | CDDD CCCC | -1
+PIEG | G P | E E | CCDDC CCCC | -1
+PQEG | G P | E E | CDDDC CCCC | -1
+PAEG | G P | E E | CDDDC CCCC | -1
+PEEG | G P | E E | CCDCC CCCC | -1
+PDEG | G P | E E | DDDDD CCCC | -1
+YOEG | G P | E E | CDCC CCDC | -1
+SOEG | G P | E E | CDCC CCCC | -1
+SLEG | G P | E E | CDDC CCCC | -1
+SAEG | G P | E E | CDDDC CCCC | -1
+SDEG | G P | E E | DDDDD CCCC | -1
+OLEG | G P | E E | CDDC CDCC | -1
+OEEG | G P | E E | CCDCC CDCC | -1
+ODEG | G P | E E | DDDDD CDCC | -1
+LFEG | G P | E E | CDDD CDDC | -1
+# martini_v3.0.0_etherphospholipids_PS_v2.itp
+DTES | S P | E E | CC CC | -1
+DJES | S P | E E | CC CC | -1
+DUES | S P | E E | CCC CCC | -1
+DMES | S P | E E | CCC CCC | -1
+DPES | S P | E E | CCCC CCCC | -1
+DSES | S P | E E | CCCC CCCC | -1
+DKES | S P | E E | CCCCC CCCCC | -1
+DBES | S P | E E | CCCCC CCCCC | -1
+DXES | S P | E E | CCCCCC CCCCCC | -1
+DCES | S P | E E | CCCCCC CCCCCC | -1
+DRES | S P | E E | CDC CDC | -1
+DYES | S P | E E | CCDC CCDC | -1
+DOES | S P | E E | CDCC CDCC | -1
+DVES | S P | E E | CCDC CCDC | -1
+DGES | S P | E E | CCDCC CCDCC | -1
+DEES | S P | E E | CCDCC CCDCC | -1
+DNES | S P | E E | CCCDCC CCCDCC | -1
+DLES | S P | E E | CDDC CDDC | -1
+DFES | S P | E E | CDDD CDDD | -1
+DAES | S P | E E | CDDDC CDDDC | -1
+DDES | S P | E E | DDDDD DDDDD | -1
+PYES | S P | E E | CCDC CCCC | -1
+PSES | S P | E E | CCCC CCCC | -1
+POES | S P | E E | CDCC CCCC | -1
+PLES | S P | E E | CDDC CCCC | -1
+PFES | S P | E E | CDDD CCCC | -1
+PIES | S P | E E | CCDDC CCCC | -1
+PQES | S P | E E | CDDDC CCCC | -1
+PAES | S P | E E | CDDDC CCCC | -1
+PEES | S P | E E | CCDCC CCCC | -1
+PDES | S P | E E | DDDDD CCCC | -1
+YOES | S P | E E | CDCC CCDC | -1
+SOES | S P | E E | CDCC CCCC | -1
+SLES | S P | E E | CDDC CCCC | -1
+SAES | S P | E E | CDDDC CCCC | -1
+SDES | S P | E E | DDDDD CCCC | -1
+OLES | S P | E E | CDDC CDCC | -1
+OEES | S P | E E | CCDCC CDCC | -1
+ODES | S P | E E | DDDDD CDCC | -1
+LFES | S P | E E | CDDD CDDC | -1
+# martini_v3.0.0_phospholipids_PA_v2.itp
+DTPA | P | G G | CC CC | -1
+DJPA | P | G G | CC CC | -1
+DUPA | P | G G | CCC CCC | -1
+DMPA | P | G G | CCC CCC | -1
+DPPA | P | G G | CCCC CCCC | -1
+DSPA | P | G G | CCCC CCCC | -1
+DKPA | P | G G | CCCCC CCCCC | -1
+DBPA | P | G G | CCCCC CCCCC | -1
+DXPA | P | G G | CCCCCC CCCCCC | -1
+DCPA | P | G G | CCCCCC CCCCCC | -1
+DRPA | P | G G | CDC CDC | -1
+DYPA | P | G G | CCDC CCDC | -1
+DOPA | P | G G | CDCC CDCC | -1
+DVPA | P | G G | CCDC CCDC | -1
+DGPA | P | G G | CCDCC CCDCC | -1
+DEPA | P | G G | CCDCC CCDCC | -1
+DNPA | P | G G | CCCDCC CCCDCC | -1
+DLPA | P | G G | CDDC CDDC | -1
+DFPA | P | G G | CDDD CDDD | -1
+DAPA | P | G G | CDDDC CDDDC | -1
+DDPA | P | G G | DDDDD DDDDD | -1
+PYPA | P | G G | CCDC CCCC | -1
+PSPA | P | G G | CCCC CCCC | -1
+POPA | P | G G | CDCC CCCC | -1
+PLPA | P | G G | CDDC CCCC | -1
+PFPA | P | G G | CDDD CCCC | -1
+PIPA | P | G G | CCDDC CCCC | -1
+PQPA | P | G G | CDDDC CCCC | -1
+PAPA | P | G G | CDDDC CCCC | -1
+PEPA | P | G G | CCDCC CCCC | -1
+PDPA | P | G G | DDDDD CCCC | -1
+YOPA | P | G G | CDCC CCDC | -1
+SOPA | P | G G | CDCC CCCC | -1
+SLPA | P | G G | CDDC CCCC | -1
+SAPA | P | G G | CDDDC CCCC | -1
+SDPA | P | G G | DDDDD CCCC | -1
+OLPA | P | G G | CDDC CDCC | -1
+OEPA | P | G G | CCDCC CDCC | -1
+ODPA | P | G G | DDDDD CDCC | -1
+LFPA | P | G G | CDDD CDDC | -1
+# martini_v3.0.0_phospholipids_PC_v2.itp
+DTPC | C P | G G | CC CC | 0
+DJPC | C P | G G | CC CC | 0
+DUPC | C P | G G | CCC CCC | 0
+DMPC | C P | G G | CCC CCC | 0
+DPPC | C P | G G | CCCC CCCC | 0
+DSPC | C P | G G | CCCC CCCC | 0
+DKPC | C P | G G | CCCCC CCCCC | 0
+DBPC | C P | G G | CCCCC CCCCC | 0
+DXPC | C P | G G | CCCCCC CCCCCC | 0
+DCPC | C P | G G | CCCCCC CCCCCC | 0
+DRPC | C P | G G | CDC CDC | 0
+DYPC | C P | G G | CCDC CCDC | 0
+DOPC | C P | G G | CDCC CDCC | 0
+DVPC | C P | G G | CCDC CCDC | 0
+DGPC | C P | G G | CCDCC CCDCC | 0
+DEPC | C P | G G | CCDCC CCDCC | 0
+DNPC | C P | G G | CCCDCC CCCDCC | 0
+DLPC | C P | G G | CDDC CDDC | 0
+DFPC | C P | G G | CDDD CDDD | 0
+DAPC | C P | G G | CDDDC CDDDC | 0
+DDPC | C P | G G | DDDDD DDDDD | 0
+PYPC | C P | G G | CCDC CCCC | 0
+PSPC | C P | G G | CCCC CCCC | 0
+POPC | C P | G G | CDCC CCCC | 0
+PLPC | C P | G G | CDDC CCCC | 0
+PFPC | C P | G G | CDDD CCCC | 0
+PIPC | C P | G G | CCDDC CCCC | 0
+PQPC | C P | G G | CDDDC CCCC | 0
+PAPC | C P | G G | CDDDC CCCC | 0
+PEPC | C P | G G | CCDCC CCCC | 0
+PDPC | C P | G G | DDDDD CCCC | 0
+YOPC | C P | G G | CDCC CCDC | 0
+SOPC | C P | G G | CDCC CCCC | 0
+SLPC | C P | G G | CDDC CCCC | 0
+SAPC | C P | G G | CDDDC CCCC | 0
+SDPC | C P | G G | DDDDD CCCC | 0
+OLPC | C P | G G | CDDC CDCC | 0
+OEPC | C P | G G | CCDCC CDCC | 0
+ODPC | C P | G G | DDDDD CDCC | 0
+LFPC | C P | G G | CDDD CDDC | 0
+MPPC | C P | G G | CCCC CCC | 0
+MSPC | C P | G G | CCCC CCC | 0
+PMPC | C P | G G | CCC CCCC | 0
+SMPC | C P | G G | CCC CCCC | 0
+# martini_v3.0.0_phospholipids_PE_v2.itp
+DTPE | E P | G G | CC CC | 0
+DJPE | E P | G G | CC CC | 0
+DUPE | E P | G G | CCC CCC | 0
+DMPE | E P | G G | CCC CCC | 0
+DPPE | E P | G G | CCCC CCCC | 0
+DSPE | E P | G G | CCCC CCCC | 0
+DKPE | E P | G G | CCCCC CCCCC | 0
+DBPE | E P | G G | CCCCC CCCCC | 0
+DXPE | E P | G G | CCCCCC CCCCCC | 0
+DCPE | E P | G G | CCCCCC CCCCCC | 0
+DRPE | E P | G G | CDC CDC | 0
+DYPE | E P | G G | CCDC CCDC | 0
+DOPE | E P | G G | CDCC CDCC | 0
+DVPE | E P | G G | CCDC CCDC | 0
+DGPE | E P | G G | CCDCC CCDCC | 0
+DEPE | E P | G G | CCDCC CCDCC | 0
+DNPE | E P | G G | CCCDCC CCCDCC | 0
+DLPE | E P | G G | CDDC CDDC | 0
+DFPE | E P | G G | CDDD CDDD | 0
+DAPE | E P | G G | CDDDC CDDDC | 0
+DDPE | E P | G G | DDDDD DDDDD | 0
+PYPE | E P | G G | CCDC CCCC | 0
+PSPE | E P | G G | CCCC CCCC | 0
+POPE | E P | G G | CDCC CCCC | 0
+PLPE | E P | G G | CDDC CCCC | 0
+PFPE | E P | G G | CDDD CCCC | 0
+PIPE | E P | G G | CCDDC CCCC | 0
+PQPE | E P | G G | CDDDC CCCC | 0
+PAPE | E P | G G | CDDDC CCCC | 0
+PEPE | E P | G G | CCDCC CCCC | 0
+PDPE | E P | G G | DDDDD CCCC | 0
+YOPE | E P | G G | CDCC CCDC | 0
+SOPE | E P | G G | CDCC CCCC | 0
+SLPE | E P | G G | CDDC CCCC | 0
+SAPE | E P | G G | CDDDC CCCC | 0
+SDPE | E P | G G | DDDDD CCCC | 0
+OLPE | E P | G G | CDDC CDCC | 0
+OAPE | E P | G G | CDDDC CDCC | 0
+OEPE | E P | G G | CCDCC CDCC | 0
+ODPE | E P | G G | DDDDD CDCC | 0
+LFPE | E P | G G | CDDD CDDC | 0
+# martini_v3.0.0_phospholipids_PG_v2.itp
+DTPG | G P | G G | CC CC | -1
+DJPG | G P | G G | CC CC | -1
+DUPG | G P | G G | CCC CCC | -1
+DMPG | G P | G G | CCC CCC | -1
+DPPG | G P | G G | CCCC CCCC | -1
+DSPG | G P | G G | CCCC CCCC | -1
+DKPG | G P | G G | CCCCC CCCCC | -1
+DBPG | G P | G G | CCCCC CCCCC | -1
+DXPG | G P | G G | CCCCCC CCCCCC | -1
+DCPG | G P | G G | CCCCCC CCCCCC | -1
+DRPG | G P | G G | CDC CDC | -1
+DYPG | G P | G G | CCDC CCDC | -1
+DOPG | G P | G G | CDCC CDCC | -1
+DVPG | G P | G G | CCDC CCDC | -1
+DGPG | G P | G G | CCDCC CCDCC | -1
+DEPG | G P | G G | CCDCC CCDCC | -1
+DNPG | G P | G G | CCCDCC CCCDCC | -1
+DLPG | G P | G G | CDDC CDDC | -1
+DFPG | G P | G G | CDDD CDDD | -1
+DAPG | G P | G G | CDDDC CDDDC | -1
+DDPG | G P | G G | DDDDD DDDDD | -1
+PYPG | G P | G G | CCDC CCCC | -1
+PSPG | G P | G G | CCCC CCCC | -1
+POPG | G P | G G | CDCC CCCC | -1
+PLPG | G P | G G | CDDC CCCC | -1
+PFPG | G P | G G | CDDD CCCC | -1
+PIPG | G P | G G | CCDDC CCCC | -1
+PQPG | G P | G G | CDDDC CCCC | -1
+PAPG | G P | G G | CDDDC CCCC | -1
+PEPG | G P | G G | CCDCC CCCC | -1
+PDPG | G P | G G | DDDDD CCCC | -1
+YOPG | G P | G G | CDCC CCDC | -1
+SOPG | G P | G G | CDCC CCCC | -1
+SLPG | G P | G G | CDDC CCCC | -1
+SAPG | G P | G G | CDDDC CCCC | -1
+SDPG | G P | G G | DDDDD CCCC | -1
+OLPG | G P | G G | CDDC CDCC | -1
+OEPG | G P | G G | CCDCC CDCC | -1
+ODPG | G P | G G | DDDDD CDCC | -1
+LFPG | G P | G G | CDDD CDDC | -1
+# martini_v3.0.0_phospholipids_PI_v2.itp
+POPI | PI | G G | CDCC CCCC | -1
+PLPI | PI | G G | CDDC CCCC | -1
+SAPI | PI | G G | CDDDC CCCC | -1
+SDPI | PI | G G | DDDDD CCCC | -1
+POP1 | P1 | G G | CDCC CCCC | -3
+SAP1 | P1 | G G | CDDDC CCCC | -3
+POP4 | P4 | G G | CDCC CCCC | -3
+SAP4 | P4 | G G | CDDDC CCCC | -3
+POP5 | P5 | G G | CDCC CCCC | -3
+SAP5 | P5 | G G | CDDDC CCCC | -3
+POP2 | P2 | G G | CDCC CCCC | -4
+SAP2 | P2 | G G | CDDDC CCCC | -4
+POP6 | P6 | G G | CDCC CCCC | -4
+SAP6 | P6 | G G | CDDDC CCCC | -4
+POP7 | P7 | G G | CDCC CCCC | -4
+SAP7 | P7 | G G | CDDDC CCCC | -4
+POP3 | P3 | G G | CDCC CCCC | -5
+SAP3 | P3 | G G | CDDDC CCCC | -5
+# martini_v3.0.0_phospholipids_PS_v2.itp
+DTPS | S P | G G | CC CC | -1
+DJPS | S P | G G | CC CC | -1
+DUPS | S P | G G | CCC CCC | -1
+DMPS | S P | G G | CCC CCC | -1
+DPPS | S P | G G | CCCC CCCC | -1
+DSPS | S P | G G | CCCC CCCC | -1
+DKPS | S P | G G | CCCCC CCCCC | -1
+DBPS | S P | G G | CCCCC CCCCC | -1
+DXPS | S P | G G | CCCCCC CCCCCC | -1
+DCPS | S P | G G | CCCCCC CCCCCC | -1
+DRPS | S P | G G | CDC CDC | -1
+DYPS | S P | G G | CCDC CCDC | -1
+DOPS | S P | G G | CDCC CDCC | -1
+DVPS | S P | G G | CCDC CCDC | -1
+DGPS | S P | G G | CCDCC CCDCC | -1
+DEPS | S P | G G | CCDCC CCDCC | -1
+DNPS | S P | G G | CCCDCC CCCDCC | -1
+DLPS | S P | G G | CDDC CDDC | -1
+DFPS | S P | G G | CDDD CDDD | -1
+DAPS | S P | G G | CDDDC CDDDC | -1
+DDPS | S P | G G | DDDDD DDDDD | -1
+PYPS | S P | G G | CCDC CCCC | -1
+PSPS | S P | G G | CCCC CCCC | -1
+POPS | S P | G G | CDCC CCCC | -1
+PLPS | S P | G G | CDDC CCCC | -1
+PFPS | S P | G G | CDDD CCCC | -1
+PIPS | S P | G G | CCDDC CCCC | -1
+PQPS | S P | G G | CDDDC CCCC | -1
+PAPS | S P | G G | CDDDC CCCC | -1
+PEPS | S P | G G | CCDCC CCCC | -1
+PDPS | S P | G G | DDDDD CCCC | -1
+YOPS | S P | G G | CDCC CCDC | -1
+SOPS | S P | G G | CDCC CCCC | -1
+SLPS | S P | G G | CDDC CCCC | -1
+SAPS | S P | G G | CDDDC CCCC | -1
+SDPS | S P | G G | DDDDD CCCC | -1
+OLPS | S P | G G | CDDC CDCC | -1
+OEPS | S P | G G | CCDCC CDCC | -1
+ODPS | S P | G G | DDDDD CDCC | -1
+LFPS | S P | G G | CDDD CDDC | -1
+# martini_v3.0.0_phospholipids_SM_v2.itp
+USM | C P | A1 A2 | tCCC CCC | 0
+MSM | C P | A1 A2 | tCCC CCC | 0
+PSM | C P | A1 A2 | tCCC CCCC | 0
+SSM | C P | A1 A2 | tCCC CCCC | 0
+KSM | C P | A1 A2 | tCCC CCCCC | 0
+BSM | C P | A1 A2 | tCCC CCCCC | 0
+XSM | C P | A1 A2 | tCCC CCCCCC | 0
+CSM | C P | A1 A2 | tCCC CCCCCC | 0
+OSM | C P | A1 A2 | tCCC CDCC | 0
+NSM | C P | A1 A2 | tCCC CCCDCC | 0
+# martini_v3.0.0_plasmalogens_PA_v2.itp
+DTLA | P | G L | CC CC | -1
+DJLA | P | G L | CC CC | -1
+DULA | P | G L | CCC CCC | -1
+DMLA | P | G L | CCC CCC | -1
+DPLA | P | G L | CCCC CCCC | -1
+DSLA | P | G L | CCCC CCCC | -1
+DKLA | P | G L | CCCCC CCCCC | -1
+DBLA | P | G L | CCCCC CCCCC | -1
+DXLA | P | G L | CCCCCC CCCCCC | -1
+DCLA | P | G L | CCCCCC CCCCCC | -1
+DRLA | P | G L | CDC CDC | -1
+DYLA | P | G L | CCDC CCDC | -1
+DOLA | P | G L | CDCC CDCC | -1
+DVLA | P | G L | CCDC CCDC | -1
+DGLA | P | G L | CCDCC CCDCC | -1
+DELA | P | G L | CCDCC CCDCC | -1
+DNLA | P | G L | CCCDCC CCCDCC | -1
+DLLA | P | G L | CDDC CDDC | -1
+DFLA | P | G L | CDDD CDDD | -1
+DALA | P | G L | CDDDC CDDDC | -1
+DDLA | P | G L | DDDDD DDDDD | -1
+PYLA | P | G L | CCDC CCCC | -1
+PSLA | P | G L | CCCC CCCC | -1
+POLA | P | G L | CDCC CCCC | -1
+PLLA | P | G L | CDDC CCCC | -1
+PFLA | P | G L | CDDD CCCC | -1
+PILA | P | G L | CCDDC CCCC | -1
+PQLA | P | G L | CDDDC CCCC | -1
+PALA | P | G L | CDDDC CCCC | -1
+PELA | P | G L | CCDCC CCCC | -1
+PDLA | P | G L | DDDDD CCCC | -1
+YOLA | P | G L | CDCC CCDC | -1
+SOLA | P | G L | CDCC CCCC | -1
+SLLA | P | G L | CDDC CCCC | -1
+SALA | P | G L | CDDDC CCCC | -1
+SDLA | P | G L | DDDDD CCCC | -1
+OLLA | P | G L | CDDC CDCC | -1
+OELA | P | G L | CCDCC CDCC | -1
+ODLA | P | G L | DDDDD CDCC | -1
+LFLA | P | G L | CDDD CDDC | -1
+# martini_v3.0.0_plasmalogens_PC_v2.itp
+DTLC | C P | G L | CC CC | 0
+DJLC | C P | G L | CC CC | 0
+DULC | C P | G L | CCC CCC | 0
+DMLC | C P | G L | CCC CCC | 0
+DPLC | C P | G L | CCCC CCCC | 0
+DSLC | C P | G L | CCCC CCCC | 0
+DKLC | C P | G L | CCCCC CCCCC | 0
+DBLC | C P | G L | CCCCC CCCCC | 0
+DXLC | C P | G L | CCCCCC CCCCCC | 0
+DCLC | C P | G L | CCCCCC CCCCCC | 0
+DRLC | C P | G L | CDC CDC | 0
+DYLC | C P | G L | CCDC CCDC | 0
+DOLC | C P | G L | CDCC CDCC | 0
+DVLC | C P | G L | CCDC CCDC | 0
+DGLC | C P | G L | CCDCC CCDCC | 0
+DELC | C P | G L | CCDCC CCDCC | 0
+DNLC | C P | G L | CCCDCC CCCDCC | 0
+DLLC | C P | G L | CDDC CDDC | 0
+DFLC | C P | G L | CDDD CDDD | 0
+DALC | C P | G L | CDDDC CDDDC | 0
+DDLC | C P | G L | DDDDD DDDDD | 0
+PYLC | C P | G L | CCDC CCCC | 0
+PSLC | C P | G L | CCCC CCCC | 0
+POLC | C P | G L | CDCC CCCC | 0
+PLLC | C P | G L | CDDC CCCC | 0
+PFLC | C P | G L | CDDD CCCC | 0
+PILC | C P | G L | CCDDC CCCC | 0
+PQLC | C P | G L | CDDDC CCCC | 0
+PALC | C P | G L | CDDDC CCCC | 0
+PELC | C P | G L | CCDCC CCCC | 0
+PDLC | C P | G L | DDDDD CCCC | 0
+YOLC | C P | G L | CDCC CCDC | 0
+SOLC | C P | G L | CDCC CCCC | 0
+SLLC | C P | G L | CDDC CCCC | 0
+SALC | C P | G L | CDDDC CCCC | 0
+SDLC | C P | G L | DDDDD CCCC | 0
+OLLC | C P | G L | CDDC CDCC | 0
+OELC | C P | G L | CCDCC CDCC | 0
+ODLC | C P | G L | DDDDD CDCC | 0
+LFLC | C P | G L | CDDD CDDC | 0
+# martini_v3.0.0_plasmalogens_PE_v2.itp
+DTLE | E P | G L | CC CC | 0
+DJLE | E P | G L | CC CC | 0
+DULE | E P | G L | CCC CCC | 0
+DMLE | E P | G L | CCC CCC | 0
+DPLE | E P | G L | CCCC CCCC | 0
+DSLE | E P | G L | CCCC CCCC | 0
+DKLE | E P | G L | CCCCC CCCCC | 0
+DBLE | E P | G L | CCCCC CCCCC | 0
+DXLE | E P | G L | CCCCCC CCCCCC | 0
+DCLE | E P | G L | CCCCCC CCCCCC | 0
+DRLE | E P | G L | CDC CDC | 0
+DYLE | E P | G L | CCDC CCDC | 0
+DOLE | E P | G L | CDCC CDCC | 0
+DVLE | E P | G L | CCDC CCDC | 0
+DGLE | E P | G L | CCDCC CCDCC | 0
+DELE | E P | G L | CCDCC CCDCC | 0
+DNLE | E P | G L | CCCDCC CCCDCC | 0
+DLLE | E P | G L | CDDC CDDC | 0
+DFLE | E P | G L | CDDD CDDD | 0
+DALE | E P | G L | CDDDC CDDDC | 0
+DDLE | E P | G L | DDDDD DDDDD | 0
+PYLE | E P | G L | CCDC CCCC | 0
+PSLE | E P | G L | CCCC CCCC | 0
+POLE | E P | G L | CDCC CCCC | 0
+PLLE | E P | G L | CDDC CCCC | 0
+PFLE | E P | G L | CDDD CCCC | 0
+PILE | E P | G L | CCDDC CCCC | 0
+PQLE | E P | G L | CDDDC CCCC | 0
+PALE | E P | G L | CDDDC CCCC | 0
+PELE | E P | G L | CCDCC CCCC | 0
+PDLE | E P | G L | DDDDD CCCC | 0
+YOLE | E P | G L | CDCC CCDC | 0
+SOLE | E P | G L | CDCC CCCC | 0
+SLLE | E P | G L | CDDC CCCC | 0
+SALE | E P | G L | CDDDC CCCC | 0
+SDLE | E P | G L | DDDDD CCCC | 0
+OLLE | E P | G L | CDDC CDCC | 0
+OELE | E P | G L | CCDCC CDCC | 0
+ODLE | E P | G L | DDDDD CDCC | 0
+LFLE | E P | G L | CDDD CDDC | 0
+# martini_v3.0.0_plasmalogens_PG_v2.itp
+DTLG | G P | G L | CC CC | -1
+DJLG | G P | G L | CC CC | -1
+DULG | G P | G L | CCC CCC | -1
+DMLG | G P | G L | CCC CCC | -1
+DPLG | G P | G L | CCCC CCCC | -1
+DSLG | G P | G L | CCCC CCCC | -1
+DKLG | G P | G L | CCCCC CCCCC | -1
+DBLG | G P | G L | CCCCC CCCCC | -1
+DXLG | G P | G L | CCCCCC CCCCCC | -1
+DCLG | G P | G L | CCCCCC CCCCCC | -1
+DRLG | G P | G L | CDC CDC | -1
+DYLG | G P | G L | CCDC CCDC | -1
+DOLG | G P | G L | CDCC CDCC | -1
+DVLG | G P | G L | CCDC CCDC | -1
+DGLG | G P | G L | CCDCC CCDCC | -1
+DELG | G P | G L | CCDCC CCDCC | -1
+DNLG | G P | G L | CCCDCC CCCDCC | -1
+DLLG | G P | G L | CDDC CDDC | -1
+DFLG | G P | G L | CDDD CDDD | -1
+DALG | G P | G L | CDDDC CDDDC | -1
+DDLG | G P | G L | DDDDD DDDDD | -1
+PYLG | G P | G L | CCDC CCCC | -1
+PSLG | G P | G L | CCCC CCCC | -1
+POLG | G P | G L | CDCC CCCC | -1
+PLLG | G P | G L | CDDC CCCC | -1
+PFLG | G P | G L | CDDD CCCC | -1
+PILG | G P | G L | CCDDC CCCC | -1
+PQLG | G P | G L | CDDDC CCCC | -1
+PALG | G P | G L | CDDDC CCCC | -1
+PELG | G P | G L | CCDCC CCCC | -1
+PDLG | G P | G L | DDDDD CCCC | -1
+YOLG | G P | G L | CDCC CCDC | -1
+SOLG | G P | G L | CDCC CCCC | -1
+SLLG | G P | G L | CDDC CCCC | -1
+SALG | G P | G L | CDDDC CCCC | -1
+SDLG | G P | G L | DDDDD CCCC | -1
+OLLG | G P | G L | CDDC CDCC | -1
+OELG | G P | G L | CCDCC CDCC | -1
+ODLG | G P | G L | DDDDD CDCC | -1
+LFLG | G P | G L | CDDD CDDC | -1
+# martini_v3.0.0_plasmalogens_PS_v2.itp
+DTLS | S P | G L | CC CC | -1
+DJLS | S P | G L | CC CC | -1
+DULS | S P | G L | CCC CCC | -1
+DMLS | S P | G L | CCC CCC | -1
+DPLS | S P | G L | CCCC CCCC | -1
+DSLS | S P | G L | CCCC CCCC | -1
+DKLS | S P | G L | CCCCC CCCCC | -1
+DBLS | S P | G L | CCCCC CCCCC | -1
+DXLS | S P | G L | CCCCCC CCCCCC | -1
+DCLS | S P | G L | CCCCCC CCCCCC | -1
+DRLS | S P | G L | CDC CDC | -1
+DYLS | S P | G L | CCDC CCDC | -1
+DOLS | S P | G L | CDCC CDCC | -1
+DVLS | S P | G L | CCDC CCDC | -1
+DGLS | S P | G L | CCDCC CCDCC | -1
+DELS | S P | G L | CCDCC CCDCC | -1
+DNLS | S P | G L | CCCDCC CCCDCC | -1
+DLLS | S P | G L | CDDC CDDC | -1
+DFLS | S P | G L | CDDD CDDD | -1
+DALS | S P | G L | CDDDC CDDDC | -1
+DDLS | S P | G L | DDDDD DDDDD | -1
+PYLS | S P | G L | CCDC CCCC | -1
+PSLS | S P | G L | CCCC CCCC | -1
+POLS | S P | G L | CDCC CCCC | -1
+PLLS | S P | G L | CDDC CCCC | -1
+PFLS | S P | G L | CDDD CCCC | -1
+PILS | S P | G L | CCDDC CCCC | -1
+PQLS | S P | G L | CDDDC CCCC | -1
+PALS | S P | G L | CDDDC CCCC | -1
+PELS | S P | G L | CCDCC CCCC | -1
+PDLS | S P | G L | DDDDD CCCC | -1
+YOLS | S P | G L | CDCC CCDC | -1
+SOLS | S P | G L | CDCC CCCC | -1
+SLLS | S P | G L | CDDC CCCC | -1
+SALS | S P | G L | CDDDC CCCC | -1
+SDLS | S P | G L | DDDDD CCCC | -1
+OLLS | S P | G L | CDDC CDCC | -1
+OELS | S P | G L | CCDCC CDCC | -1
+ODLS | S P | G L | DDDDD CDCC | -1
+LFLS | S P | G L | CDDD CDDC | -1
