@@ -513,6 +513,217 @@ def get_apl(name):
 	return lipid_apl_class.get(base[-3:],lipid_apl_class.get(base[-2:],DEFAULT_APL))
 # END LIPID AREAS
 
+# BEGIN FOOTPRINT (also read by leaflet_check.py; keep this block self-contained, using only numpy and scipy)
+# Per-leaflet protein footprint for -footprint map (docs/footprint-design.md). Each leaflet is sliced every FP_SLICE nm
+# from the midplane to its phosphate plane (the core), plus a headgroup layer FP_HEAD nm thick beyond it, on a periodic
+# pixel grid. In each slice a pixel is blocked for lipid bead centres if it lies within r_protein + r_lipid of a protein
+# bead (3D distance in the slice plane), and is covered by lipid if a lipid bead centred on an unblocked pixel reaches it,
+# so the covered region stops at the protein's own bead radius. The hydrophobic core is roughly incompressible, so
+# lipids fill the core volume the protein leaves free: a pixel's available fraction is the fraction of core slices in
+# which it is covered, or 0 where the protein occupies the headgroup layer. Free area = sum of fraction x pixel area.
+# Regions lipids cannot reach in any core slice of either leaflet (the inside of a closed barrel) are blocked unless
+# enclosed_free (-ring).
+import numpy as np
+from scipy import ndimage
+from scipy.spatial import cKDTree
+
+FP_SLICE = 0.2
+FP_HEAD = 0.6
+FP_PIXEL = 0.1
+# Martini 3 bead radii (nm) by size: regular, small, tiny. Lipid beads are taken as regular.
+FP_RADII = {"R":0.264,"S":0.230,"T":0.191}
+FP_LIPID_RADIUS = FP_RADII["R"]
+# Heavy atoms of atomistic proteins (no BB beads)
+FP_ATOM_RADIUS = 0.17
+# Small and tiny beads of Martini 3 proteins (martinize2 mapping; backbone sizes vary with secondary structure,
+# so Gly/Ala/Pro backbones are taken as small). Other beads are regular.
+FP_BEAD_SIZE = {("GLY","BB"):"S",("ALA","BB"):"S",("PRO","BB"):"S",("ALA","SC1"):"T",("CYS","SC1"):"T",("SER","SC1"):"T",
+	("ASP","SC1"):"S",("ASN","SC1"):"S",("THR","SC1"):"S",("VAL","SC1"):"S",("PRO","SC1"):"S",("LYS","SC1"):"S",("LYS","SC2"):"S",
+	("ARG","SC1"):"S",("ARG","SC2"):"S",("PHE","SC1"):"S",("PHE","SC2"):"T",("PHE","SC3"):"T",("HIS","SC1"):"T",("HIS","SC2"):"T",
+	("HIS","SC3"):"T",("TYR","SC1"):"T",("TYR","SC2"):"T",("TYR","SC3"):"T",("TYR","SC4"):"T",("TRP","SC1"):"T",("TRP","SC2"):"T",
+	("TRP","SC3"):"T",("TRP","SC4"):"T",("TRP","SC5"):"T"}
+# Non-protein residues that may be in a protein file (MemPrO membrane dummies, water, ions)
+FP_SKIP_RES = {"DUM","W","SOL","PW","TW","SW","NA","CL","CA+","K","MG","ION"}
+
+def fp_bead_radii(atomnames,resnames):
+	"""Radius (nm) of each protein bead from its name; 0 for beads to ignore (Go-model CA virtual sites on BB beads, solvent)."""
+	atomnames = [str(a).strip() for a in atomnames]
+	resnames = [str(r).strip() for r in resnames]
+	coarse = "BB" in atomnames
+	radii = np.zeros(len(atomnames))
+	for i,(a,r) in enumerate(zip(atomnames,resnames)):
+		if r in FP_SKIP_RES:
+			continue
+		if not coarse:
+			radii[i] = 0.0 if a.startswith("H") else FP_ATOM_RADIUS
+		elif a != "CA":
+			radii[i] = FP_RADII[FP_BEAD_SIZE.get((r,a),"R")]
+	return radii
+
+def fp_wrap(xy,box_xy):
+	"""Coordinates wrapped into [0,box) (x % L can round to L, which cKDTree rejects for periodic boxes)."""
+	w = np.asarray(xy,dtype=float)%box_xy
+	return np.where(w >= box_xy,0.0,w)
+
+def fp_grid(box_xy,pixel=FP_PIXEL):
+	"""Pixel counts and sizes tiling the box exactly."""
+	nx = max(1,int(round(box_xy[0]/pixel)))
+	ny = max(1,int(round(box_xy[1]/pixel)))
+	return nx,ny,box_xy[0]/nx,box_xy[1]/ny
+
+def fp_main_component(free):
+	"""Largest connected region of free pixels, with the grid periodic in both directions."""
+	lab,n = ndimage.label(free,structure=np.ones((3,3),dtype=int))
+	if n == 0:
+		return free.copy()
+	parent = np.arange(n+1)
+	def find(a):
+		while parent[a] != a:
+			parent[a] = parent[parent[a]]
+			a = parent[a]
+		return a
+	for edge_a,edge_b in ((lab[0,:],lab[-1,:]),(lab[:,0],lab[:,-1])):
+		for i,j in zip(edge_a,edge_b):
+			if i and j:
+				ri,rj = find(i),find(j)
+				if ri != rj:
+					parent[ri] = rj
+	roots = np.array([find(i) for i in range(n+1)])
+	sizes = np.bincount(roots[lab.ravel()],minlength=n+1)
+	sizes[0] = 0
+	return roots[lab] == np.argmax(sizes)
+
+def footprint_maps(prot_xyz,prot_r,box_xy,mid,half_up,half_lo,enclosed_free=False,lipid_r=FP_LIPID_RADIUS,dz=FP_SLICE,head=FP_HEAD,pixel=FP_PIXEL):
+	"""
+	Footprint maps of both leaflets of a flat membrane.
+	mid is the midplane z and half_up, half_lo the distances from it to the upper and lower phosphate planes (nm), each
+	a number or an (nx,ny) array over the pixels of fp_grid (for a deformed membrane).
+	Returns {"upper": leaflet, "lower": leaflet, "pixel": (px,py)}, where each leaflet has "avail" (available area fraction
+	per pixel), "place" (fraction of core slices where a lipid bead centre fits, 0 where the headgroup layer is
+	blocked), "free" and "footprint" (nm^2).
+	"""
+	box_xy = np.asarray(box_xy,dtype=float)[:2]
+	nx,ny,px,py = fp_grid(box_xy,pixel)
+	gx,gy = np.meshgrid((np.arange(nx)+0.5)*px,(np.arange(ny)+0.5)*py,indexing="ij")
+	pix = np.column_stack([gx.ravel(),gy.ravel()])
+	shape = (nx,ny)
+	mid = np.broadcast_to(np.asarray(mid,dtype=float),shape)
+	slices = {}
+	for name,sgn,half in (("upper",1,half_up),("lower",-1,half_lo)):
+		half = np.broadcast_to(np.asarray(half,dtype=float),shape)
+		ncore = max(1,int(np.ceil(np.mean(half)/dz)))
+		nhead = max(1,int(round(head/dz)))
+		core = [mid+sgn*half*(k+0.5)/ncore for k in range(ncore)]
+		heads = [mid+sgn*(half+head*(j+0.5)/nhead) for j in range(nhead)]
+		slices[name] = (core,heads)
+
+	prot_xyz = np.asarray(prot_xyz,dtype=float).reshape(-1,3)
+	prot_r = np.asarray(prot_r,dtype=float).reshape(-1)
+	zs = np.concatenate([np.ravel(z) for c,h in slices.values() for z in c+h])
+	reach = (prot_r.max() if prot_r.size else 0)+lipid_r
+	sel = (prot_r > 0)&(prot_xyz[:,2] > zs.min()-reach)&(prot_xyz[:,2] < zs.max()+reach) if prot_r.size else np.zeros(0,dtype=bool)
+	pts,rads = prot_xyz[sel],prot_r[sel]
+	# Periodic in x and y only: z is shifted into a box far larger than the system
+	zoff = 5000.0
+	pbox = [box_xy[0],box_xy[1],2*zoff]
+	trees = []
+	near = np.zeros(len(pix),dtype=bool)
+	if len(pts):
+		for r in np.unique(rads):
+			p = pts[rads == r]
+			trees.append((r,cKDTree(np.column_stack([fp_wrap(p[:,:2],box_xy),p[:,2]+zoff]),boxsize=pbox)))
+		d,_ = cKDTree(fp_wrap(pts[:,:2],box_xy),boxsize=box_xy).query(pix,distance_upper_bound=reach)
+		near = d < reach
+
+	def free_at(z):
+		hit = np.zeros(near.sum(),dtype=bool)
+		if hit.size:
+			q = np.column_stack([pix[near],np.ravel(z)[near]+zoff])
+			for r,t in trees:
+				d,_ = t.query(q,distance_upper_bound=r+lipid_r)
+				hit |= d < r+lipid_r
+		blocked = np.zeros(len(pix),dtype=bool)
+		blocked[near] = hit
+		return ~blocked.reshape(shape)
+
+	free = {name:([free_at(z) for z in core],[free_at(z) for z in heads]) for name,(core,heads) in slices.items()}
+	if not enclosed_free:
+		reachable = np.zeros(shape,dtype=bool)
+		for core,_ in free.values():
+			for f in core:
+				reachable |= fp_main_component(f)
+		free = {name:([f&reachable for f in core],[f&reachable for f in heads]) for name,(core,heads) in free.items()}
+
+	rad = int(np.ceil(lipid_r/min(px,py)))
+	ii,jj = np.mgrid[-rad:rad+1,-rad:rad+1]
+	disc = (ii*px)**2+(jj*py)**2 <= lipid_r**2
+	def covered(f):
+		if rad == 0:
+			return f
+		return ndimage.binary_dilation(np.pad(f,rad,mode="wrap"),structure=disc)[rad:-rad,rad:-rad]
+
+	out = {"pixel":(px,py)}
+	for name,(core,heads) in free.items():
+		avail = np.mean([covered(f) for f in core],axis=0)
+		avail[np.any([~covered(f) for f in heads],axis=0)] = 0
+		place = np.mean(core,axis=0)
+		place[np.any([~f for f in heads],axis=0)] = 0
+		free_area = avail.sum()*px*py
+		out[name] = {"avail":avail,"place":place,"free":free_area,"footprint":box_xy[0]*box_xy[1]-free_area}
+	return out
+
+def fp_lookup(grid,xy,box_xy):
+	"""Values of a pixel map at points (periodic)."""
+	nx,ny = grid.shape
+	ix = np.floor((np.asarray(xy)[:,0]%box_xy[0])/box_xy[0]*nx).astype(int)%nx
+	iy = np.floor((np.asarray(xy)[:,1]%box_xy[1])/box_xy[1]*ny).astype(int)%ny
+	return grid[ix,iy]
+
+def fp_farthest(cand,fixed,k,box_xy):
+	"""Picks up to k candidate points one at a time, each as far as possible from the fixed points and earlier picks."""
+	box_xy = np.asarray(box_xy,dtype=float)
+	if k <= 0 or len(cand) == 0:
+		return np.zeros((0,2))
+	if len(fixed):
+		d,_ = cKDTree(fp_wrap(fixed,box_xy),boxsize=box_xy).query(fp_wrap(cand,box_xy))
+	else:
+		d = np.full(len(cand),np.inf)
+	picks = []
+	for _ in range(min(k,len(cand))):
+		j = int(np.argmax(d))
+		if d[j] <= 0:
+			break
+		picks.append(cand[j])
+		dd = np.abs(cand-cand[j])
+		dd = np.minimum(dd,box_xy-dd)
+		d = np.minimum(d,np.hypot(dd[:,0],dd[:,1]))
+	return np.array(picks).reshape(-1,2)
+
+def fp_select_sites(xy,place,box_xy,n_target,n_spare,rng):
+	"""
+	Chooses lipid sites for a leaflet: drops grid sites xy on mostly blocked pixels (place < 0.5), then removes the
+	least available (ties at random) or adds sites in the largest gaps between free pixels to reach n_target exactly.
+	Returns the indices of the grid sites kept, the added sites and spare sites (for lipids whose tails cannot be placed).
+	"""
+	box_xy = np.asarray(box_xy,dtype=float)
+	pv = fp_lookup(place,xy,box_xy)
+	keep = np.where(pv >= 0.5)[0]
+	if len(keep) > n_target:
+		order = sorted(keep,key=lambda i:(pv[i],rng.random()))
+		keep = np.sort(np.array(order[len(keep)-n_target:],dtype=int))
+	need = max(0,n_target-len(keep))
+	nx,ny = place.shape
+	stride = max(1,int(round(0.2/(box_xy[0]/nx))))
+	sub = place[::stride,::stride]
+	ok = sub >= 1-1e-9
+	if not ok.any():
+		ok = sub >= 0.5
+	ix,iy = np.nonzero(ok)
+	cand = np.column_stack([(ix*stride+0.5)*box_xy[0]/nx,(iy*stride+0.5)*box_xy[1]/ny])
+	picks = fp_farthest(cand,xy[keep],need+n_spare,box_xy)
+	return keep,picks[:need],picks[need:]
+# END FOOTPRINT
+
 
 a,  b  = math.sqrt(2)/20, math.sqrt(2)/60
 ct, st = math.cos(math.pi*109.47/180), math.sin(math.pi*109.47/180) # Tetrahedral
@@ -1188,6 +1399,20 @@ def get_avlip_len(lipids):
 		lipLen = max(az)-min(az)
 		liplens += lipLen
 	return liplens/len(lipids)
+
+#Height above the midplane of the phosphate bead (or the first PO bead, otherwise the head) of lipids as built, number
+#weighted over a leaflet composition. This is the leaflet half-thickness for -footprint map when -mt is not given.
+def get_phosphate_depth(lipids):
+	depth, total = 0.0, 0.0
+	for lipid in lipids:
+		name, num = parse_mol(lipid)
+		atoms	= list(zip(lipidsa[name][1].split(),lipidsx[lipidsa[name][0]],lipidsy[lipidsa[name][0]],lipidsz[lipidsa[name][0]]))
+		at,ax,ay,az = list(zip(*[i for i in atoms if i[0] != "-"]))
+		po = [i for i,a in enumerate(at) if a.startswith("PO")]
+		ip = po[0] if po else int(np.argmax(az))
+		depth += num*(0.5+(az[ip]-min(az)))*options["-bd"].value
+		total += num
+	return depth/total
 
 
 #This uses all the above to build the micelle. Using contours with radius and height varing as a semi circle
@@ -2990,6 +3215,9 @@ are not specified. Curvature can be specified using -curv.
 	("-temp",	 Option(float,	   1,		None, "Temperature (K) for the built-in phospholipid areas per lipid (default: values at ~303 K)")),
 	("-apl_ff",	 Option(str,	   1,		"exp", "Built-in phospholipid areas per lipid: exp (experimental) or m3 (Martini 3 equilibrium, ~0.94 of experimental)")),
 	("-balance",	 Option(str,	   1,		"off", "Balance the leaflets of each membrane after removing lipids that clash with the protein: off, area (equal total lipid area) or number (equal lipid count)")),
+	("-footprint",	 Option(str,	   1,		"clash", "How lipids are removed around the protein: clash (lipids whose tails cannot be traced past the protein) or map (each leaflet filled to its free area, from a depth-resolved protein footprint; flat membranes only)")),
+	("-mt",	 Option(str,	   1,		None, "Membrane thickness (nm) between phosphate planes for -footprint map, as fitted by MemPrO. One value, or two comma separated for the -l/-u and -lo/-uo membranes (default: from the lipid lengths)")),
+	("-fp_map",	 Option(str,	   1,		None, "Write the -footprint map of each leaflet to this .npz file")),
 	("-asym",   Option(int,		 1,		None, "Membrane asymmetry (number of lipids)")),
 	("-rand",   Option(float,	   1,		 0.1, "Random kick size (maximum atom displacement)")),
 	("-bd",	 Option(float,	   1,		 0.3, "Bead distance unit for scaling z-coordinates (nm)")),
@@ -3967,6 +4195,15 @@ if lipL:
 	print("Area per lipid (nm^2): upper %.3f, lower %.3f"%(area_u,area_l))
 	if(options["-ps"].value > 1e-5):
 		print("Area per lipid (nm^2) in outer membrane: upper %.3f, lower %.3f"%(area_uo,area_lo))
+	footprint_mode = options["-footprint"].value
+	if footprint_mode not in ("clash","map"):
+		print("ERROR: -footprint must be clash or map")
+		exit()
+	#Thickness between phosphate planes of the -l/-u and -lo/-uo membranes for -footprint map (None: from lipid lengths)
+	mem_thick = [None,None]
+	if options["-mt"].value is not None:
+		mt_vals = [float(v) for v in options["-mt"].value.split(",")]
+		mem_thick = [mt_vals[0],mt_vals[-1]]
 
 	density_l = [np.pi/2*np.sqrt(1/site_l),np.pi/2*np.sqrt(1/site_lo)]
 	density_u = [np.pi/2*np.sqrt(1/site_u),np.pi/2*np.sqrt(1/site_uo)]
@@ -4067,7 +4304,12 @@ if lipL:
 	av_liplenLO = get_avlip_len(lipLO)
 	
 	#removing lipids within -fudge of protein
-	prot_coords = np.array(protein_lip.coord)
+	#protein_lip includes the beads filling enclosed regions (unless -ring), used by -footprint clash. -footprint map
+	#traces tails past the protein alone, as its map already excludes regions lipids cannot reach.
+	prot_coords_fill = np.array(protein_lip.coord).reshape(-1,3)
+	prot_coords_plain = np.array(protein.coord).reshape(-1,3)
+	prot_radii = fp_bead_radii([a[0] for a in protein.atoms],[a[1] for a in protein.atoms])
+	prot_coords = prot_coords_fill
 	#Lipids whose path can't reach the protein skip the bead-by-bead clash checks below (same result, much faster)
 	prot_tree = cKDTree(prot_coords) if len(prot_coords) > 0 else None
 	#write_point(prot_coords*10,"Protein_filled.pdb")
@@ -4131,24 +4373,93 @@ if lipL:
 				break
 		return (not coll), path
 
+	#-footprint map needs a flat membrane filling the box
+	def membrane_flat(gi):
+		return (not add_pore) and (not is_micelle) and mem_outer_red < 0 and min(curv_up[gi],rcurv_up[gi]) < 1e-5 and min(curv_lo[gi],rcurv_lo[gi]) < 1e-5
+
+	fp_map_out = {}
+	#-footprint map: fills each leaflet to (free area)/(area per site), on grid sites the protein leaves free plus sites
+	#added in the largest gaps. A lipid whose tails cannot be traced past the protein moves to a spare site.
+	def place_leaflets_map(gi,test_pts):
+		box_xy = np.array([pbcx,pbcy])
+		nx,ny,px,py = fp_grid(box_xy)
+		mid = zdist*(gi*2-1)
+		scale = 1.0
+		if memdata:
+			#Local midplane shift and thickness from MemPrOD, read as in place_lipid
+			gx,gy = np.meshgrid((np.arange(nx)+0.5)*px,(np.arange(ny)+0.5)*py,indexing="ij")
+			xind = ((((gx-pbcx/2)*10)-xlin_def[0])/(xlin_def[-1]-xlin_def[0])*xlin_def.shape[0]).astype(int)
+			yind = ((((gy-pbcy/2)*10)-ylin_def[0])/(ylin_def[-1]-ylin_def[0])*ylin_def.shape[0]).astype(int)
+			inside = (xind >= 0)&(yind >= 0)&(xind < xlin_def.shape[0])&(yind < ylin_def.shape[0])
+			xind,yind = np.clip(xind,0,xlin_def.shape[0]-1),np.clip(yind,0,ylin_def.shape[0]-1)
+			mid = mid+np.where(inside,membrane_pos[xind,yind,0]/10.0,0.0)
+			scale = np.where(inside,membrane_pos[xind,yind,1]/membrane_pos[0,0,1],1.0)
+		if mem_thick[gi] is not None:
+			half_up = half_lo = mem_thick[gi]/2
+			source = "-mt"
+		else:
+			half_up,half_lo = get_phosphate_depth(lipUs[gi]),get_phosphate_depth(lipLs[gi])
+			source = "lipid lengths"
+		maps = footprint_maps(prot_coords_plain,prot_radii,box_xy,mid,half_up*scale,half_lo*scale,enclosed_free=options["-ring"].value is not None)
+		print("Footprint map%s: midplane z %.2f nm, phosphate planes +%.2f/-%.2f nm (from %s)"%(" of membrane %d"%(gi+1) if zdist > 1e-5 else "",np.mean(mid),half_up,half_lo,source))
+		placed_both = []
+		for name,grid,direcs,tails,sgn,site_area,store in (("upper",up_grids[gi],direcss[gi],tailsUs[gi],1,[site_u,site_uo][gi],upper),
+				("lower",lo_grids[gi],direcs2s[gi],tailsLs[gi],-1,[site_l,site_lo][gi],lower)):
+			fp = maps[name]
+			n_target = int(round(fp["free"]/site_area))
+			keep,added,spare = fp_select_sites(grid[:,:2],fp["place"],box_xy,n_target,max(20,n_target//20),random)
+			z0 = grid[0,2] if len(grid) else 2.0*sgn
+			d0 = direcs[0] if len(direcs) else np.array([0.0,0.0,1.0])
+			sites = [(grid[i],direcs[i]) for i in keep]+[(np.array([x,y,z0]),d0) for x,y in added]
+			spares = [(np.array([x,y,z0]),d0) for x,y in spare]
+			placed, moved = [], 0
+			for gp,direc in sites:
+				ok,path = place_lipid(gp,np.array(direc,dtype=float),tails,sgn,gi,test_pts)
+				while not ok and spares:
+					moved += 1
+					gp,direc = spares.pop(0)
+					ok,path = place_lipid(gp,np.array(direc,dtype=float),tails,sgn,gi,test_pts)
+				if ok:
+					entry = (random.random(),gp[0],gp[1],gp[2],direc[0],direc[1],direc[2],path)
+					placed.append(entry)
+					store.append(entry)
+			print("  %s leaflet: protein footprint %.1f nm^2, free area %.1f nm^2, %d sites at %.3f nm^2 (%d added in gaps, %d moved to spare sites)"
+				%(name.capitalize(),fp["footprint"],fp["free"],n_target,site_area,len(added),moved))
+			if len(placed) < n_target:
+				print("WARNING: Only %d of %d sites in the %s leaflet could be filled"%(len(placed),n_target,name))
+			placed_both.append(placed)
+			fp_map_out["%s%d_avail"%(name,gi)] = fp["avail"]
+			fp_map_out["%s%d_place"%(name,gi)] = fp["place"]
+		if options["-fp_map"].value:
+			np.savez(options["-fp_map"].value,box=box_xy,pixel=np.array(maps["pixel"]),**fp_map_out)
+		return placed_both
+
 	for gi in range(2):
 		test_pts = DiskGridFib(20,np.sqrt(area_ls[gi])/1.5)
 		total_up_lips = up_grids[gi].shape[0]
 		total_lo_lips = lo_grids[gi].shape[0]
+		use_map = footprint_mode == "map" and membrane_flat(gi)
+		if footprint_mode == "map" and not use_map and (options["-ps"].value > 1e-5 or gi == 0):
+			print("-footprint map is for flat membranes filling the box; using -footprint clash for membrane %d"%(gi+1))
+		prot_coords = prot_coords_plain if use_map else prot_coords_fill
+		prot_tree = cKDTree(prot_coords) if len(prot_coords) > 0 else None
 		if(options["-ps"].value > 1e-5 or gi == 0):
-			upper_tmp, lower_tmp = [], []
-			for i in range(total_up_lips):
-				direc = np.array([direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2]])
-				placed, path = place_lipid(up_grids[gi][i],direc,tailsUs[gi],1,gi,test_pts)
-				if(placed):
-					 upper_tmp.append((random.random(),up_grids[gi][i][0],up_grids[gi][i][1],up_grids[gi][i][2],direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2],path))
-					 upper.append((random.random(),up_grids[gi][i][0],up_grids[gi][i][1],up_grids[gi][i][2],direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2],path))
-			for i in range(total_lo_lips):
-				direc = np.array([direcs2s[gi][i][0],direcs2s[gi][i][1],direcs2s[gi][i][2]])
-				placed, path = place_lipid(lo_grids[gi][i],direc,tailsLs[gi],-1,gi,test_pts)
-				if(placed):
-					lower_tmp.append((random.random(),lo_grids[gi][i][0],lo_grids[gi][i][1],lo_grids[gi][i][2],direcs2s[gi][i][0],direcs2s[gi][i][1],direcs2s[gi][i][2],path))
-					lower.append((random.random(),lo_grids[gi][i][0],lo_grids[gi][i][1],lo_grids[gi][i][2],direcs2s[gi][i][0],direcs2s[gi][i][1],direcs2s[gi][i][2],path))
+			if use_map:
+				upper_tmp, lower_tmp = place_leaflets_map(gi,test_pts)
+			else:
+				upper_tmp, lower_tmp = [], []
+				for i in range(total_up_lips):
+					direc = np.array([direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2]])
+					placed, path = place_lipid(up_grids[gi][i],direc,tailsUs[gi],1,gi,test_pts)
+					if(placed):
+						 upper_tmp.append((random.random(),up_grids[gi][i][0],up_grids[gi][i][1],up_grids[gi][i][2],direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2],path))
+						 upper.append((random.random(),up_grids[gi][i][0],up_grids[gi][i][1],up_grids[gi][i][2],direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2],path))
+				for i in range(total_lo_lips):
+					direc = np.array([direcs2s[gi][i][0],direcs2s[gi][i][1],direcs2s[gi][i][2]])
+					placed, path = place_lipid(lo_grids[gi][i],direc,tailsLs[gi],-1,gi,test_pts)
+					if(placed):
+						lower_tmp.append((random.random(),lo_grids[gi][i][0],lo_grids[gi][i][1],lo_grids[gi][i][2],direcs2s[gi][i][0],direcs2s[gi][i][1],direcs2s[gi][i][2],path))
+						lower.append((random.random(),lo_grids[gi][i][0],lo_grids[gi][i][1],lo_grids[gi][i][2],direcs2s[gi][i][0],direcs2s[gi][i][1],direcs2s[gi][i][2],path))
 
 			
 			# Sort on the random number

@@ -1,6 +1,6 @@
 # Design: per-leaflet protein footprint (`-footprint map`)
 
-Status: agreed design, not yet implemented (branch `lipid-area-table`, 2026-10-23).
+Status: implemented as `-footprint map` (branch `lipid-area-table`, 2026-10-23); the MD validation (step 2 of the plan) is still to do. See [Implementation](#implementation) for the QmcA diagnosis and the choices made where the design left them open.
 This is our own design. Do not copy or adapt code from COBY (its approach is an alpha-shape outline per leaflet; this one is not).
 
 ## Problem
@@ -80,3 +80,34 @@ Option: `-footprint map|clash` (default `clash`, the current behaviour), so the 
   - `place_lipid`, `near_protein` and `place_bead`, plus the "Balance the leaflets" block;
   - `pick_area`, `assign_lipids` and `create_leaflet`.
 - Key code (`mempro/MemPrO.py`): `build_oriented`, and the `optimise_mem_thickness` / `mem_structure` thickness values.
+
+## Implementation
+
+### Why QmcA's lower leaflet was under-filled (confirmed)
+
+The cause is the cavity fill, not tail tracing.
+- Without `-ring`, Insane takes 25 slices from z = -4 to +4 nm (0.5 nm thick, every 0.33 nm), projects the protein onto a 20 x 20 grid over its extent, and fills every cell not reachable from one corner with pseudo-beads (`protein_lip`). Lipids are then traced past these as well as the protein.
+- For QmcA (a ring of TM helices at r = 10-12 nm, z = -2.5 to +1.3 nm, under a soluble cap hanging from z = -2.5 nm) the grid cells are 1.25 nm, so the ring reads as closed in every slice from z = -4 to +1 nm and about 545 nm^2 is filled per slice: the ring interior plus three corners of the bounding box (the flood fill needs a corridor two cells wide to get round the ring, and the 1 nm margin is less than that).
+- The lower head plane (z = -2 nm) lies inside the filled z range, and fill slices are 0.33 nm apart against a 0.3 nm clash tolerance, so head sites over the fill rarely find a free start. The upper head plane (+2 nm) is above the last filled slice.
+- Tail tracing alone hardly removes anything: with `-ring` (no fill) only 0 and 11 of 1750 sites were dropped in the upper and lower leaflets, even over the ring wall.
+
+| QmcA build (1750 grid sites per leaflet) | lipids fewer than 1750, upper | lower |
+|---|---|---|
+| default (`clash`) | 36 | 276 (275 of them next to fill beads; 172 with no free start) |
+| `-ring` (no fill) | 0 | 11 |
+| fill slices below z = -1.7 nm removed | 32 | 53 (45 at the ring wall) |
+| `-footprint map -mt 3.8` | 33 (footprint 19.8 nm^2) | 202 (footprint 119.5 nm^2) |
+
+With `map` the lipid density inside and outside the ring is the same in both leaflets (~1.75 heads/nm^2); only the annulus under the ring wall and cap rim is depleted. `mempro-leaflets` on the default build reports -5.7% differential strain with the new footprint (-8.5% with the old cross-section), and -0.1% on a `map` build with the same leaflet geometry. The lower leaflet's larger footprint is real: the cap rim (r = 10-11.7 nm) rests in its headgroup layer.
+
+### Choices made in the implementation
+
+- **Code.** The `# BEGIN FOOTPRINT` block in `Insane4MemPrO.py` (`footprint_maps`, `fp_select_sites`, bead radii), executed by `leaflet_check.py` as the area table is. Tests: `tests/test_footprint.py` (synthetic shapes, site selection, builds; QmcA with `MEMPRO_SLOW_TESTS=1`).
+- **Blocked versus covered.** A pixel is blocked for lipid bead centres within r_protein + r_lipid, as designed. The free area counts the pixels lipid beads centred on unblocked pixels can cover, i.e. the blocked region shrunk back by r_lipid. Counting blocked pixels directly would also count the shell of lipid radius around the protein, which annular lipids fill, as protein. Crevices narrower than a lipid bead count as protein, so bead cylinders come out 2-4% above pi (R + r_bead)^2.
+- **Headgroup layer.** 0.6 nm beyond the phosphate plane (3 slices). Where a protein widens into the headgroup layer (a cone or hourglass crossing it) that layer sets the footprint, as designed; volume averaging shows where the protein is narrower at the headgroups than in the core (bulge, funnel).
+- **Enclosed regions.** Pixels that are not in the largest connected (periodic) free region of any core slice of either leaflet count as protein, unless `-ring`. A closed barrel is excluded; the QmcA ring is open in its upper slices and between helices, so its interior gets lipids.
+- **Bead radii.** Martini 3 regular/small/tiny (0.264/0.230/0.191 nm) from residue and bead names (approximate for backbones, whose size varies with secondary structure); Go-model CA virtual sites and MemPrO dummies are ignored; atomistic input uses 0.17 nm per heavy atom. Lipid beads are regular.
+- **Geometry.** `-mt` gives the phosphate-to-phosphate thickness (MemPrO's reported thickness: hydrophobic thickness + 10 A). `build_oriented` passes it, matching membranes by position: Insane's `-l`/`-u` membrane (at -ps) is MemPrO's outer membrane unless `-flip`. Without `-mt` each leaflet extends to its lipids' PO beads as built (+/-1.65 nm for POPE). With `-def` the midplane and thickness follow MemPrOD per pixel. Lipids are still built with heads at +/-2 nm either way.
+- **Placement.** Grid sites with placement fraction < 0.5 are dropped, the least available removed first if there are too many, and missing sites added one at a time in the largest gap between free pixels (0.2 nm lattice). Spares (5%, at least 20) take lipids whose tails fail; tails are traced past the protein only, without fill beads.
+- **Scope.** Flat membranes filling the box, including `-ps` and `-def`. Curved membranes, pores, micelles and `-radius` disks fall back to `clash`. The default stays `clash` until the MD comparison is done.
+

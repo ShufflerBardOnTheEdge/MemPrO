@@ -20,4 +20,11 @@ Build directly from the oriented protein (the box size MemPrO used):
     python mempro/Insane4MemPrO.py -f protein-cg_rank_1.pdb -x 32.11502 -y 32.262005 -z 24.711554 \
         -l POPE:8 -l POPG:2 -sol W -negi_c0 CL -posi_c0 NA -o CG-system.gro -p topol.top
 
+For the comparison in `docs/footprint-design.md`, build the same system with the footprint map as well (MemPrO's fitted thickness, 3.8 nm, is passed automatically when building with `-bd`):
+
+    python mempro/Insane4MemPrO.py -f protein-cg_rank_1.pdb -x 32.11502 -y 32.262005 -z 24.711554 \
+        -l POPE:8 -l POPG:2 -sol W -negi_c0 CL -posi_c0 NA -footprint map -mt 3.8 -o CG-system-map.gro -p topol-map.top
+
+The lower leaflet's under-filling with the default (`clash`) build comes from the beads Insane uses to fill the ring (see the design note); `map` fills both leaflets to their free area.
+
 The built system has about 234k beads, so MD validation is best run on a GPU machine.

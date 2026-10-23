@@ -13,6 +13,7 @@ from functools import partial, lru_cache
 import datetime
 from jax import tree_util
 import shutil
+import re
 import shlex
 import sys
 from collections import defaultdict
@@ -2590,6 +2591,17 @@ class MemBrain:
 			run_str = shlex.quote(sys.executable)+" "+shlex.quote(insane_path)+" "+build_args.strip()+" -o "+shlex.quote(cg_sys_dir+"CG-system.gro")+" -p "+shlex.quote(cg_sys_dir+"topol.top")+" -f "+shlex.quote(cg_sys_dir+"protein-cg.pdb")+" -x "+str(x_range)+" -y "+str(y_range)+" -z "+str(z_range)+curv_str
 			if(zdist > 1e-6):
 				run_str += " -ps "+str(zdist)
+			#Thickness between phosphate planes (nm) for Insane4MemPrO -footprint map: MemPrO's thickness is the
+			#hydrophobic thickness plus 10 A of headgroups. Insane's first membrane (-l/-u, at -ps) is the one written at
+			#negative z, MemPrO's outer membrane unless the output is flipped (-flip).
+			if(not re.search(r"(^|\s)-mt(\s|$)",build_args)):
+				mt_im = (self.memt_heads+float(self.new_memt_im[i]))/10.0
+				mt_om = (self.memt_heads_om+float(self.new_memt_om[i]))/10.0
+				if(zdist > 1e-6):
+					mt_first,mt_second = (mt_om,mt_im) if self.flip > 0 else (mt_im,mt_om)
+					run_str += " -mt "+str(round(mt_first,3))+","+str(round(mt_second,3))
+				else:
+					run_str += " -mt "+str(round(mt_im,3))
 			if(self.pg_layer_pred):
 				ps = self.pg_poses[i][0]
 				xs_pg = self.pg_poses[i][1]
@@ -2601,6 +2613,7 @@ class MemBrain:
 				print("WARNING: There was an error when trying to build the system. Check -bd_args are correct.")
 	#Writes a pdb using a given file as a template and replacing positions
 	def write_oriented(self,temp_fn,orient_dir,run_cmd,flip):
+		self.flip = flip
 		lfile = open(temp_fn,"r")
 		content = lfile.read()
 		lfile.close()
