@@ -26,4 +26,4 @@ where = ["."]
 include = ["mempro*"]
 
 [tool.setuptools.package-data]
-mempro = ["Insane4MemPrO.py", "martini_v3.itp"]
+mempro = ["Insane4MemPrO.py", "martini_v3.itp", "lipidome_m3.dat"]

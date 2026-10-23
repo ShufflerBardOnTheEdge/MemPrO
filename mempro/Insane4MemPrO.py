@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys,math,random,os
+import sys,math,random,os,re
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy as sp
@@ -81,17 +81,17 @@ lipidsz[moltype] = (   10,  9,  9,  8,  8,  7,  6,  6,  5,  4,  3,  2,  1,  0,  
 lipidsa.update({	  # 1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20
 ## Phospholipids
 	"DTPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A  -   -   -   -  C1B C2B  -   -   -   - "),
-	"DLPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A C3A  -   -   -  C1B C2B C3B  -   -   - "),
+	"DLPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A D2A D3A C4A  -   -  C1B D2B D3B C4B  -   - "),  # Martini 3 lipidome DLPC (18:2); the Martini 3.0 DLPC (12:0) is DLPC.o
 	"DPPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A C3A C4A  -   -  C1B C2B C3B C4B  -   - "),
 	"DBPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A C3A C4A C5A  -  C1B C2B C3B C4B C5B  - "),
 	"POPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A D2A C3A C4A  -   -  C1B C2B C3B C4B  -   - "),
 	"DOPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A D2A C3A C4A  -   -  C1B D2B C3B C4B  -   - "),
-	"DAPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 D1A D2A D3A D4A C5A  -  D1B D2B D3B D4B C5B  - "),
+	"DAPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A D2A D3A D4A C5A  -  C1B D2B D3B D4B C5B  - "),  # Martini 3 lipidome bead names; the Martini 3.0 names are DAPC.o
 	"DIPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A D2A D3A C4A  -   -  C1B D2B D3B C4B  -   - "),
 	"DGPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A D3A C4A C5A  -  C1B C2B D3B C4B C5B  - "),
 	"DNPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A C3A D4A C5A C6A C1B C2B C3B D4B C5B C6B"),
 	"DTPE": (moltype, " -   -   -  NH3  -  PO4 GL1 GL2 C1A C2A  -   -   -   -  C1B C2B  -   -   -   - "),
-	"DLPE": (moltype, " -   -   -  NH3  -  PO4 GL1 GL2 C1A C2A C3A  -   -   -  C1B C2B C3B  -   -   - "),
+	"DLPE": (moltype, " -   -   -  NH3  -  PO4 GL1 GL2 C1A D2A D3A C4A  -   -  C1B D2B D3B C4B  -   - "),  # Martini 3 lipidome DLPE (18:2); the Martini 3.0 DLPE (12:0) is DLPE.o
 	"DPPE": (moltype, " -   -   -  NH3  -  PO4 GL1 GL2 C1A C2A C3A C4A  -   -  C1B C2B C3B C4B  -   - "),
 	"DBPE": (moltype, " -   -   -  NH3  -  PO4 GL1 GL2 C1A C2A C3A C4A C5A  -  C1B C2B C3B C4B C5B  - "),
 	"POPE": (moltype, " -   -   -  NH3  -  PO4 GL1 GL2 C1A D2A C3A C4A  -   -  C1B C2B C3B C4B  -   - "),
@@ -113,7 +113,12 @@ lipidsa.update({	  # 1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  
 	"JFPG": (moltype, " -   -   -  GL0  -  PO4 GL1 GL2 C1A D2A D3A D4A  -   -  D1B C2B C3B C4B  -   - "),
 ## Monoacylglycerol
 	"GMO":  (moltype, " -   -   -   -   -   -  GL1 GL2 C1A C2A D3A C4A C5A  -   -   -   -   -   -   - "),
+## Martini 3 lipidome diacylglycerol and DOTAP (their itp files have no ;@INSANE line)
+	"DODG": (moltype, " -   -   -   -   -  COH GL1 GL2 C1A D2A C3A C4A  -   -  C1B D2B C3B C4B  -   - "),
+	"DOTAP": (moltype, " -   -   -  NC3  -   -  GL1 GL2 C1A D2A C3A C4A  -   -  C1B D2B C3B C4B  -   - "),
 ## Templates using the old lipid names and definitions
+  "DLPC.o": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A C3A  -   -   -  C1B C2B C3B  -   -   - "),
+  "DAPC.o": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 D1A D2A D3A D4A C5A  -  D1B D2B D3B D4B C5B  - "),
   "DHPC.o": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A  -   -   -   -  C1B C2B  -   -   -   - "),
   "DMPC.o": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A C3A  -   -   -  C1B C2B C3B  -   -   - "),
   "DSPC.o": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A C3A C4A C5A  -  C1B C2B C3B C4B C5B  - "),
@@ -254,6 +259,9 @@ lipidsa.update({	  #  1	2   3   4   5   6   7   8   9  10  11  12  13  14  15  1
 	"CL4P": (moltype, "GL5 PO41 GL1 GL2 C1A D2A C3A C4A   -   - C1B C2B C3B C4B   -   - PO42 GL3 GL4 C1C D2C C3C C4C   -   - C1D C2D C3D C4D   -   -"), 
 	"CL4M": (moltype, "GL5 PO41 GL1 GL2 C1A D2A C3A   -   -   - C1B C2B C3B   -   -   - PO42 GL3 GL4 C1C D2C C3C   -   -   - C1D C2D C3D   -   -   -"), 
 	"CARD": (moltype, "GL0 PO1  GL1 GL2 C1A D2A C3A C4A   -   - C1B C2B C3B C4B   -   - PO2 GL3 GL4 C1C D2C C3C C4C   -   - C1D C2D C3D C4D   -   -"),
+# Martini 3 lipidome cardiolipins (tetraoleoyl and tetramyristoyl)
+	"TOCL": (moltype, "GLC PO41 GL11 GL21 C1A1 D2A1 C3A1 C4A1 - - C1B1 D2B1 C3B1 C4B1 - - PO42 GL12 GL22 C1A2 D2A2 C3A2 C4A2 - - C1B2 D2B2 C3B2 C4B2 - -"),
+	"TMCL": (moltype, "GLC PO41 GL11 GL21 C1A1 C2A1 C3A1 - - - C1B1 C2B1 C3B1 - - - PO42 GL12 GL22 C1A2 C2A2 C3A2 - - - C1B2 C2B2 C3B2 - - -"),
 ## Templates using the old lipid names and definitions
   "CL4.o" : (moltype, "GL5 PO41 GL1 GL2 C1A C2A D3A C4A C5A   - C1B C2B D3B C4B C5B   - PO42 GL3 GL4 C1C C2C D3C C4C C5C   - C1D C2D D3D C4D C5D   -"), 
   "CL4O.o": (moltype, "GL5 PO41 GL1 GL2 C1A C2A D3A C4A C5A   - C1B C2B D3B C4B C5B   - PO42 GL3 GL4 C1C C2C D3C C4C C5C   - C1D C2D D3D C4D C5D   -"),
@@ -340,6 +348,24 @@ lipidsy[moltype] = (      0,   0,   0,   0,  0,   0,   0,   0,   0,  0)
 lipidsz[moltype] = (    5.3, 4.5, 3.9, 3.3,  3, 2.6, 4.5, 2.6, 1.4,  0)
 lipidsa.update({
     "CHL1": (moltype, " ROH  R1  R2  R3  R4   -  R5  R6  C1  C2 "),
+    "CHOL": (moltype, " ROH  R1  R2  R3  R4   -  R5  R6  C1  C2 "),  # Martini 3 lipidome name
+})
+
+# Bis(monoacylglycero)phosphate, Martini 3 lipidome 2,2' (DO2B) and 3,3' (DO3B) isomers
+#
+#   (OH)-GL1-(OH)-C1A-D2A-C3A-C4A
+#        /
+#     PO4
+#        \
+#   (OH)-GL2-(OH)-C1B-D2B-C3B-C4B
+#
+moltype = "BMP"
+lipidsx[moltype] = (0.5,   0,   0,   0, 0, 0, 0, 0,   1,   1,   1, 1, 1, 1, 1)
+lipidsy[moltype] = (  0, 0.5,   0, 0.5, 0, 0, 0, 0, 0.5,   0, 0.5, 0, 0, 0, 0)
+lipidsz[moltype] = (  6, 5.5,   5, 5.5, 4, 3, 2, 1, 5.5,   5, 5.5, 4, 3, 2, 1)
+lipidsa.update({
+    "DO2B": (moltype, "PO4   -  GL1 OH1 C1A D2A C3A C4A   -  GL2 OH2 C1B D2B C3B C4B"),
+    "DO3B": (moltype, "PO4 OH1  GL1   - C1A D2A C3A C4A OH2  GL2   - C1B D2B C3B C4B"),
 })
 
 
@@ -378,7 +404,7 @@ lipidsa.update({	# 1	2   3   4   5   6   7   8   9   10  11  12  13   14  15  16
 
 
 # Lists for automatic charge determination
-charges = {"HPPA":-1,"4HPA":-1,"UDP2":-2,"UDP1":-1, "GLYP":-1, "GLYM":-1, "ARG":1, "LYS":1, "ASP":-1, "GLU":-1, "DOPG":-1, "POPG":-1, "DOPS":-1, "POPS":-1, "DSSQ":-1, "KPG":+1, "LIPA":-2, "PGIN":-1, "REMP":-6, "RAMP":-10, "OANT":-10, "CARD":-2, "A2P2":-1, "APM2":-1, "APM6":-1, "LIP2":-4, "LIP4":-6, "LIP6":-8, "LIP8":-10, "LI10":-12, "LI12":-14, "LI14":-16, "LI16":-18, "LI18":-20, "LI20":-22, "LI22":-24,"UPEP":-1,"SPEP":-2,"UUPEP":-1,"KLA":-6}
+charges = {"HPPA":-1,"4HPA":-1,"UDP2":-2,"UDP1":-1, "GLYP":-1, "GLYM":-1, "ARG":1, "LYS":1, "ASP":-1, "GLU":-1, "DOPG":-1, "POPG":-1, "DOPS":-1, "POPS":-1, "DSSQ":-1, "KPG":+1, "LIPA":-2, "PGIN":-1, "REMP":-6, "RAMP":-10, "OANT":-10, "CARD":-2, "A2P2":-1, "APM2":-1, "APM6":-1, "LIP2":-4, "LIP4":-6, "LIP6":-8, "LIP8":-10, "LI10":-12, "LI12":-14, "LI14":-16, "LI16":-18, "LI18":-20, "LI20":-22, "LI22":-24,"UPEP":-1,"SPEP":-2,"UUPEP":-1,"KLA":-6,"TOCL":-2,"TMCL":-2,"DOTAP":1,"DO2B":-1,"DO3B":-1}
 ion_charges = {"NA" :1,"CL":-1,"CA":2}
 
 # BEGIN LIPID AREAS (also read by leaflet_check.py; keep this block self-contained, using only numpy)
@@ -388,39 +414,77 @@ ion_charges = {"NA" :1,"CL":-1,"CA":2}
 # Values are fluid-phase experimental areas (~303 K) where available, otherwise from simulation as noted, rounded
 # to 0.01 nm^2 (roughly their accuracy; LPS values are less certain, ~0.1 nm^2).
 DEFAULT_APL = 0.60
-lipid_apl = {
-	# Phosphatidylcholines: Kucerka et al. 2008 BJ, 2011 BBA (DPPC at 323 K)
-	"POPC":0.64, "DOPC":0.67, "DPPC":0.63, "DLPC":0.61,
-	# Phosphatidylethanolamines: POPE Kucerka et al. 2015 JPCB; DOPE has no lamellar value, CHARMM36/Martini 3 ~0.62
-	"POPE":0.58, "DOPE":0.62,
-	# Phosphatidylglycerols: Pan et al. 2014 BBA; phosphatidylserines: Pan et al. 2014 Soft Matter, Petrache et al. 2004 BJ
-	"POPG":0.64, "DOPG":0.69, "POPS":0.63, "DOPS":0.65,
-	# Cardiolipins (four tails): TOCL, Pan et al. 2015 Soft Matter
-	"CARD":1.30, "CDL0":1.30, "CDL1":1.30, "CDL2":1.30, "CL4P":1.30, "CL4M":1.30,
+# Martini 3 lipidome bilayers (Pedersen et al. 2025 ACS Cent Sci, autobuild-lipid-properties in the M3-Lipid-Parameters
+# repository; single-lipid bilayers at ~310 K) scaled by 1.04, the mean ratio (sd 0.03) of experiment at 303 K to these
+# simulations over the 16 fluid lipids that have both. Only lipids that are fluid in those simulations are listed.
+lipid_apl_m3 = {
+	"DAPA":0.74, "DAPC":0.75, "DAPE":0.71, "DAPG":0.74, "DAPS":0.74, "DDPA":0.80, "DDPC":0.80, "DDPE":0.77, "DDPG":0.80,
+	"DDPS":0.80, "DEPA":0.65, "DEPE":0.61, "DEPG":0.65, "DEPS":0.65, "DFPA":0.73, "DFPC":0.73, "DFPE":0.69, "DFPG":0.73,
+	"DFPS":0.73, "DGPA":0.65, "DGPE":0.61, "DGPG":0.65, "DGPS":0.64, "DJPA":0.64, "DJPC":0.63, "DJPE":0.58, "DJPG":0.64,
+	"DJPS":0.63, "DLPA":0.74, "DLPC":0.74, "DLPE":0.70, "DLPG":0.74, "DLPS":0.73, "DMPA":0.60, "DMPS":0.60, "DNPA":0.60,
+	"DNPG":0.61, "DOPA":0.69, "DOPE":0.64, "DRPA":0.69, "DRPE":0.65, "DRPG":0.69, "DRPS":0.69, "DTPA":0.59, "DTPC":0.60,
+	"DTPE":0.54, "DTPG":0.60, "DTPS":0.59, "DUPA":0.59, "DUPS":0.59, "DVPA":0.66, "DVPC":0.65, "DVPE":0.61, "DVPG":0.66,
+	"DVPS":0.65, "DYPA":0.64, "DYPE":0.61, "DYPG":0.64, "DYPS":0.64, "LFPA":0.75, "LFPC":0.75, "LFPE":0.71, "LFPG":0.75,
+	"LFPS":0.74, "MSM":0.59, "NSM":0.57, "ODPA":0.76, "ODPC":0.75, "ODPE":0.72, "ODPG":0.76, "ODPS":0.75, "OEPA":0.68,
+	"OEPC":0.68, "OEPE":0.64, "OEPG":0.68, "OEPS":0.68, "OLPA":0.71, "OLPC":0.71, "OLPE":0.67, "OLPG":0.71, "OLPS":0.71,
+	"OSM":0.66, "PAPA":0.69, "PAPC":0.70, "PAPE":0.66, "PAPG":0.69, "PAPS":0.69, "PDPA":0.72, "PDPE":0.68, "PDPG":0.72,
+	"PDPS":0.72, "PEPA":0.61, "PEPC":0.62, "PEPE":0.57, "PEPG":0.62, "PEPS":0.61, "PFPA":0.68, "PFPC":0.68, "PFPE":0.64,
+	"PFPG":0.68, "PFPS":0.68, "PIPA":0.65, "PIPC":0.66, "PIPE":0.62, "PIPG":0.66, "PIPS":0.65, "PLPA":0.67, "PLPC":0.67,
+	"PLPE":0.63, "PLPG":0.67, "PLPS":0.67, "POPA":0.63, "PQPA":0.69, "PQPC":0.70, "PQPE":0.65, "PQPG":0.69, "PQPS":0.69,
+	"PYPA":0.62, "PYPC":0.62, "PYPE":0.58, "PYPG":0.62, "PYPS":0.62, "SAPA":0.70, "SAPC":0.70, "SAPE":0.66, "SAPG":0.70,
+	"SAPS":0.69, "SDPA":0.74, "SDPE":0.69, "SDPG":0.74, "SDPS":0.73, "SLPA":0.69, "SLPC":0.69, "SLPE":0.65, "SLPG":0.69,
+	"SLPS":0.69, "SOPA":0.65, "SOPS":0.64, "USM":0.60, "YOPA":0.66, "YOPC":0.67, "YOPE":0.63, "YOPG":0.67, "YOPS":0.66,
+}
+lipid_apl = dict(lipid_apl_m3)
+lipid_apl.update({
+	# Experimental (SAXS/SANS) areas from the Martini 3 lipidome benchmark (Martini_lipid_Benchmark in the same
+	# repository; Kucerka et al. 2008 BJ, 2011 BBA; Pan et al. 2014 BBA; Kucerka et al. 2015 JPCB; Doktorova et al.
+	# 2020 JPCB) at 303 K, or the lowest fluid temperature measured (apl_ref_temp). Lipidome names: DUPC = 12:0 PC,
+	# DLPC = 18:2 PC.
+	"DEPC":0.66, "DGPC":0.67, "DMPC":0.60, "DMPG":0.62, "DNPC":0.63, "DOPC":0.67, "DOPG":0.69, "DPPC":0.63, "DPPG":0.65,
+	"DRPC":0.64, "DSPC":0.64, "DSPG":0.67, "DUPC":0.61, "DUPE":0.52, "DUPG":0.62, "DYPC":0.66, "MSPC":0.62, "PDPC":0.71,
+	"PMPC":0.63, "POPC":0.64, "POPE":0.58, "POPG":0.64, "PSM":0.60, "SDPC":0.70, "SMPC":0.62, "SOPC":0.66, "SOPE":0.57,
+	"SOPG":0.64, "SSM":0.62,
+	# Phosphatidylserines: Pan et al. 2014 Soft Matter, Petrache et al. 2004 BJ
+	"POPS":0.63, "DOPS":0.65,
+	# Cardiolipins (four tails): TOCL, Pan et al. 2015 Soft Matter; TMCL scaled from TOCL by DMPC/DOPC (estimate)
+	"TOCL":1.30, "TMCL":1.16, "CARD":1.30, "CDL0":1.30, "CDL1":1.30, "CDL2":1.30, "CL4P":1.30, "CL4M":1.30,
 	# Lipid A: Snyder et al. 1999 Biochemistry; Re-LPS (Kdo2-lipid A): CHARMM36m, Brandner et al. 2024 JCTC;
 	# smooth LPS: CHARMM36, Park et al. 2023 JCIM and Martini 3 LPS 2026 JPCB; Ra-LPS taken between Re and smooth
 	"LIPA":1.56, "KLA":1.67, "REMP":1.67, "RAMP":1.80, "OANT":1.85,
 	# Phosphoinositides (Martini 3 naming: 1/4/5 = PI(3)P/PI(4)P/PI(5)P, 2/6/7 = PI(3,4)P2/PI(4,5)P2/PI(3,5)P2, 3 = PIP3).
 	# No bilayer experiment exists; values are consensus of monolayer areas at 30 mN/m (Levental et al. 2008 JACS),
 	# CHARMM36/Martini 3 areas at 5% in POPC (Borges-Araujo et al. 2022 JCTC) and Martini 3 lipidome bilayers.
-	# Uncertain to ~0.05 nm^2, and PIP2 areas depend strongly on salt and divalent cations.
+	# Uncertain to ~0.05 nm^2, and PIP2 areas depend strongly on salt and divalent cations (pure PIP bilayers in
+	# the lipidome are ~10% larger, from headgroup repulsion).
 	"POPI":0.60, "PLPI":0.62, "SAPI":0.64, "SDPI":0.67,
 	"POP1":0.64, "POP4":0.64, "POP5":0.64, "SAP1":0.66, "SAP4":0.66, "SAP5":0.66,
 	"POP2":0.66, "POP6":0.66, "POP7":0.68, "SAP2":0.68, "SAP6":0.68, "SAP7":0.70,
 	"POP3":0.67, "SAP3":0.70,
 	# Sterols: steric area for placement (the partial area is ~0.26 at >30 mol%, Edholm & Nagle 2005 BJ);
 	# hopanoids assumed sterol-like
-	"CHL1":0.40, "HOPR":0.40, "HHOP":0.40, "HDPT":0.40, "HBHT":0.40,
-}
-lipid_apl_class = {"PC":0.64, "PE":0.58, "PG":0.64, "PS":0.63, "SM":0.60}	# SM: PSM, Doktorova et al. 2020 JPCB
+	"CHL1":0.40, "CHOL":0.40, "HOPR":0.40, "HHOP":0.40, "HDPT":0.40, "HBHT":0.40,
+	# DOTAP: similar to DOPC (Mihailescu et al. 2023 BJ); BMP: no data, taken as DOPG (estimate)
+	"DOTAP":0.67, "DO2B":0.69, "DO3B":0.69,
+	# Martini 3.0 lipids kept under their old names (.o): 12:0 PC and 18:2 PC
+	"DLPC.o":0.61, "DUPC.o":0.74,
+})
+# Headgroup classes, from the last letters of the name. PA: POPA in the lipidome bilayers as above. SM: PSM,
+# Doktorova et al. 2020 JPCB. CER: ceramide, ~0.40 (uncertain; pure ceramide does not form a fluid bilayer).
+lipid_apl_class = {"PC":0.64, "PE":0.58, "PG":0.64, "PS":0.63, "PA":0.63, "SM":0.60, "CER":0.40}
+# Ether (XXEC, XXEE, ...) and plasmalogen (XXLC, XXLE, ...) lipids of the lipidome take the area of their diacyl
+# analogue (XXPC, XXPE, ...) times these: ether DHPC is ~1.5% larger than DPPC (Guler et al. 2009 Chem Phys Lipids),
+# plasmalogen PE ~0.03 nm^2 (5%) larger than POPE (West et al. 2020 JPCB)
+APL_ETHER = 1.015
+APL_PLASMALOGEN = 1.05
 
 # -temp and -apl_ff adjust the phospholipid-like values above (not LPS, sterols or hopanoids). Values refer to 303 K
-# except DPPC (323 K) and SM (318 K). Fluid areas grow ~0.25%/K and Martini 3 phospholipids equilibrate at ~0.94 of
+# except those in apl_ref_temp, measured at the lowest temperature where the lipid is fluid. Fluid areas grow ~0.25%/K and Martini 3 phospholipids equilibrate at ~0.94 of
 # experiment (0.93-0.95 for PO lipids at 303-323 K; Martini 3 lipidome benchmark, PMC12464760).
 APL_TEMP_COEF = 0.0025
 APL_M3_FACTOR = 0.94
-apl_ref_temp = {"DPPC":323.0, "SM":318.0}
-apl_fixed = {"LIPA","KLA","REMP","RAMP","OANT","CHL1","HOPR","HHOP","HDPT","HBHT"}
+apl_ref_temp = {"DPPC":323.0, "DSPC":333.0, "MSPC":323.0, "SMPC":323.0, "PMPC":323.0, "PSM":318.0, "SSM":328.0, "DUPE":308.0, "POPE":308.0, "SOPE":308.0, "DPPG":323.0, "DSPG":333.0, "SM":318.0}
+apl_fixed = {"LIPA","KLA","REMP","RAMP","OANT","CHL1","CHOL","HOPR","HHOP","HDPT","HBHT"}
 
 def adjust_apls(temp,ff):
 	def adj(name,val,cls=None):
@@ -443,7 +507,10 @@ def get_apl(name):
 	base = name.split(".")[0]
 	if base in lipid_apl:
 		return lipid_apl[base]
-	return lipid_apl_class.get(base[-2:],DEFAULT_APL)
+	# Martini 3 lipidome ether and plasmalogen lipids, from their diacyl analogue
+	if len(base) == 4 and base[2] in "EL" and base[3] in "CEGSA":
+		return get_apl(base[:2]+"P"+base[3])*(APL_ETHER if base[2] == "E" else APL_PLASMALOGEN)
+	return lipid_apl_class.get(base[-3:],lipid_apl_class.get(base[-2:],DEFAULT_APL))
 # END LIPID AREAS
 
 
@@ -2851,14 +2918,26 @@ usrmols  = []
 usrheads = []
 usrlinks = []
 usrtails = []
-usrLipHeadMapp = { # Define supported lipid head beads. One letter name mapped to atom name
+lipid_itps = []
+usrLipHeadMapp = { # Define supported lipid head beads. Name mapped to atom name
 	"C":  ('NC3'), # NC3 = Choline
 	"E":  ('NH3'), # NH3 = Ethanolamine 
 	"G":  ('GL0'), # GL0 = Glycerol
 	"S":  ('CNO'), # CNO = Serine
 	"P":  ('PO4'), # PO4 = Phosphate
-	"O":  ('PO4')  # PO4 = Phosphate acid
+	"O":  ('PO4'), # PO4 = Phosphate acid
+	"PS1": ('PS1'), # PS1 = COO bead of a two bead serine
+	"PS2": ('PS2'), # PS2 = NH3 bead of a two bead serine
+	"COH": ('COH')  # COH = Capping bead for the top of diacylglycerols and ceramides
 	}
+# Inositol head groups (Martini 3 lipidome): beads and their positions in the INOSITOLLIPIDS template
+usrInositolHeads = {"PI": "C1 C2 C3 C4 PO4", "P1": "C1 C2 C3 C4 PO4 P3", "P4": "C1 C2 C3 C4 PO4 P4", "P5": "C1 C2 C3 C4 PO4 P5",
+	"P2": "C1 C2 C3 C4 PO4 P3 P4", "P7": "C1 C2 C3 C4 PO4 P3 P5", "P6": "C1 C2 C3 C4 PO4 P4 P5", "P3": "C1 C2 C3 C4 PO4 P3 P4 P5"}
+usrInositolPos = {"C1": (.5, 8), "C2": (.5, 9), "C3": (0, 9), "C4": (.25, 8.5), "PO4": (0, 7), "P3": (0, 10), "P4": (.5, 10), "P5": (1, 10)}
+# Linker beads: G = glycerol, E = ether glycerol, L = plasmalogen glycerol, A1 A2 = sphingosine, A = old amide linker
+usrLinkMapp = {"G": "GL%d", "E": "ET%d", "L": "PL%d", "A1": "OH1", "A2": "AM2", "A": "AM%d"}
+# Tail bead letters that are named differently from the letter (c = small C, t = small trans, F = polyunsaturated)
+usrTailNames = {"c": "C", "t": "T", "F": "D"}
 usrIndexToLetter = "A B C D E F G H I J K L M N".split() # For naming lipid tail beads 
 
 # Description
@@ -2974,6 +3053,7 @@ Define additional lipid types (same format as in lipid-martini-itp-v01.py)
 	("-alhead",  Option(usrheads.append,		1,		None, "Additional lipid head specification string")),
 	("-allink",  Option(usrlinks.append,		1,		None, "Additional lipid linker specification string")),
 	("-altail",  Option(usrtails.append,		1,		None, "Additional lipid tail specification string")),
+	("-lipid_itp", Option(lipid_itps.append,	1,		None, "Lipid topology (.itp) to take lipid definitions (;@INSANE lines) and charges from, e.g. from the Martini 3 lipidome")),
 	]
 	
 args = sys.argv[1:]
@@ -3036,61 +3116,123 @@ else:
 
 
 # HII edit - lipid definition
-# Add specified lipid definition to insane lipid library
-for name, head, link, tail in list(zip(usrmols,usrheads,usrlinks,usrtails)):
+# Builds a lipid template from head, linker and tail strings (as in the ;@INSANE lines of Martini 3 lipidome itp files)
+def define_lipid(name, head, link, tail):
 	moltype = "usr_"+name
-	lipidsx[moltype] = []
-	lipidsy[moltype] = []
-	lipidsz[moltype] = []
-	headArray = (head).split()
-	linkArray = (link).split()
-	tailsArray = (tail).split()
-	lipidDefString = ""  
+	xs, ys, zs = [], [], []
+	headArray = head.split()
+	linkArray = link.split()
+	tailsArray = tail.split()
+	lipidDefString = ""
 
 	if len(tailsArray) != len(linkArray):
-		print("Error, Number of tails has to equal number of linkers")
-		sys.exit()
+		raise ValueError("Number of tails has to equal number of linkers")
 
 	# Find longest tail 
-	maxTail = 0
-	for cTail in tailsArray:
-	   if len(cTail) > maxTail:
-		   maxTail = len(cTail)
+	maxTail = max([len(cTail) for cTail in tailsArray]+[0])
 	cBeadZ = maxTail + len(headArray) # longest tail + linker (always x1) + lengths of all heads - 1 (as it starts on 0)
 
 	# Add head beads
 	for cHead in headArray:
-		lipidsx[moltype].append(0)
-		lipidsy[moltype].append(0)
-		lipidsz[moltype].append(cBeadZ)
+		if cHead in usrInositolHeads:
+			# Inositol ring placed as in the INOSITOLLIPIDS template, whose glycerol is at z = 6
+			for bead in usrInositolHeads[cHead].split():
+				px, pz = usrInositolPos[bead]
+				xs.append(px)
+				ys.append(0)
+				zs.append(pz - 6 + maxTail)
+				lipidDefString += bead + " "
+		elif cHead in usrLipHeadMapp:
+			xs.append(0)
+			ys.append(0)
+			zs.append(cBeadZ)
+			lipidDefString += usrLipHeadMapp[cHead] + " "
+		else:
+			raise ValueError("Head bead type %s not supported" % cHead)
 		cBeadZ -= 1
-		lipidDefString += usrLipHeadMapp[cHead] + " "
 
 	# Add linkers
 	for i,cLinker in enumerate(linkArray):
-		lipidsx[moltype].append(max(i-0.5,0))
-		lipidsy[moltype].append(0)
-		lipidsz[moltype].append(cBeadZ)
-		if cLinker == 'G': 
-			lipidDefString += "GL" + str(i+1) + " "
-		elif cLinker == 'A':
-			lipidDefString += "AM" + str(i+1) + " "
-		else:
-			print("Error, linker type not supported")
-			sys.exit()
+		if cLinker not in usrLinkMapp:
+			raise ValueError("Linker type %s not supported" % cLinker)
+		xs.append(max(i-0.5,0))
+		ys.append(0)
+		zs.append(maxTail)
+		lipidDefString += (usrLinkMapp[cLinker] % (i+1) if "%" in usrLinkMapp[cLinker] else usrLinkMapp[cLinker]) + " "
 
 	# Add tails 
 	for i,cTail in enumerate(tailsArray):
 		cBeadZ = maxTail - 1
-		
 		for j,cTailBead in enumerate(cTail):
-			lipidsx[moltype].append(i)
-			lipidsy[moltype].append(0)
-			lipidsz[moltype].append(cBeadZ)
+			xs.append(i)
+			ys.append(0)
+			zs.append(cBeadZ)
 			cBeadZ -= 1
-			lipidDefString += cTailBead + str(j+1) + usrIndexToLetter[i] + " "
-   
+			lipidDefString += usrTailNames.get(cTailBead, cTailBead) + str(j+1) + usrIndexToLetter[i] + " "
+
+	lipidsx[moltype], lipidsy[moltype], lipidsz[moltype] = xs, ys, zs
 	lipidsa[name] = (moltype,lipidDefString)
+
+
+# Reads the ;@INSANE build lines, charges and bead names of the molecules in a lipid .itp file
+def read_lipid_itp(fn):
+	mols = {}
+	with open(fn) as f:
+		txt = f.read()
+	builds = {}
+	for line in re.findall(r";@INSANE (.*)", txt):
+		kv = dict(x.strip().split("=",1) for x in line.split(",") if "=" in x)
+		if "alname" in kv:
+			builds[kv["alname"].strip()] = kv
+	for blk in re.split(r"\[\s*moleculetype\s*\]", txt)[1:]:
+		lines = [l.split(";")[0].split() for l in blk.splitlines()]
+		lines = [l for l in lines if l]
+		if not lines:
+			continue
+		name = lines[0][0]
+		atoms, charge, sec = [], 0.0, None
+		for l in lines[1:]:
+			if l[0].startswith("["):
+				sec = "".join(l).strip("[]")
+			elif sec == "atoms" and len(l) >= 7 and not l[0].startswith("#"):
+				atoms.append(l[4])
+				charge += float(l[6])
+		mols[name] = {"atoms": atoms, "charge": int(round(charge)), "build": builds.get(name)}
+	return mols
+
+
+# The Martini 3 lipidome, for lipids without a built-in template
+lipidome_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lipidome_m3.dat")
+if os.path.exists(lipidome_file):
+	with open(lipidome_file) as f:
+		for line in f:
+			if line.startswith("#") or not line.strip():
+				continue
+			name, head, link, tail, charge = [x.strip() for x in line.split("|")]
+			if name not in lipidsa:
+				define_lipid(name, head, link, tail)
+			charges[name] = int(round(float(charge)))
+
+# Lipid topologies given with -lipid_itp: their ;@INSANE lines replace the templates, and their charges are used
+used_lipids = {l.split(":")[0] for l in lipL+lipU+lipLO+lipUO}
+for fn in lipid_itps:
+	for name, mol in read_lipid_itp(fn).items():
+		charges[name] = mol["charge"]
+		if mol["build"]:
+			kv = mol["build"]
+			define_lipid(name, kv.get("alhead",""), kv.get("allink",""), kv.get("altail",""))
+		elif name in lipidsa and name in used_lipids:
+			beads = [b for b in lipidsa[name][1].split() if b != "-"]
+			if beads != mol["atoms"]:
+				print("WARNING: The bead names of %s in %s differ from the template (%s); the built lipid will not match the topology" % (name, fn, " ".join(beads)), file=sys.stderr)
+
+# Add specified lipid definition to insane lipid library
+for name, head, link, tail in list(zip(usrmols,usrheads,usrlinks,usrtails)):
+	try:
+		define_lipid(name, head, link, tail)
+	except ValueError as e:
+		print("Error, %s (lipid %s)" % (e, name))
+		sys.exit()
 # End user lipid definition
 
 
