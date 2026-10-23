@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 
-import sys,math,random,os,re
+import sys,math,random,os
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy as sp
-from scipy.spatial import cKDTree
 import jax
 import jax.numpy as jnp
 from functools import partial
-from collections import deque
 
 jax.config.update("jax_enable_x64",True)
 jax.config.update("jax_platform_name","cpu")
@@ -81,17 +79,17 @@ lipidsz[moltype] = (   10,  9,  9,  8,  8,  7,  6,  6,  5,  4,  3,  2,  1,  0,  
 lipidsa.update({	  # 1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20
 ## Phospholipids
 	"DTPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A  -   -   -   -  C1B C2B  -   -   -   - "),
-	"DLPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A D2A D3A C4A  -   -  C1B D2B D3B C4B  -   - "),  # Martini 3 lipidome DLPC (18:2); the Martini 3.0 DLPC (12:0) is DLPC.o
+	"DLPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A C3A  -   -   -  C1B C2B C3B  -   -   - "),
 	"DPPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A C3A C4A  -   -  C1B C2B C3B C4B  -   - "),
 	"DBPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A C3A C4A C5A  -  C1B C2B C3B C4B C5B  - "),
 	"POPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A D2A C3A C4A  -   -  C1B C2B C3B C4B  -   - "),
 	"DOPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A D2A C3A C4A  -   -  C1B D2B C3B C4B  -   - "),
-	"DAPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A D2A D3A D4A C5A  -  C1B D2B D3B D4B C5B  - "),  # Martini 3 lipidome bead names; the Martini 3.0 names are DAPC.o
+	"DAPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 D1A D2A D3A D4A C5A  -  D1B D2B D3B D4B C5B  - "),
 	"DIPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A D2A D3A C4A  -   -  C1B D2B D3B C4B  -   - "),
 	"DGPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A D3A C4A C5A  -  C1B C2B D3B C4B C5B  - "),
 	"DNPC": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A C3A D4A C5A C6A C1B C2B C3B D4B C5B C6B"),
 	"DTPE": (moltype, " -   -   -  NH3  -  PO4 GL1 GL2 C1A C2A  -   -   -   -  C1B C2B  -   -   -   - "),
-	"DLPE": (moltype, " -   -   -  NH3  -  PO4 GL1 GL2 C1A D2A D3A C4A  -   -  C1B D2B D3B C4B  -   - "),  # Martini 3 lipidome DLPE (18:2); the Martini 3.0 DLPE (12:0) is DLPE.o
+	"DLPE": (moltype, " -   -   -  NH3  -  PO4 GL1 GL2 C1A C2A C3A  -   -   -  C1B C2B C3B  -   -   - "),
 	"DPPE": (moltype, " -   -   -  NH3  -  PO4 GL1 GL2 C1A C2A C3A C4A  -   -  C1B C2B C3B C4B  -   - "),
 	"DBPE": (moltype, " -   -   -  NH3  -  PO4 GL1 GL2 C1A C2A C3A C4A C5A  -  C1B C2B C3B C4B C5B  - "),
 	"POPE": (moltype, " -   -   -  NH3  -  PO4 GL1 GL2 C1A D2A C3A C4A  -   -  C1B C2B C3B C4B  -   - "),
@@ -113,12 +111,7 @@ lipidsa.update({	  # 1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  
 	"JFPG": (moltype, " -   -   -  GL0  -  PO4 GL1 GL2 C1A D2A D3A D4A  -   -  D1B C2B C3B C4B  -   - "),
 ## Monoacylglycerol
 	"GMO":  (moltype, " -   -   -   -   -   -  GL1 GL2 C1A C2A D3A C4A C5A  -   -   -   -   -   -   - "),
-## Martini 3 lipidome diacylglycerol and DOTAP (their itp files have no ;@INSANE line)
-	"DODG": (moltype, " -   -   -   -   -  COH GL1 GL2 C1A D2A C3A C4A  -   -  C1B D2B C3B C4B  -   - "),
-	"DOTAP": (moltype, " -   -   -  NC3  -   -  GL1 GL2 C1A D2A C3A C4A  -   -  C1B D2B C3B C4B  -   - "),
 ## Templates using the old lipid names and definitions
-  "DLPC.o": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A C3A  -   -   -  C1B C2B C3B  -   -   - "),
-  "DAPC.o": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 D1A D2A D3A D4A C5A  -  D1B D2B D3B D4B C5B  - "),
   "DHPC.o": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A  -   -   -   -  C1B C2B  -   -   -   - "),
   "DMPC.o": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A C3A  -   -   -  C1B C2B C3B  -   -   - "),
   "DSPC.o": (moltype, " -   -   -  NC3  -  PO4 GL1 GL2 C1A C2A C3A C4A C5A  -  C1B C2B C3B C4B C5B  - "),
@@ -259,9 +252,6 @@ lipidsa.update({	  #  1	2   3   4   5   6   7   8   9  10  11  12  13  14  15  1
 	"CL4P": (moltype, "GL5 PO41 GL1 GL2 C1A D2A C3A C4A   -   - C1B C2B C3B C4B   -   - PO42 GL3 GL4 C1C D2C C3C C4C   -   - C1D C2D C3D C4D   -   -"), 
 	"CL4M": (moltype, "GL5 PO41 GL1 GL2 C1A D2A C3A   -   -   - C1B C2B C3B   -   -   - PO42 GL3 GL4 C1C D2C C3C   -   -   - C1D C2D C3D   -   -   -"), 
 	"CARD": (moltype, "GL0 PO1  GL1 GL2 C1A D2A C3A C4A   -   - C1B C2B C3B C4B   -   - PO2 GL3 GL4 C1C D2C C3C C4C   -   - C1D C2D C3D C4D   -   -"),
-# Martini 3 lipidome cardiolipins (tetraoleoyl and tetramyristoyl)
-	"TOCL": (moltype, "GLC PO41 GL11 GL21 C1A1 D2A1 C3A1 C4A1 - - C1B1 D2B1 C3B1 C4B1 - - PO42 GL12 GL22 C1A2 D2A2 C3A2 C4A2 - - C1B2 D2B2 C3B2 C4B2 - -"),
-	"TMCL": (moltype, "GLC PO41 GL11 GL21 C1A1 C2A1 C3A1 - - - C1B1 C2B1 C3B1 - - - PO42 GL12 GL22 C1A2 C2A2 C3A2 - - - C1B2 C2B2 C3B2 - - -"),
 ## Templates using the old lipid names and definitions
   "CL4.o" : (moltype, "GL5 PO41 GL1 GL2 C1A C2A D3A C4A C5A   - C1B C2B D3B C4B C5B   - PO42 GL3 GL4 C1C C2C D3C C4C C5C   - C1D C2D D3D C4D C5D   -"), 
   "CL4O.o": (moltype, "GL5 PO41 GL1 GL2 C1A C2A D3A C4A C5A   - C1B C2B D3B C4B C5B   - PO42 GL3 GL4 C1C C2C D3C C4C C5C   - C1D C2D D3D C4D C5D   -"),
@@ -348,24 +338,6 @@ lipidsy[moltype] = (      0,   0,   0,   0,  0,   0,   0,   0,   0,  0)
 lipidsz[moltype] = (    5.3, 4.5, 3.9, 3.3,  3, 2.6, 4.5, 2.6, 1.4,  0)
 lipidsa.update({
     "CHL1": (moltype, " ROH  R1  R2  R3  R4   -  R5  R6  C1  C2 "),
-    "CHOL": (moltype, " ROH  R1  R2  R3  R4   -  R5  R6  C1  C2 "),  # Martini 3 lipidome name
-})
-
-# Bis(monoacylglycero)phosphate, Martini 3 lipidome 2,2' (DO2B) and 3,3' (DO3B) isomers
-#
-#   (OH)-GL1-(OH)-C1A-D2A-C3A-C4A
-#        /
-#     PO4
-#        \
-#   (OH)-GL2-(OH)-C1B-D2B-C3B-C4B
-#
-moltype = "BMP"
-lipidsx[moltype] = (0.5,   0,   0,   0, 0, 0, 0, 0,   1,   1,   1, 1, 1, 1, 1)
-lipidsy[moltype] = (  0, 0.5,   0, 0.5, 0, 0, 0, 0, 0.5,   0, 0.5, 0, 0, 0, 0)
-lipidsz[moltype] = (  6, 5.5,   5, 5.5, 4, 3, 2, 1, 5.5,   5, 5.5, 4, 3, 2, 1)
-lipidsa.update({
-    "DO2B": (moltype, "PO4   -  GL1 OH1 C1A D2A C3A C4A   -  GL2 OH2 C1B D2B C3B C4B"),
-    "DO3B": (moltype, "PO4 OH1  GL1   - C1A D2A C3A C4A OH2  GL2   - C1B D2B C3B C4B"),
 })
 
 
@@ -404,325 +376,8 @@ lipidsa.update({	# 1	2   3   4   5   6   7   8   9   10  11  12  13   14  15  16
 
 
 # Lists for automatic charge determination
-charges = {"HPPA":-1,"4HPA":-1,"UDP2":-2,"UDP1":-1, "GLYP":-1, "GLYM":-1, "ARG":1, "LYS":1, "ASP":-1, "GLU":-1, "DOPG":-1, "POPG":-1, "DOPS":-1, "POPS":-1, "DSSQ":-1, "KPG":+1, "LIPA":-4, "PGIN":-1, "REMP":-6, "RAMP":-10, "OANT":-10, "CARD":-2, "A2P2":-1, "APM2":-1, "APM6":-1, "LIP2":-4, "LIP4":-6, "LIP6":-8, "LIP8":-10, "LI10":-12, "LI12":-14, "LI14":-16, "LI16":-18, "LI18":-20, "LI20":-22, "LI22":-24,"UPEP":-1,"SPEP":-2,"UUPEP":-1,"KLA":-6,"TOCL":-2,"TMCL":-2,"CDL0":0,"CDL1":-1,"CDL2":-2,"DOTAP":1,"DO2B":-1,"DO3B":-1}
+charges = {"HPPA":-1,"4HPA":-1,"UDP2":-2,"UDP1":-1, "GLYP":-1, "GLYM":-1, "ARG":1, "LYS":1, "ASP":-1, "GLU":-1, "DOPG":-1, "POPG":-1, "DOPS":-1, "POPS":-1, "DSSQ":-1, "KPG":+1, "LIPA":-2, "PGIN":-1, "REMP":-6, "RAMP":-10, "OANT":-10, "CARD":-2, "A2P2":-1, "APM2":-1, "APM6":-1, "LIP2":-4, "LIP4":-6, "LIP6":-8, "LIP8":-10, "LI10":-12, "LI12":-14, "LI14":-16, "LI16":-18, "LI18":-20, "LI20":-22, "LI22":-24,"UPEP":-1,"SPEP":-2,"UUPEP":-1,"KLA":-6}
 ion_charges = {"NA" :1,"CL":-1,"CA":2}
-
-# BEGIN LIPID AREAS (also read by leaflet_check.py; keep this block self-contained, using only numpy)
-# Default area per lipid (nm^2) for each lipid type. Unless -a/-au/-ao/-auo are given, the grid density of each
-# leaflet is set from the number-weighted mean of these over its composition. Lipids not listed fall back to their
-# headgroup class (last two letters of the name), then to DEFAULT_APL. Entries can be overridden with -apl NAME:AREA.
-# Values are fluid-phase experimental areas (~303 K) where available, otherwise from simulation as noted, rounded
-# to 0.01 nm^2 (roughly their accuracy; LPS values are less certain, ~0.1 nm^2).
-DEFAULT_APL = 0.60
-# Martini 3 lipidome bilayers (Pedersen et al. 2025 ACS Cent Sci, autobuild-lipid-properties in the M3-Lipid-Parameters
-# repository; single-lipid bilayers at ~310 K) scaled by 1.04, the mean ratio (sd 0.03) of experiment at 303 K to these
-# simulations over the 16 fluid lipids that have both. Only lipids that are fluid in those simulations are listed.
-lipid_apl_m3 = {
-	"DAPA":0.74, "DAPC":0.75, "DAPE":0.71, "DAPG":0.74, "DAPS":0.74, "DDPA":0.80, "DDPC":0.80, "DDPE":0.77, "DDPG":0.80,
-	"DDPS":0.80, "DEPA":0.65, "DEPE":0.61, "DEPG":0.65, "DEPS":0.65, "DFPA":0.73, "DFPC":0.73, "DFPE":0.69, "DFPG":0.73,
-	"DFPS":0.73, "DGPA":0.65, "DGPE":0.61, "DGPG":0.65, "DGPS":0.64, "DJPA":0.64, "DJPC":0.63, "DJPE":0.58, "DJPG":0.64,
-	"DJPS":0.63, "DLPA":0.74, "DLPC":0.74, "DLPE":0.70, "DLPG":0.74, "DLPS":0.73, "DMPA":0.60, "DMPS":0.60, "DNPA":0.60,
-	"DNPG":0.61, "DOPA":0.69, "DOPE":0.64, "DRPA":0.69, "DRPE":0.65, "DRPG":0.69, "DRPS":0.69, "DTPA":0.59, "DTPC":0.60,
-	"DTPE":0.54, "DTPG":0.60, "DTPS":0.59, "DUPA":0.59, "DUPS":0.59, "DVPA":0.66, "DVPC":0.65, "DVPE":0.61, "DVPG":0.66,
-	"DVPS":0.65, "DYPA":0.64, "DYPE":0.61, "DYPG":0.64, "DYPS":0.64, "LFPA":0.75, "LFPC":0.75, "LFPE":0.71, "LFPG":0.75,
-	"LFPS":0.74, "MSM":0.59, "NSM":0.57, "ODPA":0.76, "ODPC":0.75, "ODPE":0.72, "ODPG":0.76, "ODPS":0.75, "OEPA":0.68,
-	"OEPC":0.68, "OEPE":0.64, "OEPG":0.68, "OEPS":0.68, "OLPA":0.71, "OLPC":0.71, "OLPE":0.67, "OLPG":0.71, "OLPS":0.71,
-	"OSM":0.66, "PAPA":0.69, "PAPC":0.70, "PAPE":0.66, "PAPG":0.69, "PAPS":0.69, "PDPA":0.72, "PDPE":0.68, "PDPG":0.72,
-	"PDPS":0.72, "PEPA":0.61, "PEPC":0.62, "PEPE":0.57, "PEPG":0.62, "PEPS":0.61, "PFPA":0.68, "PFPC":0.68, "PFPE":0.64,
-	"PFPG":0.68, "PFPS":0.68, "PIPA":0.65, "PIPC":0.66, "PIPE":0.62, "PIPG":0.66, "PIPS":0.65, "PLPA":0.67, "PLPC":0.67,
-	"PLPE":0.63, "PLPG":0.67, "PLPS":0.67, "POPA":0.63, "PQPA":0.69, "PQPC":0.70, "PQPE":0.65, "PQPG":0.69, "PQPS":0.69,
-	"PYPA":0.62, "PYPC":0.62, "PYPE":0.58, "PYPG":0.62, "PYPS":0.62, "SAPA":0.70, "SAPC":0.70, "SAPE":0.66, "SAPG":0.70,
-	"SAPS":0.69, "SDPA":0.74, "SDPE":0.69, "SDPG":0.74, "SDPS":0.73, "SLPA":0.69, "SLPC":0.69, "SLPE":0.65, "SLPG":0.69,
-	"SLPS":0.69, "SOPA":0.65, "SOPS":0.64, "USM":0.60, "YOPA":0.66, "YOPC":0.67, "YOPE":0.63, "YOPG":0.67, "YOPS":0.66,
-}
-lipid_apl = dict(lipid_apl_m3)
-lipid_apl.update({
-	# Experimental (SAXS/SANS) areas from the Martini 3 lipidome benchmark (Martini_lipid_Benchmark in the same
-	# repository; Kucerka et al. 2008 BJ, 2011 BBA; Pan et al. 2014 BBA; Kucerka et al. 2015 JPCB; Doktorova et al.
-	# 2020 JPCB) at 303 K, or the lowest fluid temperature measured (apl_ref_temp). Lipidome names: DUPC = 12:0 PC,
-	# DLPC = 18:2 PC.
-	"DEPC":0.66, "DGPC":0.67, "DMPC":0.60, "DMPG":0.62, "DNPC":0.63, "DOPC":0.67, "DOPG":0.69, "DPPC":0.63, "DPPG":0.65,
-	"DRPC":0.64, "DSPC":0.64, "DSPG":0.67, "DUPC":0.61, "DUPE":0.52, "DUPG":0.62, "DYPC":0.66, "MSPC":0.62, "PDPC":0.71,
-	"PMPC":0.63, "POPC":0.64, "POPE":0.58, "POPG":0.64, "PSM":0.60, "SDPC":0.70, "SMPC":0.62, "SOPC":0.66, "SOPE":0.57,
-	"SOPG":0.64, "SSM":0.62,
-	# Phosphatidylserines: Pan et al. 2014 Soft Matter, Petrache et al. 2004 BJ
-	"POPS":0.63, "DOPS":0.65,
-	# Cardiolipins (four tails): TOCL, Pan et al. 2015 Soft Matter; TMCL scaled from TOCL by DMPC/DOPC (estimate)
-	"TOCL":1.30, "TMCL":1.16, "CARD":1.30, "CDL0":1.30, "CDL1":1.30, "CDL2":1.30, "CL4P":1.30, "CL4M":1.30,
-	# Lipid A: Snyder et al. 1999 Biochemistry; Re-LPS (Kdo2-lipid A): CHARMM36m, Brandner et al. 2024 JCTC;
-	# smooth LPS: CHARMM36, Park et al. 2023 JCIM and Martini 3 LPS 2026 JPCB; Ra-LPS taken between Re and smooth
-	"LIPA":1.56, "KLA":1.67, "REMP":1.67, "RAMP":1.80, "OANT":1.85,
-	# Phosphoinositides (Martini 3 naming: 1/4/5 = PI(3)P/PI(4)P/PI(5)P, 2/6/7 = PI(3,4)P2/PI(4,5)P2/PI(3,5)P2, 3 = PIP3).
-	# No bilayer experiment exists; values are consensus of monolayer areas at 30 mN/m (Levental et al. 2008 JACS),
-	# CHARMM36/Martini 3 areas at 5% in POPC (Borges-Araujo et al. 2022 JCTC) and Martini 3 lipidome bilayers.
-	# Uncertain to ~0.05 nm^2, and PIP2 areas depend strongly on salt and divalent cations (pure PIP bilayers in
-	# the lipidome are ~10% larger, from headgroup repulsion).
-	"POPI":0.60, "PLPI":0.62, "SAPI":0.64, "SDPI":0.67,
-	"POP1":0.64, "POP4":0.64, "POP5":0.64, "SAP1":0.66, "SAP4":0.66, "SAP5":0.66,
-	"POP2":0.66, "POP6":0.66, "POP7":0.68, "SAP2":0.68, "SAP6":0.68, "SAP7":0.70,
-	"POP3":0.67, "SAP3":0.70,
-	# Sterols: steric area for placement (the partial area is ~0.26 at >30 mol%, Edholm & Nagle 2005 BJ);
-	# hopanoids assumed sterol-like
-	"CHL1":0.40, "CHOL":0.40, "HOPR":0.40, "HHOP":0.40, "HDPT":0.40, "HBHT":0.40,
-	# DOTAP: similar to DOPC (Mihailescu et al. 2023 BJ); BMP: no data, taken as DOPG (estimate)
-	"DOTAP":0.67, "DO2B":0.69, "DO3B":0.69,
-	# Martini 3.0 lipids kept under their old names (.o): 12:0 PC and 18:2 PC
-	"DLPC.o":0.61, "DUPC.o":0.74,
-})
-# Headgroup classes, from the last letters of the name. PA: POPA in the lipidome bilayers as above. SM: PSM,
-# Doktorova et al. 2020 JPCB. CER: ceramide, ~0.40 (uncertain; pure ceramide does not form a fluid bilayer).
-lipid_apl_class = {"PC":0.64, "PE":0.58, "PG":0.64, "PS":0.63, "PA":0.63, "SM":0.60, "CER":0.40}
-# Ether (XXEC, XXEE, ...) and plasmalogen (XXLC, XXLE, ...) lipids of the lipidome take the area of their diacyl
-# analogue (XXPC, XXPE, ...) times these: ether DHPC is ~1.5% larger than DPPC (Guler et al. 2009 Chem Phys Lipids),
-# plasmalogen PE ~0.03 nm^2 (5%) larger than POPE (West et al. 2020 JPCB)
-APL_ETHER = 1.015
-APL_PLASMALOGEN = 1.05
-
-# -temp and -apl_ff adjust the phospholipid-like values above (not LPS, sterols or hopanoids). Values refer to 303 K
-# except those in apl_ref_temp, measured at the lowest temperature where the lipid is fluid. Fluid areas grow ~0.25%/K and Martini 3 phospholipids equilibrate at ~0.94 of
-# experiment (0.93-0.95 for PO lipids at 303-323 K; Martini 3 lipidome benchmark, PMC12464760).
-APL_TEMP_COEF = 0.0025
-APL_M3_FACTOR = 0.94
-apl_ref_temp = {"DPPC":323.0, "DSPC":333.0, "MSPC":323.0, "SMPC":323.0, "PMPC":323.0, "PSM":318.0, "SSM":328.0, "DUPE":308.0, "POPE":308.0, "SOPE":308.0, "DPPG":323.0, "DSPG":333.0, "SM":318.0}
-apl_fixed = {"LIPA","KLA","REMP","RAMP","OANT","CHL1","CHOL","HOPR","HHOP","HDPT","HBHT"}
-
-def adjust_apls(temp,ff):
-	def adj(name,val,cls=None):
-		if name in apl_fixed:
-			return val
-		if temp is not None:
-			val *= 1+APL_TEMP_COEF*(temp-apl_ref_temp.get(name,apl_ref_temp.get(cls,303.0)))
-		if ff == "m3":
-			val *= APL_M3_FACTOR
-		return val
-	for n in lipid_apl:
-		lipid_apl[n] = adj(n,lipid_apl[n],n[-2:])
-	for c in lipid_apl_class:
-		lipid_apl_class[c] = adj(c,lipid_apl_class[c],c)
-
-def get_apl(name):
-	if name in lipid_apl:
-		return lipid_apl[name]
-	#Variants such as POPC.o share the area of the parent lipid
-	base = name.split(".")[0]
-	if base in lipid_apl:
-		return lipid_apl[base]
-	# Martini 3 lipidome ether and plasmalogen lipids, from their diacyl analogue
-	if len(base) == 4 and base[2] in "EL" and base[3] in "CEGSA":
-		return get_apl(base[:2]+"P"+base[3])*(APL_ETHER if base[2] == "E" else APL_PLASMALOGEN)
-	return lipid_apl_class.get(base[-3:],lipid_apl_class.get(base[-2:],DEFAULT_APL))
-# END LIPID AREAS
-
-# BEGIN FOOTPRINT (also read by leaflet_check.py; keep this block self-contained, using only numpy and scipy)
-# Per-leaflet protein footprint for -footprint map (docs/footprint-design.md). Each leaflet is sliced every FP_SLICE nm
-# from the midplane to its phosphate plane (the core), plus a headgroup layer FP_HEAD nm thick beyond it, on a periodic
-# pixel grid. In each slice a pixel is blocked for lipid bead centres if it lies within r_protein + r_lipid of a protein
-# bead (3D distance in the slice plane), and is covered by lipid if a lipid bead centred on an unblocked pixel reaches it,
-# so the covered region stops at the protein's own bead radius. The hydrophobic core is roughly incompressible, so
-# lipids fill the core volume the protein leaves free: a pixel's available fraction is the fraction of core slices in
-# which it is covered, or 0 where the protein occupies the headgroup layer. Free area = sum of fraction x pixel area.
-# Regions lipids cannot reach in any core slice of either leaflet (the inside of a closed barrel) are blocked unless
-# enclosed_free (-ring).
-import numpy as np
-from scipy import ndimage
-from scipy.spatial import cKDTree
-
-FP_SLICE = 0.2
-FP_HEAD = 0.6
-FP_PIXEL = 0.1
-# Martini 3 bead radii (nm) by size: regular, small, tiny. Lipid beads are taken as regular.
-FP_RADII = {"R":0.264,"S":0.230,"T":0.191}
-FP_LIPID_RADIUS = FP_RADII["R"]
-# Heavy atoms of atomistic proteins (no BB beads)
-FP_ATOM_RADIUS = 0.17
-# Small and tiny beads of Martini 3 proteins (martinize2 mapping; backbone sizes vary with secondary structure,
-# so Gly/Ala/Pro backbones are taken as small). Other beads are regular.
-FP_BEAD_SIZE = {("GLY","BB"):"S",("ALA","BB"):"S",("PRO","BB"):"S",("ALA","SC1"):"T",("CYS","SC1"):"T",("SER","SC1"):"T",
-	("ASP","SC1"):"S",("ASN","SC1"):"S",("THR","SC1"):"S",("VAL","SC1"):"S",("PRO","SC1"):"S",("LYS","SC1"):"S",("LYS","SC2"):"S",
-	("ARG","SC1"):"S",("ARG","SC2"):"S",("PHE","SC1"):"S",("PHE","SC2"):"T",("PHE","SC3"):"T",("HIS","SC1"):"T",("HIS","SC2"):"T",
-	("HIS","SC3"):"T",("TYR","SC1"):"T",("TYR","SC2"):"T",("TYR","SC3"):"T",("TYR","SC4"):"T",("TRP","SC1"):"T",("TRP","SC2"):"T",
-	("TRP","SC3"):"T",("TRP","SC4"):"T",("TRP","SC5"):"T"}
-# Non-protein residues that may be in a protein file (MemPrO membrane dummies, water, ions)
-FP_SKIP_RES = {"DUM","W","SOL","PW","TW","SW","NA","CL","CA+","K","MG","ION"}
-
-def fp_bead_radii(atomnames,resnames):
-	"""Radius (nm) of each protein bead from its name; 0 for beads to ignore (Go-model CA virtual sites on BB beads, solvent)."""
-	atomnames = [str(a).strip() for a in atomnames]
-	resnames = [str(r).strip() for r in resnames]
-	coarse = "BB" in atomnames
-	radii = np.zeros(len(atomnames))
-	for i,(a,r) in enumerate(zip(atomnames,resnames)):
-		if r in FP_SKIP_RES:
-			continue
-		if not coarse:
-			radii[i] = 0.0 if a.startswith("H") else FP_ATOM_RADIUS
-		elif a != "CA":
-			radii[i] = FP_RADII[FP_BEAD_SIZE.get((r,a),"R")]
-	return radii
-
-def fp_wrap(xy,box_xy):
-	"""Coordinates wrapped into [0,box) (x % L can round to L, which cKDTree rejects for periodic boxes)."""
-	w = np.asarray(xy,dtype=float)%box_xy
-	return np.where(w >= box_xy,0.0,w)
-
-def fp_grid(box_xy,pixel=FP_PIXEL):
-	"""Pixel counts and sizes tiling the box exactly."""
-	nx = max(1,int(round(box_xy[0]/pixel)))
-	ny = max(1,int(round(box_xy[1]/pixel)))
-	return nx,ny,box_xy[0]/nx,box_xy[1]/ny
-
-def fp_main_component(free):
-	"""Largest connected region of free pixels, with the grid periodic in both directions."""
-	lab,n = ndimage.label(free,structure=np.ones((3,3),dtype=int))
-	if n == 0:
-		return free.copy()
-	parent = np.arange(n+1)
-	def find(a):
-		while parent[a] != a:
-			parent[a] = parent[parent[a]]
-			a = parent[a]
-		return a
-	for edge_a,edge_b in ((lab[0,:],lab[-1,:]),(lab[:,0],lab[:,-1])):
-		for i,j in zip(edge_a,edge_b):
-			if i and j:
-				ri,rj = find(i),find(j)
-				if ri != rj:
-					parent[ri] = rj
-	roots = np.array([find(i) for i in range(n+1)])
-	sizes = np.bincount(roots[lab.ravel()],minlength=n+1)
-	sizes[0] = 0
-	return roots[lab] == np.argmax(sizes)
-
-def footprint_maps(prot_xyz,prot_r,box_xy,mid,half_up,half_lo,enclosed_free=False,lipid_r=FP_LIPID_RADIUS,dz=FP_SLICE,head=FP_HEAD,pixel=FP_PIXEL):
-	"""
-	Footprint maps of both leaflets of a flat membrane.
-	mid is the midplane z and half_up, half_lo the distances from it to the upper and lower phosphate planes (nm), each
-	a number or an (nx,ny) array over the pixels of fp_grid (for a deformed membrane).
-	Returns {"upper": leaflet, "lower": leaflet, "pixel": (px,py)}, where each leaflet has "avail" (available area fraction
-	per pixel), "place" (fraction of core slices where a lipid bead centre fits, 0 where the headgroup layer is
-	blocked), "free" and "footprint" (nm^2).
-	"""
-	box_xy = np.asarray(box_xy,dtype=float)[:2]
-	nx,ny,px,py = fp_grid(box_xy,pixel)
-	gx,gy = np.meshgrid((np.arange(nx)+0.5)*px,(np.arange(ny)+0.5)*py,indexing="ij")
-	pix = np.column_stack([gx.ravel(),gy.ravel()])
-	shape = (nx,ny)
-	mid = np.broadcast_to(np.asarray(mid,dtype=float),shape)
-	slices = {}
-	for name,sgn,half in (("upper",1,half_up),("lower",-1,half_lo)):
-		half = np.broadcast_to(np.asarray(half,dtype=float),shape)
-		ncore = max(1,int(np.ceil(np.mean(half)/dz)))
-		nhead = max(1,int(round(head/dz)))
-		core = [mid+sgn*half*(k+0.5)/ncore for k in range(ncore)]
-		heads = [mid+sgn*(half+head*(j+0.5)/nhead) for j in range(nhead)]
-		slices[name] = (core,heads)
-
-	prot_xyz = np.asarray(prot_xyz,dtype=float).reshape(-1,3)
-	prot_r = np.asarray(prot_r,dtype=float).reshape(-1)
-	zs = np.concatenate([np.ravel(z) for c,h in slices.values() for z in c+h])
-	reach = (prot_r.max() if prot_r.size else 0)+lipid_r
-	sel = (prot_r > 0)&(prot_xyz[:,2] > zs.min()-reach)&(prot_xyz[:,2] < zs.max()+reach) if prot_r.size else np.zeros(0,dtype=bool)
-	pts,rads = prot_xyz[sel],prot_r[sel]
-	# Periodic in x and y only: z is shifted into a box far larger than the system
-	zoff = 5000.0
-	pbox = [box_xy[0],box_xy[1],2*zoff]
-	trees = []
-	near = np.zeros(len(pix),dtype=bool)
-	if len(pts):
-		for r in np.unique(rads):
-			p = pts[rads == r]
-			trees.append((r,cKDTree(np.column_stack([fp_wrap(p[:,:2],box_xy),p[:,2]+zoff]),boxsize=pbox)))
-		d,_ = cKDTree(fp_wrap(pts[:,:2],box_xy),boxsize=box_xy).query(pix,distance_upper_bound=reach)
-		near = d < reach
-
-	def free_at(z):
-		hit = np.zeros(near.sum(),dtype=bool)
-		if hit.size:
-			q = np.column_stack([pix[near],np.ravel(z)[near]+zoff])
-			for r,t in trees:
-				d,_ = t.query(q,distance_upper_bound=r+lipid_r)
-				hit |= d < r+lipid_r
-		blocked = np.zeros(len(pix),dtype=bool)
-		blocked[near] = hit
-		return ~blocked.reshape(shape)
-
-	free = {name:([free_at(z) for z in core],[free_at(z) for z in heads]) for name,(core,heads) in slices.items()}
-	if not enclosed_free:
-		reachable = np.zeros(shape,dtype=bool)
-		for core,_ in free.values():
-			for f in core:
-				reachable |= fp_main_component(f)
-		free = {name:([f&reachable for f in core],[f&reachable for f in heads]) for name,(core,heads) in free.items()}
-
-	rad = int(np.ceil(lipid_r/min(px,py)))
-	ii,jj = np.mgrid[-rad:rad+1,-rad:rad+1]
-	disc = (ii*px)**2+(jj*py)**2 <= lipid_r**2
-	def covered(f):
-		if rad == 0:
-			return f
-		return ndimage.binary_dilation(np.pad(f,rad,mode="wrap"),structure=disc)[rad:-rad,rad:-rad]
-
-	out = {"pixel":(px,py)}
-	for name,(core,heads) in free.items():
-		avail = np.mean([covered(f) for f in core],axis=0)
-		avail[np.any([~covered(f) for f in heads],axis=0)] = 0
-		place = np.mean(core,axis=0)
-		place[np.any([~f for f in heads],axis=0)] = 0
-		free_area = avail.sum()*px*py
-		out[name] = {"avail":avail,"place":place,"free":free_area,"footprint":box_xy[0]*box_xy[1]-free_area}
-	return out
-
-def fp_lookup(grid,xy,box_xy):
-	"""Values of a pixel map at points (periodic)."""
-	nx,ny = grid.shape
-	ix = np.floor((np.asarray(xy)[:,0]%box_xy[0])/box_xy[0]*nx).astype(int)%nx
-	iy = np.floor((np.asarray(xy)[:,1]%box_xy[1])/box_xy[1]*ny).astype(int)%ny
-	return grid[ix,iy]
-
-def fp_farthest(cand,fixed,k,box_xy):
-	"""Picks up to k candidate points one at a time, each as far as possible from the fixed points and earlier picks."""
-	box_xy = np.asarray(box_xy,dtype=float)
-	if k <= 0 or len(cand) == 0:
-		return np.zeros((0,2))
-	if len(fixed):
-		d,_ = cKDTree(fp_wrap(fixed,box_xy),boxsize=box_xy).query(fp_wrap(cand,box_xy))
-	else:
-		d = np.full(len(cand),np.inf)
-	picks = []
-	for _ in range(min(k,len(cand))):
-		j = int(np.argmax(d))
-		if d[j] <= 0:
-			break
-		picks.append(cand[j])
-		dd = np.abs(cand-cand[j])
-		dd = np.minimum(dd,box_xy-dd)
-		d = np.minimum(d,np.hypot(dd[:,0],dd[:,1]))
-	return np.array(picks).reshape(-1,2)
-
-def fp_select_sites(xy,place,box_xy,n_target,n_spare,rng):
-	"""
-	Chooses lipid sites for a leaflet: drops grid sites xy on mostly blocked pixels (place < 0.5), then removes the
-	least available (ties at random) or adds sites in the largest gaps between free pixels to reach n_target exactly.
-	Returns the indices of the grid sites kept, the added sites and spare sites (for lipids whose tails cannot be placed).
-	"""
-	box_xy = np.asarray(box_xy,dtype=float)
-	pv = fp_lookup(place,xy,box_xy)
-	keep = np.where(pv >= 0.5)[0]
-	if len(keep) > n_target:
-		order = sorted(keep,key=lambda i:(pv[i],rng.random()))
-		keep = np.sort(np.array(order[len(keep)-n_target:],dtype=int))
-	need = max(0,n_target-len(keep))
-	nx,ny = place.shape
-	stride = max(1,int(round(0.2/(box_xy[0]/nx))))
-	sub = place[::stride,::stride]
-	ok = sub >= 1-1e-9
-	if not ok.any():
-		ok = sub >= 0.5
-	ix,iy = np.nonzero(ok)
-	cand = np.column_stack([(ix*stride+0.5)*box_xy[0]/nx,(iy*stride+0.5)*box_xy[1]/ny])
-	picks = fp_farthest(cand,xy[keep],need+n_spare,box_xy)
-	return keep,picks[:need],picks[need:]
-# END FOOTPRINT
 
 
 a,  b  = math.sqrt(2)/20, math.sqrt(2)/60
@@ -1035,86 +690,6 @@ def parse_mol(x):
 	l = x.split(":")
 	return l[0], len(l) == 1 and 1 or float(l[1])
 
-# Number-weighted mean area per lipid of a leaflet composition (list of LIPID[:NUMBER])
-def leaflet_apl(lips):
-	names, nums = list(zip(*[ parse_mol(i) for i in lips ]))
-	return sum(get_apl(n)*c for n,c in zip(names,nums))/float(sum(nums))
-
-# Lipids much larger than the smallest in a leaflet (e.g. cardiolipin among PE) take several grid sites,
-# k = area / smallest area in the leaflet (rounded). Returns names, abundances, areas and sites per lipid.
-def lipid_sites(lips):
-	names, nums = list(zip(*[ parse_mol(i) for i in lips ]))
-	apls = [get_apl(n) for n in names]
-	return names, nums, apls, [max(1,int(round(a/min(apls)))) for a in apls]
-
-# Area per grid site of a leaflet (total lipid area / total sites)
-def leaflet_site_area(lips):
-	names, nums, apls, ks = lipid_sites(lips)
-	return sum(a*c for a,c in zip(apls,nums))/float(sum(k*c for k,c in zip(ks,nums)))
-
-# Assigns lipid types to placed sites (entries x,y,z,dx,dy,dz,path). A lipid taking k sites keeps one site and
-# removes its k-1 nearest unused neighbours. Returns the lipid names, their sites (grouped by type, in the order
-# of lips) and the count of each type.
-def assign_lipids(sites,lips,use_sites,box_xy):
-	names, nums, apls, ks = lipid_sites(lips)
-	if not use_sites:
-		ks = [1]*len(names)
-	nsites = len(sites)
-	exact = [nsites*c/float(sum(k*n for k,n in zip(ks,nums))) for c in nums]
-	counts = split_counts(int(sum(exact)),nums)
-	#Rounding can leave the sites slightly over- or under-used; correct with the types furthest from their share
-	while sum(k*c for k,c in zip(ks,counts)) > nsites:
-		j = max([j for j in range(len(counts)) if counts[j] > 0],key=lambda j: counts[j]-exact[j])
-		counts[j] -= 1
-	singles = [j for j in range(len(ks)) if ks[j] == 1]
-	while singles and sum(k*c for k,c in zip(ks,counts)) < nsites:
-		j = min(singles,key=lambda j: counts[j]-exact[j])
-		counts[j] += 1
-	used = np.zeros(nsites,dtype=bool)
-	chosen = [[] for _ in names]
-	if max(ks) > 1 and nsites > 0:
-		xyz = np.array([s_[:3] for s_ in sites],dtype=float)
-		xyz[:,0] %= box_xy[0]
-		xyz[:,1] %= box_xy[1]
-		zspan = np.ptp(xyz[:,2])*2+10
-		xyz[:,2] -= xyz[:,2].min()
-		tree = cKDTree(xyz,boxsize=[box_xy[0],box_xy[1],zspan])
-	nxt = 0
-	for j in sorted(range(len(names)),key=lambda j: -ks[j]):
-		for _ in range(counts[j]):
-			while used[nxt]:
-				nxt += 1
-			used[nxt] = True
-			if ks[j] == 1:
-				chosen[j].append(sites[nxt])
-				continue
-			claimed = [nxt]
-			for nb in tree.query(xyz[nxt],k=min(nsites,8*ks[j]))[1]:
-				if len(claimed) == ks[j]:
-					break
-				if not used[nb]:
-					used[nb] = True
-					claimed.append(nb)
-			#Centre the lipid on the sites it takes (minimum image in x,y), moving its path with it
-			rel = xyz[claimed]-xyz[nxt]
-			rel[:,:2] -= np.round(rel[:,:2]/np.array(box_xy))*np.array(box_xy)
-			off = rel.mean(axis=0)
-			st = sites[nxt]
-			chosen[j].append((st[0]+off[0],st[1]+off[1],st[2]+off[2],st[3],st[4],st[5],[np.asarray(pp)+off for pp in st[6]]))
-	lip_names = [names[j] for j in range(len(names)) for _ in chosen[j]]
-	lip_sites = [s_ for j in range(len(names)) for s_ in chosen[j]]
-	return lip_names, lip_sites, counts
-
-# Splits n lipids between types in proportion to their abundance, giving the remainder to the types
-# with the largest fractional parts so the counts add up to n
-def split_counts(n,nums):
-	tot = float(sum(nums))
-	exact = [n*i/tot for i in nums]
-	counts = [int(e) for e in exact]
-	for j in sorted(range(len(nums)),key=lambda k: exact[k]-counts[k],reverse=True)[:n-sum(counts)]:
-		counts[j] += 1
-	return counts
-
 ## MIJN EIGEN ROUTINE ##
 
 # Quite short piece of code for diagonalizing symmetric 3x3 matrices :)
@@ -1262,9 +837,8 @@ def DiskGrid(den,inner_rad,xbox,ybox,outer_rad):
 		new_den =2*den/np.pi
 		new_den = new_den*new_den
 		return DiskGridFB(new_den,outer_rad)
-	#frden rings spaced sqrt(area per lipid) apart (linspace needs one more point than gaps)
-	frden = int(round(den*2*(outer_rad-inner_rad)/np.pi))
-	rings = np.linspace(inner_rad,outer_rad,frden+1)
+	frden = int(den*2*(outer_rad-inner_rad)/np.pi)
+	rings = np.linspace(inner_rad,outer_rad,frden)
 	for xr,r in enumerate(rings[1:]):
 		rad = r
 		rden = int(rad*den)+1
@@ -1399,20 +973,6 @@ def get_avlip_len(lipids):
 		lipLen = max(az)-min(az)
 		liplens += lipLen
 	return liplens/len(lipids)
-
-#Height above the midplane of the phosphate bead (or the first PO bead, otherwise the head) of lipids as built, number
-#weighted over a leaflet composition. This is the leaflet half-thickness for -footprint map when -mt is not given.
-def get_phosphate_depth(lipids):
-	depth, total = 0.0, 0.0
-	for lipid in lipids:
-		name, num = parse_mol(lipid)
-		atoms	= list(zip(lipidsa[name][1].split(),lipidsx[lipidsa[name][0]],lipidsy[lipidsa[name][0]],lipidsz[lipidsa[name][0]]))
-		at,ax,ay,az = list(zip(*[i for i in atoms if i[0] != "-"]))
-		po = [i for i,a in enumerate(at) if a.startswith("PO")]
-		ip = po[0] if po else int(np.argmax(az))
-		depth += num*(0.5+(az[ip]-min(az)))*options["-bd"].value
-		total += num
-	return depth/total
 
 
 #This uses all the above to build the micelle. Using contours with radius and height varing as a semi circle
@@ -2333,34 +1893,9 @@ def write_all_itp(itp_str,out_folder):
 			
 	
 #Function that creates a leaflet using all of the above
-#Square grid filling a box of half-widths xbox,ybox, spaced so it is continuous across the periodic boundaries.
-#The lattice is made at least as dense as den and random surplus points are removed to give (box area)/(area per lipid)
-def SquareGrid(den,xbox,ybox):
-	spacing = np.pi/(2*den)
-	nx = int(np.ceil(2*xbox/spacing))
-	ny = int(np.ceil(2*ybox/spacing))
-	xs = -xbox+(np.arange(nx)+0.5)*2*xbox/nx
-	ys = -ybox+(np.arange(ny)+0.5)*2*ybox/ny
-	grid_points = np.array([[x,y,0] for x in xs for y in ys])
-	target = min(int(round(4*xbox*ybox/(spacing*spacing))),len(grid_points))
-	keep = sorted(random.sample(range(len(grid_points)),target))
-	return grid_points[keep],np.tile([0.0,0.0,1.0],(target,1))
-
-def create_leaflet(den,xbox,ybox,curv_A,curv_B,ch_ang,pore,leng,keep_end,mem_outer_red,square=False): 
+def create_leaflet(den,xbox,ybox,curv_A,curv_B,ch_ang,pore,leng,keep_end,mem_outer_red): 
 	if(curv_A < 1e-5 or curv_B < 1e-5):
-		if(square and mem_outer_red < 0):
-			return SquareGrid(den,xbox,ybox)
 		gpoints3,direcs3 = np.array(DiskGrid(den,0,xbox,ybox,mem_outer_red))
-		#Rings don't tile the box exactly, so for a flat leaflet filling the box make the number of points
-		#(box area)/(area per lipid): densify slightly if short, then remove random surplus points
-		if(mem_outer_red < 0):
-			target = int(round(4*xbox*ybox*(2*den/np.pi)**2))
-			fill_den = den
-			while(len(gpoints3) < target):
-				fill_den *= 1.01
-				gpoints3,direcs3 = np.array(DiskGrid(fill_den,0,xbox,ybox,mem_outer_red))
-			keep = sorted(random.sample(range(len(gpoints3)),target))
-			gpoints3,direcs3 = gpoints3[keep],direcs3[keep]
 		return gpoints3,direcs3
 	rad_A = 1.0/curv_A
 	rad_B = 1.0/curv_B 
@@ -2386,8 +1921,6 @@ def create_leaflet(den,xbox,ybox,curv_A,curv_B,ch_ang,pore,leng,keep_end,mem_out
 		
 	gpoints2,direcs2 = np.array(InvSphereGrid(den,in_rad,(np.pi/2-ch_ang),rad_B))
 	gpoints3,direcs3 = np.array(DiskGrid(den,rad_B+in_rad,xbox,ybox,mem_outer_red))
-	#A section can have no points (e.g. a return arc shorter than one lipid spacing), so keep every array (n,3)
-	gpoints,direcs,gpoints2,direcs2,gpoints3,direcs3 = [np.reshape(np.asarray(g,dtype=float),(-1,3)) for g in (gpoints,direcs,gpoints2,direcs2,gpoints3,direcs3)]
 	shift = -gpoints[-1,2]+s2*rad_B-rad_B
 	if(pore):
 		 gpoints[:,2] = gpoints[:,2]-rad_B
@@ -2495,14 +2028,6 @@ def get_box_slice(points,p,r):
 	pslice = pslice[pslice[:,2]<p[2]+r[2]]
 	return pslice
 	
-	
-#Protein beads a lipid's path could reach: the path starts at poser+si and moves at most one tail step
-#per step, and get_box_slice looks up to sqrt(3)*exprot from each point
-def near_protein(prot_tree,prot_coords,poser,si,tails,exprot):
-	if prot_tree is None:
-		return prot_coords
-	reach = np.linalg.norm(si)+len(tails)*tails[1]+np.sqrt(3)*exprot+1e-6
-	return prot_coords[prot_tree.query_ball_point(poser,reach)]
 	
 #This is a function for sorting atoms for a neater topology file
 def reorder_atoms(atoms,coords):
@@ -3045,21 +2570,31 @@ def relax_pg(gposes,box_size,tol,all_p):
 
 #This function uses a flood fill algorithm to identifiy the inside of a protein. This works better than the basic method used in ring.
 def flood_fill(grid,add_in):
-	#Each cell is queued at most once (seen), so this is linear in the grid size
-	to_test = deque([(0,0)])
-	seen = np.zeros(grid.shape,dtype=bool)
-	seen[0,0] = True
+	to_test = [[0,0]]
+	done = []
 	flagged = np.zeros_like(grid)
 	while len(to_test) > 0:
-		cx,cy = to_test.popleft()
+		ct = to_test[0]
 		if add_in:
-			flagged[cx,cy] = 1
-		if grid[cx,cy] == 0:
-			flagged[cx,cy] = 1
-			for nx_,ny_ in ((cx-1,cy),(cx+1,cy),(cx,cy+1),(cx,cy-1)):
-				if nx_ >= 0 and ny_ >= 0 and nx_ < grid.shape[0] and ny_ < grid.shape[1] and not seen[nx_,ny_]:
-					seen[nx_,ny_] = True
-					to_test.append((nx_,ny_))
+			flagged[ct[0],ct[1]] = 1
+		if grid[ct[0],ct[1]] == 0:
+			flagged[ct[0],ct[1]] = 1
+			poss_tests = [[ct[0]-1,ct[1]],[ct[0]+1,ct[1]],[ct[0],ct[1]+1],[ct[0],ct[1]-1]]
+			for i in poss_tests:
+				if i[0] >= 0 and i[1] >= 0 and i[0] < grid.shape[0] and i[1] < grid.shape[1]:
+					already_done = False
+					for d in done:
+						if d[0] == i[0] and d[1] == i[1]:
+							already_done = True
+							break
+					for d in to_test:
+						if d[0] == i[0] and d[1] == i[1]:
+							already_done = True
+							break
+					if not already_done:
+						to_test.append(i)
+		done.append(to_test[0])
+		del to_test[0]
 	return flagged
 
 @jax.jit
@@ -3133,7 +2668,6 @@ lipL_loc = []
 lipU_loc = []
 lipLO = []
 lipUO = []
-apl_user = []
 solv = []
 pos_ions = [[],[],[]]
 neg_ions = [[],[],[]]
@@ -3143,26 +2677,14 @@ usrmols  = []
 usrheads = []
 usrlinks = []
 usrtails = []
-lipid_itps = []
-usrLipHeadMapp = { # Define supported lipid head beads. Name mapped to atom name
+usrLipHeadMapp = { # Define supported lipid head beads. One letter name mapped to atom name
 	"C":  ('NC3'), # NC3 = Choline
 	"E":  ('NH3'), # NH3 = Ethanolamine 
 	"G":  ('GL0'), # GL0 = Glycerol
 	"S":  ('CNO'), # CNO = Serine
 	"P":  ('PO4'), # PO4 = Phosphate
-	"O":  ('PO4'), # PO4 = Phosphate acid
-	"PS1": ('PS1'), # PS1 = COO bead of a two bead serine
-	"PS2": ('PS2'), # PS2 = NH3 bead of a two bead serine
-	"COH": ('COH')  # COH = Capping bead for the top of diacylglycerols and ceramides
+	"O":  ('PO4')  # PO4 = Phosphate acid
 	}
-# Inositol head groups (Martini 3 lipidome): beads and their positions in the INOSITOLLIPIDS template
-usrInositolHeads = {"PI": "C1 C2 C3 C4 PO4", "P1": "C1 C2 C3 C4 PO4 P3", "P4": "C1 C2 C3 C4 PO4 P4", "P5": "C1 C2 C3 C4 PO4 P5",
-	"P2": "C1 C2 C3 C4 PO4 P3 P4", "P7": "C1 C2 C3 C4 PO4 P3 P5", "P6": "C1 C2 C3 C4 PO4 P4 P5", "P3": "C1 C2 C3 C4 PO4 P3 P4 P5"}
-usrInositolPos = {"C1": (.5, 8), "C2": (.5, 9), "C3": (0, 9), "C4": (.25, 8.5), "PO4": (0, 7), "P3": (0, 10), "P4": (.5, 10), "P5": (1, 10)}
-# Linker beads: G = glycerol, E = ether glycerol, L = plasmalogen glycerol, A1 A2 = sphingosine, A = old amide linker
-usrLinkMapp = {"G": "GL%d", "E": "ET%d", "L": "PL%d", "A1": "OH1", "A2": "AM2", "A": "AM%d"}
-# Tail bead letters that are named differently from the letter (c = small C, t = small trans, F = polyunsaturated)
-usrTailNames = {"c": "C", "t": "T", "F": "D"}
 usrIndexToLetter = "A B C D E F G H I J K L M N".split() # For naming lipid tail beads 
 
 # Description
@@ -3207,17 +2729,10 @@ are not specified. Curvature can be specified using -curv.
 	("-u",	  Option(lipU.append, 1,   None, "Lipid type and relative abundance (NAME[:#])")),
 	("-lo",	  Option(lipLO.append, 1,   None, "Lipid type and relative abundance (For double membrane definitions) (NAME[:#])")),
 	("-uo",	  Option(lipUO.append, 1,   None, "Lipid type and relative abundance (For double membrane definitions) (NAME[:#])")),
-	("-a",	  Option(float,	   1,		None, "Area per lipid (nm*nm). By default set for each leaflet from its composition (see -apl)")),
+	("-a",	  Option(float,	   1,		0.60, "Area per lipid (nm*nm)")),
 	("-au",	 Option(float,	   1,		None, "Area per lipid (nm*nm) for upper layer")),
 	("-ao",	  Option(float,	   1,		None, "Area per lipid (nm*nm) for outer membrane")),
 	("-auo",	 Option(float,	   1,		None, "Area per lipid (nm*nm) for outer membrane upper layer")),
-	("-apl",	 Option(apl_user.append, 1,   None, "Area per lipid (nm*nm) for a lipid type, overriding the built-in table (NAME:AREA)")),
-	("-temp",	 Option(float,	   1,		None, "Temperature (K) for the built-in phospholipid areas per lipid (default: values at ~303 K)")),
-	("-apl_ff",	 Option(str,	   1,		"exp", "Built-in phospholipid areas per lipid: exp (experimental) or m3 (Martini 3 equilibrium, ~0.94 of experimental)")),
-	("-balance",	 Option(str,	   1,		"off", "Balance the leaflets of each membrane after removing lipids that clash with the protein: off, area (equal total lipid area) or number (equal lipid count)")),
-	("-footprint",	 Option(str,	   1,		"clash", "How lipids are removed around the protein: clash (lipids whose tails cannot be traced past the protein) or map (each leaflet filled to its free area, from a depth-resolved protein footprint; flat membranes only)")),
-	("-mt",	 Option(str,	   1,		None, "Membrane thickness (nm) between phosphate planes for -footprint map, as fitted by MemPrO. One value, or two comma separated for the -l/-u and -lo/-uo membranes (default: from the lipid lengths)")),
-	("-fp_map",	 Option(str,	   1,		None, "Write the -footprint map of each leaflet to this .npz file")),
 	("-asym",   Option(int,		 1,		None, "Membrane asymmetry (number of lipids)")),
 	("-rand",   Option(float,	   1,		 0.1, "Random kick size (maximum atom displacement)")),
 	("-bd",	 Option(float,	   1,		 0.3, "Bead distance unit for scaling z-coordinates (nm)")),
@@ -3231,7 +2746,6 @@ are not specified. Curvature can be specified using -curv.
 	("-u_loc",	  Option(lipU_loc.append, 1,   None, "Currently WIP do not use. Lipid type for localisation")),
 	("-micelle",		Option(bool,		0,		  None, "Builds a micelle around a protein instead of a bilayer")),
 	("-radius",		Option(float,		1,		  -1, "Radius of membrane outer disk. This is by default the whole cell")),
-	("-grid",		Option(str,		1,		  "circular", "Lipid grid for flat membranes filling the box: circular (concentric rings) or square (continuous across the periodic boundaries). Curved membranes and -radius disks always use rings")),
 	("-no_lipids",		Option(int,		1,		  -1, "Number of lipids that make up a micelle, this will override area per lipid. Only for use with -micelle")),
 	("-def",	  Option(str,		 1,		None, "Input folder containing deformation data from MemPrOD, This cannot be used with -ps or -curv.")),
 	"""
@@ -3281,7 +2795,6 @@ Define additional lipid types (same format as in lipid-martini-itp-v01.py)
 	("-alhead",  Option(usrheads.append,		1,		None, "Additional lipid head specification string")),
 	("-allink",  Option(usrlinks.append,		1,		None, "Additional lipid linker specification string")),
 	("-altail",  Option(usrtails.append,		1,		None, "Additional lipid tail specification string")),
-	("-lipid_itp", Option(lipid_itps.append,	1,		None, "Lipid topology (.itp) to take lipid definitions (;@INSANE lines) and charges from, e.g. from the Martini 3 lipidome")),
 	]
 	
 args = sys.argv[1:]
@@ -3344,123 +2857,61 @@ else:
 
 
 # HII edit - lipid definition
-# Builds a lipid template from head, linker and tail strings (as in the ;@INSANE lines of Martini 3 lipidome itp files)
-def define_lipid(name, head, link, tail):
+# Add specified lipid definition to insane lipid library
+for name, head, link, tail in list(zip(usrmols,usrheads,usrlinks,usrtails)):
 	moltype = "usr_"+name
-	xs, ys, zs = [], [], []
-	headArray = head.split()
-	linkArray = link.split()
-	tailsArray = tail.split()
-	lipidDefString = ""
+	lipidsx[moltype] = []
+	lipidsy[moltype] = []
+	lipidsz[moltype] = []
+	headArray = (head).split()
+	linkArray = (link).split()
+	tailsArray = (tail).split()
+	lipidDefString = ""  
 
 	if len(tailsArray) != len(linkArray):
-		raise ValueError("Number of tails has to equal number of linkers")
+		print("Error, Number of tails has to equal number of linkers")
+		sys.exit()
 
 	# Find longest tail 
-	maxTail = max([len(cTail) for cTail in tailsArray]+[0])
+	maxTail = 0
+	for cTail in tailsArray:
+	   if len(cTail) > maxTail:
+		   maxTail = len(cTail)
 	cBeadZ = maxTail + len(headArray) # longest tail + linker (always x1) + lengths of all heads - 1 (as it starts on 0)
 
 	# Add head beads
 	for cHead in headArray:
-		if cHead in usrInositolHeads:
-			# Inositol ring placed as in the INOSITOLLIPIDS template, whose glycerol is at z = 6
-			for bead in usrInositolHeads[cHead].split():
-				px, pz = usrInositolPos[bead]
-				xs.append(px)
-				ys.append(0)
-				zs.append(pz - 6 + maxTail)
-				lipidDefString += bead + " "
-		elif cHead in usrLipHeadMapp:
-			xs.append(0)
-			ys.append(0)
-			zs.append(cBeadZ)
-			lipidDefString += usrLipHeadMapp[cHead] + " "
-		else:
-			raise ValueError("Head bead type %s not supported" % cHead)
+		lipidsx[moltype].append(0)
+		lipidsy[moltype].append(0)
+		lipidsz[moltype].append(cBeadZ)
 		cBeadZ -= 1
+		lipidDefString += usrLipHeadMapp[cHead] + " "
 
 	# Add linkers
 	for i,cLinker in enumerate(linkArray):
-		if cLinker not in usrLinkMapp:
-			raise ValueError("Linker type %s not supported" % cLinker)
-		xs.append(max(i-0.5,0))
-		ys.append(0)
-		zs.append(maxTail)
-		lipidDefString += (usrLinkMapp[cLinker] % (i+1) if "%" in usrLinkMapp[cLinker] else usrLinkMapp[cLinker]) + " "
+		lipidsx[moltype].append(max(i-0.5,0))
+		lipidsy[moltype].append(0)
+		lipidsz[moltype].append(cBeadZ)
+		if cLinker == 'G': 
+			lipidDefString += "GL" + str(i+1) + " "
+		elif cLinker == 'A':
+			lipidDefString += "AM" + str(i+1) + " "
+		else:
+			print("Error, linker type not supported")
+			sys.exit()
 
 	# Add tails 
 	for i,cTail in enumerate(tailsArray):
 		cBeadZ = maxTail - 1
+		
 		for j,cTailBead in enumerate(cTail):
-			xs.append(i)
-			ys.append(0)
-			zs.append(cBeadZ)
+			lipidsx[moltype].append(i)
+			lipidsy[moltype].append(0)
+			lipidsz[moltype].append(cBeadZ)
 			cBeadZ -= 1
-			lipidDefString += usrTailNames.get(cTailBead, cTailBead) + str(j+1) + usrIndexToLetter[i] + " "
-
-	lipidsx[moltype], lipidsy[moltype], lipidsz[moltype] = xs, ys, zs
+			lipidDefString += cTailBead + str(j+1) + usrIndexToLetter[i] + " "
+   
 	lipidsa[name] = (moltype,lipidDefString)
-
-
-# Reads the ;@INSANE build lines, charges and bead names of the molecules in a lipid .itp file
-def read_lipid_itp(fn):
-	mols = {}
-	with open(fn) as f:
-		txt = f.read()
-	builds = {}
-	for line in re.findall(r";@INSANE (.*)", txt):
-		kv = dict(x.strip().split("=",1) for x in line.split(",") if "=" in x)
-		if "alname" in kv:
-			builds[kv["alname"].strip()] = kv
-	for blk in re.split(r"\[\s*moleculetype\s*\]", txt)[1:]:
-		lines = [l.split(";")[0].split() for l in blk.splitlines()]
-		lines = [l for l in lines if l]
-		if not lines:
-			continue
-		name = lines[0][0]
-		atoms, charge, sec = [], 0.0, None
-		for l in lines[1:]:
-			if l[0].startswith("["):
-				sec = "".join(l).strip("[]")
-			elif sec == "atoms" and len(l) >= 7 and not l[0].startswith("#"):
-				atoms.append(l[4])
-				charge += float(l[6])
-		mols[name] = {"atoms": atoms, "charge": int(round(charge)), "build": builds.get(name)}
-	return mols
-
-
-# The Martini 3 lipidome, for lipids without a built-in template
-lipidome_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lipidome_m3.dat")
-if os.path.exists(lipidome_file):
-	with open(lipidome_file) as f:
-		for line in f:
-			if line.startswith("#") or not line.strip():
-				continue
-			name, head, link, tail, charge = [x.strip() for x in line.split("|")]
-			if name not in lipidsa:
-				define_lipid(name, head, link, tail)
-			charges[name] = int(round(float(charge)))
-
-# Lipid topologies given with -lipid_itp: their ;@INSANE lines replace the templates, and their charges are used
-used_lipids = {l.split(":")[0] for l in lipL+lipU+lipLO+lipUO}
-for fn in lipid_itps:
-	for name, mol in read_lipid_itp(fn).items():
-		charges[name] = mol["charge"]
-		if mol["build"]:
-			kv = mol["build"]
-			define_lipid(name, kv.get("alhead",""), kv.get("allink",""), kv.get("altail",""))
-		elif name in lipidsa and name in used_lipids:
-			beads = [b for b in lipidsa[name][1].split() if b != "-"]
-			if beads != mol["atoms"]:
-				print("WARNING: The bead names of %s in %s differ from the template (%s); the built lipid will not match the topology" % (name, fn, " ".join(beads)), file=sys.stderr)
-
-# Add specified lipid definition to insane lipid library
-for name, head, link, tail in list(zip(usrmols,usrheads,usrlinks,usrtails)):
-	try:
-		define_lipid(name, head, link, tail)
-	except ValueError as e:
-		print("Error, %s (lipid %s)" % (e, name))
-		sys.exit()
 # End user lipid definition
 
 
@@ -3483,10 +2934,6 @@ if options["-box"].value:
 	
 	
 mem_outer_red = options["-radius"].value
-if options["-grid"].value not in ("circular","square"):
-	print("ERROR: -grid must be circular or square")
-	exit()
-square_grid = options["-grid"].value == "square"
 
 Num_PGL =  options["-pgl"].value
 Pos_PGL =  options["-pgl_z"].value
@@ -4169,44 +3616,28 @@ mi_rad = 0
 if lipL:
 	print("Begining to build lipid bilayer(s)...")
 	#reading inputs
-	if options["-apl_ff"].value not in ("exp","m3"):
-		print("ERROR: -apl_ff must be exp or m3")
-		exit()
-	if(options["-temp"].value is not None or options["-apl_ff"].value == "m3"):
-		adjust_apls(options["-temp"].value,options["-apl_ff"].value)
-		print("Areas per lipid adjusted for"+(" %.0f K"%options["-temp"].value if options["-temp"].value is not None else "")+(" Martini 3 equilibrium areas" if options["-apl_ff"].value == "m3" else ""))
-	for ap in apl_user:
-		ap_name, ap_val = ap.split(":")
-		lipid_apl[ap_name] = float(ap_val)
+	area_l = float(options["-a"].value)
+	if(not options["-au"].value is None):
+		area_u = float(options["-au"].value)
+	else:
+		area_u = float(options["-a"].value)
 
-	#Each leaflet takes the first area flag given, otherwise the mean area per lipid of its composition
-	#(compositions fall back in the same way as when lipids are assigned below)
-	#Returns the mean area per lipid, the area per grid site (smaller where large lipids take several sites)
-	#and whether large lipids take several sites (not when an area is given, which means one lipid per site)
-	def pick_area(flags,lips):
-		for f in flags:
-			if(not options[f].value is None):
-				return float(options[f].value), float(options[f].value), False
-		return leaflet_apl(lips), leaflet_site_area(lips), True
-	area_l, site_l, sites_l = pick_area(["-a"],lipL)
-	area_u, site_u, sites_u = pick_area(["-au","-a"],lipU or lipL)
-	area_lo, site_lo, sites_lo = pick_area(["-ao","-a"],lipLO or lipL)
-	area_uo, site_uo, sites_uo = pick_area(["-auo","-ao","-a"],lipUO or lipLO or lipL)
-	print("Area per lipid (nm^2): upper %.3f, lower %.3f"%(area_u,area_l))
-	if(options["-ps"].value > 1e-5):
-		print("Area per lipid (nm^2) in outer membrane: upper %.3f, lower %.3f"%(area_uo,area_lo))
-	footprint_mode = options["-footprint"].value
-	if footprint_mode not in ("clash","map"):
-		print("ERROR: -footprint must be clash or map")
-		exit()
-	#Thickness between phosphate planes of the -l/-u and -lo/-uo membranes for -footprint map (None: from lipid lengths)
-	mem_thick = [None,None]
-	if options["-mt"].value is not None:
-		mt_vals = [float(v) for v in options["-mt"].value.split(",")]
-		mem_thick = [mt_vals[0],mt_vals[-1]]
-
-	density_l = [np.pi/2*np.sqrt(1/site_l),np.pi/2*np.sqrt(1/site_lo)]
-	density_u = [np.pi/2*np.sqrt(1/site_u),np.pi/2*np.sqrt(1/site_uo)]
+	if(not options["-ao"].value is None):
+		area_lo = float(options["-ao"].value)
+	else:
+		area_lo = float(options["-a"].value)
+	
+	
+	if(not options["-auo"].value is None):
+		area_uo = float(options["-auo"].value)
+	else:
+		if(not options["-ao"].value is None):
+			area_uo = float(options["-ao"].value)
+		else:
+			area_uo = float(options["-a"].value)
+	
+	density_l = [np.pi/2*np.sqrt(1/area_l),np.pi/2*np.sqrt(1/area_lo)]
+	density_u = [np.pi/2*np.sqrt(1/area_u),np.pi/2*np.sqrt(1/area_uo)]
 	area_ls = [area_l,area_lo]
 
 
@@ -4252,10 +3683,8 @@ if lipL:
 				lo_grid = np.zeros((0,3))
 				direcs2 = np.zeros((0,3))
 			else:
-				#The two grids are swapped below when the curvature is reversed, so each is built with the density of the leaflet it ends up as
-				den_up, den_lo = (density_u[i],density_l[i]) if cdirs[i] >= 0 else (density_l[i],density_u[i])
-				up_grid,direcs = create_leaflet(den_up,pbcx/2,pbcy/2,curv_up[i],rcurv_up[i],ang_exts[i],add_pore,inner_leng,trufal[i],mem_outer_red,square_grid)
-				lo_grid,direcs2 = create_leaflet(den_lo,pbcx/2,pbcy/2,curv_lo[i],rcurv_lo[i],ang_exts[i],add_pore,inner_leng,trufal[i],mem_outer_red,square_grid)
+				up_grid,direcs = create_leaflet(density_u[i],pbcx/2,pbcy/2,curv_up[i],rcurv_up[i],ang_exts[i],add_pore,inner_leng,trufal[i],mem_outer_red)
+				lo_grid,direcs2 = create_leaflet(density_l[i],pbcx/2,pbcy/2,curv_lo[i],rcurv_lo[i],ang_exts[i],add_pore,inner_leng,trufal[i],mem_outer_red)
 				up_grid[:,2] = -up_grid[:,2]+2
 				lo_grid[:,2] = -lo_grid[:,2]-2
 
@@ -4304,14 +3733,7 @@ if lipL:
 	av_liplenLO = get_avlip_len(lipLO)
 	
 	#removing lipids within -fudge of protein
-	#protein_lip includes the beads filling enclosed regions (unless -ring), used by -footprint clash. -footprint map
-	#traces tails past the protein alone, as its map already excludes regions lipids cannot reach.
-	prot_coords_fill = np.array(protein_lip.coord).reshape(-1,3)
-	prot_coords_plain = np.array(protein.coord).reshape(-1,3)
-	prot_radii = fp_bead_radii([a[0] for a in protein.atoms],[a[1] for a in protein.atoms])
-	prot_coords = prot_coords_fill
-	#Lipids whose path can't reach the protein skip the bead-by-bead clash checks below (same result, much faster)
-	prot_tree = cKDTree(prot_coords) if len(prot_coords) > 0 else None
+	prot_coords = np.array(protein_lip.coord)
 	#write_point(prot_coords*10,"Protein_filled.pdb")
 	
 	tailsU = np.linspace(0,av_liplenU*1.5,50)
@@ -4325,141 +3747,113 @@ if lipL:
 	zdist = float(options["-ps"].value)
 	print("Calculating lipid positions...")
 	
-	#Tests whether a lipid can be placed at grid point gp with normal direc, tracing its tails past the protein.
-	#sgn is 1 for upper leaflets (tails along -direc) and -1 for lower. Returns whether it can be placed and the path.
-	def place_lipid(gp,direc,tails,sgn,gi,test_pts):
-		zdef = 0
-		mtdef = 1.0
-		coll = False
-		for si in test_pts:
-			if memdata:
-				xtest = (gp[0]+si[0]-pbcx/2)*10
-				ytest = (gp[1]+si[1]-pbcy/2)*10
-				xind = int(((xtest-xlin_def[0])/(xlin_def[-1]-xlin_def[0]))*xlin_def.shape[0])
-				yind = int(((ytest-ylin_def[0])/(ylin_def[-1]-ylin_def[0]))*ylin_def.shape[0])
-				if xind < 0 or yind < 0 or xind >= xlin_def.shape[0] or yind >= ylin_def.shape[0]:
-					zdef = 0
-				else:
-					defor = membrane_pos[xind,yind]/10.0
-					zdef = defor[0]
-					mtdef = (10*defor[1]/membrane_pos[0,0,1])
-			poser = np.array([gp[0],gp[1],mtdef*gp[2]+zdist*(gi*2-1)+zdef])
-			coll = False
-			path = [poser+si]
-			near_prot = near_protein(prot_tree,prot_coords,poser,si,tails,exprot) if tm else prot_coords
-			for it,dr in enumerate(tails):
-				if tm:
-					prot_sliceb = get_box_slice(near_prot,path[-1],[exprot,exprot,exprot])
-				else:
-					prot_sliceb = jnp.empty((0,3))
-				if not prot_sliceb.size == 0:
-					path_bead,can_place = place_bead(np.asarray(path[-1]),tails[1],sgn*direc,SpGrid,prot_sliceb,exprot)
-				else:
-					path_bead = path[-1]-sgn*direc*tails[1]
-					can_place =True
-				path.append(np.array(path_bead))
-				if(not can_place):
-					coll = True
-					break
-			if not coll:
-				for _ in range(10):
-					path_bead = path[-1]-sgn*direc*tails[1]
-					path.append(np.array(path_bead))
-				path_top = [poser+si+direc*tailsUs[gi][1]]
-				for _ in range(50):
-					path_top.append(path_top[-1]+direc*tailsUs[gi][1])
-				for k in range(49):
-					path.append(path_top[-k-1])
-				break
-		return (not coll), path
-
-	#-footprint map needs a flat membrane filling the box
-	def membrane_flat(gi):
-		return (not add_pore) and (not is_micelle) and mem_outer_red < 0 and min(curv_up[gi],rcurv_up[gi]) < 1e-5 and min(curv_lo[gi],rcurv_lo[gi]) < 1e-5
-
-	fp_map_out = {}
-	#-footprint map: fills each leaflet to (free area)/(area per site), on grid sites the protein leaves free plus sites
-	#added in the largest gaps. A lipid whose tails cannot be traced past the protein moves to a spare site.
-	def place_leaflets_map(gi,test_pts):
-		box_xy = np.array([pbcx,pbcy])
-		nx,ny,px,py = fp_grid(box_xy)
-		mid = zdist*(gi*2-1)
-		scale = 1.0
-		if memdata:
-			#Local midplane shift and thickness from MemPrOD, read as in place_lipid
-			gx,gy = np.meshgrid((np.arange(nx)+0.5)*px,(np.arange(ny)+0.5)*py,indexing="ij")
-			xind = ((((gx-pbcx/2)*10)-xlin_def[0])/(xlin_def[-1]-xlin_def[0])*xlin_def.shape[0]).astype(int)
-			yind = ((((gy-pbcy/2)*10)-ylin_def[0])/(ylin_def[-1]-ylin_def[0])*ylin_def.shape[0]).astype(int)
-			inside = (xind >= 0)&(yind >= 0)&(xind < xlin_def.shape[0])&(yind < ylin_def.shape[0])
-			xind,yind = np.clip(xind,0,xlin_def.shape[0]-1),np.clip(yind,0,ylin_def.shape[0]-1)
-			mid = mid+np.where(inside,membrane_pos[xind,yind,0]/10.0,0.0)
-			scale = np.where(inside,membrane_pos[xind,yind,1]/membrane_pos[0,0,1],1.0)
-		if mem_thick[gi] is not None:
-			half_up = half_lo = mem_thick[gi]/2
-			source = "-mt"
-		else:
-			half_up,half_lo = get_phosphate_depth(lipUs[gi]),get_phosphate_depth(lipLs[gi])
-			source = "lipid lengths"
-		maps = footprint_maps(prot_coords_plain,prot_radii,box_xy,mid,half_up*scale,half_lo*scale,enclosed_free=options["-ring"].value is not None)
-		print("Footprint map%s: midplane z %.2f nm, phosphate planes +%.2f/-%.2f nm (from %s)"%(" of membrane %d"%(gi+1) if zdist > 1e-5 else "",np.mean(mid),half_up,half_lo,source))
-		placed_both = []
-		for name,grid,direcs,tails,sgn,site_area,store in (("upper",up_grids[gi],direcss[gi],tailsUs[gi],1,[site_u,site_uo][gi],upper),
-				("lower",lo_grids[gi],direcs2s[gi],tailsLs[gi],-1,[site_l,site_lo][gi],lower)):
-			fp = maps[name]
-			n_target = int(round(fp["free"]/site_area))
-			keep,added,spare = fp_select_sites(grid[:,:2],fp["place"],box_xy,n_target,max(20,n_target//20),random)
-			z0 = grid[0,2] if len(grid) else 2.0*sgn
-			d0 = direcs[0] if len(direcs) else np.array([0.0,0.0,1.0])
-			sites = [(grid[i],direcs[i]) for i in keep]+[(np.array([x,y,z0]),d0) for x,y in added]
-			spares = [(np.array([x,y,z0]),d0) for x,y in spare]
-			placed, moved = [], 0
-			for gp,direc in sites:
-				ok,path = place_lipid(gp,np.array(direc,dtype=float),tails,sgn,gi,test_pts)
-				while not ok and spares:
-					moved += 1
-					gp,direc = spares.pop(0)
-					ok,path = place_lipid(gp,np.array(direc,dtype=float),tails,sgn,gi,test_pts)
-				if ok:
-					entry = (random.random(),gp[0],gp[1],gp[2],direc[0],direc[1],direc[2],path)
-					placed.append(entry)
-					store.append(entry)
-			print("  %s leaflet: protein footprint %.1f nm^2, free area %.1f nm^2, %d sites at %.3f nm^2 (%d added in gaps, %d moved to spare sites)"
-				%(name.capitalize(),fp["footprint"],fp["free"],n_target,site_area,len(added),moved))
-			if len(placed) < n_target:
-				print("WARNING: Only %d of %d sites in the %s leaflet could be filled"%(len(placed),n_target,name))
-			placed_both.append(placed)
-			fp_map_out["%s%d_avail"%(name,gi)] = fp["avail"]
-			fp_map_out["%s%d_place"%(name,gi)] = fp["place"]
-		if options["-fp_map"].value:
-			np.savez(options["-fp_map"].value,box=box_xy,pixel=np.array(maps["pixel"]),**fp_map_out)
-		return placed_both
-
 	for gi in range(2):
 		test_pts = DiskGridFib(20,np.sqrt(area_ls[gi])/1.5)
 		total_up_lips = up_grids[gi].shape[0]
 		total_lo_lips = lo_grids[gi].shape[0]
-		use_map = footprint_mode == "map" and membrane_flat(gi)
-		if footprint_mode == "map" and not use_map and (options["-ps"].value > 1e-5 or gi == 0):
-			print("-footprint map is for flat membranes filling the box; using -footprint clash for membrane %d"%(gi+1))
-		prot_coords = prot_coords_plain if use_map else prot_coords_fill
-		prot_tree = cKDTree(prot_coords) if len(prot_coords) > 0 else None
 		if(options["-ps"].value > 1e-5 or gi == 0):
-			if use_map:
-				upper_tmp, lower_tmp = place_leaflets_map(gi,test_pts)
-			else:
-				upper_tmp, lower_tmp = [], []
-				for i in range(total_up_lips):
-					direc = np.array([direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2]])
-					placed, path = place_lipid(up_grids[gi][i],direc,tailsUs[gi],1,gi,test_pts)
-					if(placed):
-						 upper_tmp.append((random.random(),up_grids[gi][i][0],up_grids[gi][i][1],up_grids[gi][i][2],direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2],path))
-						 upper.append((random.random(),up_grids[gi][i][0],up_grids[gi][i][1],up_grids[gi][i][2],direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2],path))
-				for i in range(total_lo_lips):
-					direc = np.array([direcs2s[gi][i][0],direcs2s[gi][i][1],direcs2s[gi][i][2]])
-					placed, path = place_lipid(lo_grids[gi][i],direc,tailsLs[gi],-1,gi,test_pts)
-					if(placed):
-						lower_tmp.append((random.random(),lo_grids[gi][i][0],lo_grids[gi][i][1],lo_grids[gi][i][2],direcs2s[gi][i][0],direcs2s[gi][i][1],direcs2s[gi][i][2],path))
-						lower.append((random.random(),lo_grids[gi][i][0],lo_grids[gi][i][1],lo_grids[gi][i][2],direcs2s[gi][i][0],direcs2s[gi][i][1],direcs2s[gi][i][2],path))
+			upper_tmp, lower_tmp = [], []
+			for i in range(total_up_lips):
+				zdef = 0
+				mtdef = 1.0
+				
+				direc = np.array([direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2]])
+				coll = False
+				for si in test_pts:
+					if memdata:
+						xtest = (up_grids[gi][i][0]+si[0]-pbcx/2)*10
+						ytest = (up_grids[gi][i][1]+si[1]-pbcy/2)*10
+						xind = int(((xtest-xlin_def[0])/(xlin_def[-1]-xlin_def[0]))*xlin_def.shape[0])
+						yind = int(((ytest-ylin_def[0])/(ylin_def[-1]-ylin_def[0]))*ylin_def.shape[0])
+						if xind < 0 or yind < 0 or xind >= xlin_def.shape[0] or yind >= ylin_def.shape[0]:
+							zdef = 0
+						else:
+							defor = membrane_pos[xind,yind]/10.0
+							zdef = defor[0]
+							mtdef = (10*defor[1]/membrane_pos[0,0,1])
+					poser = np.array([up_grids[gi][i][0],up_grids[gi][i][1],mtdef*up_grids[gi][i][2]+zdist*(gi*2-1)+zdef])
+					coll = False
+					path = [poser+si]
+					for it,dr in enumerate(tailsUs[gi]):
+						#prot_slice = get_box_slice(prot_coords,poser-dr*direc*mtdef,[exprot,exprot,exprot])
+						if tm:
+							prot_sliceb = get_box_slice(prot_coords,path[-1],[exprot,exprot,exprot])
+						else:
+							prot_sliceb = jnp.empty((0,3))
+						if not prot_sliceb.size == 0:
+							path_bead,can_place = place_bead(jnp.array(path[-1]),tailsUs[gi][1],jnp.array(direc),SpGrid,jnp.array(prot_sliceb),exprot)
+						else:
+							path_bead = path[-1]-direc*tailsUs[gi][1]
+							can_place =True
+						path.append(np.array(path_bead))
+						if(not can_place):
+							coll = True
+							break
+					if not coll:
+						for _ in range(10):
+							path_bead = path[-1]-direc*tailsUs[gi][1]
+							path.append(np.array(path_bead))
+						path_top = [poser+si+direc*tailsUs[gi][1]]
+						for _ in range(50):
+							path_top.append(path_top[-1]+direc*tailsUs[gi][1])
+						for i in range(49):
+							path.append(path_top[-i-1])
+						break
+				if(not coll):
+					 upper_tmp.append((random.random(),up_grids[gi][i][0],up_grids[gi][i][1],up_grids[gi][i][2],direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2],path))
+					 upper.append((random.random(),up_grids[gi][i][0],up_grids[gi][i][1],up_grids[gi][i][2],direcss[gi][i][0],direcss[gi][i][1],direcss[gi][i][2],path))
+			for i in range(total_lo_lips):
+				zdef = 0
+				mtdef = 1.0
+				direc = np.array([direcs2s[gi][i][0],direcs2s[gi][i][1],direcs2s[gi][i][2]])
+				coll = False				
+				for si in test_pts:
+					if memdata:
+						xtest = (lo_grids[gi][i][0]+si[0]-pbcx/2)*10
+						ytest = (lo_grids[gi][i][1]+si[1]-pbcy/2)*10
+						xind = int(((xtest-xlin_def[0])/(xlin_def[-1]-xlin_def[0]))*xlin_def.shape[0])
+						yind = int(((ytest-ylin_def[0])/(ylin_def[-1]-ylin_def[0]))*ylin_def.shape[0])
+						if xind < 0 or yind < 0 or xind >= xlin_def.shape[0] or yind >= ylin_def.shape[0]:
+							zdef = 0
+						else:
+							defor = membrane_pos[xind,yind]/10.0
+							zdef = defor[0]
+							mtdef = (10*defor[1]/membrane_pos[0,0,1])
+					poser = np.array([lo_grids[gi][i][0],lo_grids[gi][i][1],mtdef*lo_grids[gi][i][2]+zdist*(gi*2-1)+zdef])
+				
+					coll = False
+					path = [poser+si]
+					#if tm:
+					for it,dr in enumerate(tailsLs[gi]):
+						#prot_slice = get_box_slice(prot_coords,poser+dr*direc*mtdef,[exprot,exprot,exprot])
+						if tm:
+							prot_sliceb = get_box_slice(prot_coords,path[-1],[exprot,exprot,exprot])
+						else:
+							prot_sliceb = jnp.empty((0,3))
+						if not prot_sliceb.size == 0:
+							path_bead,can_place = place_bead(jnp.array(path[-1]),tailsLs[gi][1],-jnp.array(direc),SpGrid,jnp.array(prot_sliceb),exprot)
+						else:
+							path_bead = path[-1]+direc*tailsLs[gi][1]
+							can_place =True
+						path.append(np.array(path_bead))
+						if(not can_place):
+							coll = True
+							break
+					if not coll:
+						for _ in range(10):
+							path_bead = path[-1]+direc*tailsLs[gi][1]
+							path.append(np.array(path_bead))
+						path_top = [poser+si+direc*tailsUs[gi][1]]
+						for _ in range(50):
+							path_top.append(path_top[-1]+direc*tailsUs[gi][1])
+						for i in range(49):
+							path.append(path_top[-i-1])
+						break
+					
+				if(not coll):
+
+					lower_tmp.append((random.random(),lo_grids[gi][i][0],lo_grids[gi][i][1],lo_grids[gi][i][2],direcs2s[gi][i][0],direcs2s[gi][i][1],direcs2s[gi][i][2],path))
+					lower.append((random.random(),lo_grids[gi][i][0],lo_grids[gi][i][1],lo_grids[gi][i][2],direcs2s[gi][i][0],direcs2s[gi][i][1],direcs2s[gi][i][2],path))
 
 			
 			# Sort on the random number
@@ -4469,50 +3863,28 @@ if lipL:
 			
 	
 	
-			# Balance the leaflets by removing (random) lipids from the fuller one
-			#Each placed entry is a grid site; large lipids take several
-			apl_up = [site_u,site_uo][gi]
-			apl_lo = [site_l,site_lo][gi]
-			balance = options["-balance"].value
-			if balance not in ("off","area","number"):
-				print("ERROR: -balance must be off, area or number")
-				exit()
-			if balance != "off":
-				w_up, w_lo = (apl_up,apl_lo) if balance == "area" else (apl_up/[area_u,area_uo][gi],apl_lo/[area_l,area_lo][gi])
-				if len(upper_tmp)*w_up > len(lower_tmp)*w_lo:
-					upper_tmp = upper_tmp[:int(round(len(lower_tmp)*w_lo/w_up))]
-				else:
-					lower_tmp = lower_tmp[:int(round(len(upper_tmp)*w_up/w_lo))]
-
 			# Extract coordinates, taking asymmetry in account
-			#-asym is a number of lipids; entries here are grid sites, of which large lipids take several
 			asym  = options["-asym"].value or 0
-			asym_up = int(round(max(0, asym)*[area_u,area_uo][gi]/apl_up))
-			asym_lo = int(round(max(0,-asym)*[area_l,area_lo][gi]/apl_lo))
-			upper_tmp = [i[1:] for i in upper_tmp[asym_up:]]
-			lower_tmp = [i[1:] for i in lower_tmp[asym_lo:]]
-
-			#A large difference in lipid area between leaflets can induce curvature, though some is expected
-			#where the protein occupies more of one leaflet than the other
-			area_up_leaf = len(upper_tmp)*apl_up
-			area_lo_leaf = len(lower_tmp)*apl_lo
-			area_diff = abs(area_up_leaf-area_lo_leaf)/max(area_up_leaf,area_lo_leaf,1e-9)
-			print("Lipid area (nm^2): upper leaflet %.0f, lower leaflet %.0f (%.1f%% difference)"%(area_up_leaf,area_lo_leaf,100*area_diff))
-			if area_diff > 0.05:
-				print("WARNING: The leaflet lipid areas differ by more than 5%, which may induce curvature. Some difference is expected where the protein occupies more of one leaflet; otherwise consider -balance area or -asym.")
-
+			upper_tmp = [i[1:] for i in upper_tmp[max(0, asym):]]
+			lower_tmp = [i[1:] for i in lower_tmp[max(0,-asym):]]
+			print("; %d lipids in upper leaflet, %d lipids in lower leaflet"%(len(upper_tmp),len(lower_tmp)),file=sys.stderr )
+	
 			# Types of lipids, relative numbers, fractions and numbers
-
+			
 			# Upper leaflet (+1)
 			lipU_new, numU = list(zip(*[ parse_mol(i) for i in lipUs[gi] ]))
-			lip_up, upper_tmp, num_up = assign_lipids(upper_tmp,lipUs[gi],[sites_u,sites_uo][gi],(pbcx,pbcy))
+			totU	   = float(sum(numU))
+			num_up	 = [int(len(upper_tmp)*i/totU) for i in numU]
+			
+			lip_up	 = [l for i,l in list(zip(num_up,lipU_new)) for j in range(i)]
 
 			leaf_up	= ( 1,list(zip(lip_up,upper_tmp)))
 			
 			# Lower leaflet (-1)
 			lipL_new, numL = list(zip(*[ parse_mol(i) for i in lipLs[gi] ]))
-			lip_lo, lower_tmp, num_lo = assign_lipids(lower_tmp,lipLs[gi],[sites_l,sites_lo][gi],(pbcx,pbcy))
-			print("; %d lipids in upper leaflet, %d lipids in lower leaflet"%(len(upper_tmp),len(lower_tmp)),file=sys.stderr )
+			totL	   = float(sum(numL))
+			num_lo	 = [int(len(lower_tmp)*i/totL) for i in numL]
+			lip_lo	 = [l for i,l in list(zip(num_lo,lipL_new)) for j in range(i)]
 			
 			#lower_tmp = LocBias(lower_tmp,num_lo,lipL_new,10000,lipL_loc,loc_grid[0])
 			leaf_lo	= (-1,list(zip(lip_lo,lower_tmp)))
@@ -4936,17 +4308,7 @@ if solv:
 			total_posi += icount
 
 
-		#Compartments given no ions, or ions of only one sign, would otherwise divide by zero below
-		if(total_negi == 0 and total_posi == 0):
-			A_pos = 0
-			A_neg = 0
-		elif(total_negi == 0):
-			A_neg = 0
-			A_pos = cperi/total_posc
-		elif(total_posi == 0):
-			A_pos = 0
-			A_neg = cperi/total_negc
-		elif(total_negc-(total_negi/total_posi) == 0):
+		if(total_negc-(total_negi/total_posi) == 0):
 			A_pos = (cperi-total_negc/total_negi)/(total_posc-total_negc*(total_posi/total_negi))
 			A_neg = (cperi-total_posc*A_pos)/total_negc
 		elif(total_posc-(total_posi/total_negi) == 0):
@@ -4958,10 +4320,10 @@ if solv:
 
 		if(A_pos < 0):
 			A_pos = 0
-			A_neg = cperi/total_negc if total_negc != 0 else 0
+			A_neg = cperi/total_negc
 		if(A_neg < 0):
 			A_neg = 0
-			A_pos = cperi/total_posc if total_posc != 0 else 0
+			A_pos = cperi/total_posc
 
 		A_pos = max(0,A_pos)*total_ions
 		A_neg = max(0,A_neg)*total_ions
@@ -5007,11 +4369,6 @@ if solv:
 				if(ion_charges[inn] == 1):
 					ion_nums[ind] -= cdiff
 					break
-
-		#Without a monovalent ion of the right sign the compartment can't be neutralised
-		residual = ncharges[ci]+sum(ion_charges[inn]*ion_nums[ind] for ind,inn in enumerate(ion_names))
-		if(abs(residual) > 0.5):
-			print("WARNING: Compartment "+str(ci)+" is left with a net charge of "+str(round(residual))+". Add monovalent ions of the opposite sign with -posi_c"+str(ci)+"/-negi_c"+str(ci)+" to neutralise it.")
   
 
 		ngrid   = cn - np.sum(ion_nums)

@@ -4,26 +4,21 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mempro"
-version = "0.3.1"
+version = "0.1.0"
 description = "Membrane Protein Orientation in Lipid Bilayers"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "jax[cpu]>=0.6.0,<0.12",
+    "jax[cpu]==0.6.0",
     "matplotlib>=3.8.4",
 ]
 
-[project.optional-dependencies]
-# NVIDIA GPU support (Linux, CUDA 12): pip install "mempro[gpu]"
-gpu = ["jax[cuda12]>=0.6.0,<0.12"]
-
 [project.scripts]
 mempro = "mempro._cli:main"
-mempro-leaflets = "mempro.leaflet_check:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["mempro*"]
 
 [tool.setuptools.package-data]
-mempro = ["Insane4MemPrO.py", "martini_v3.itp", "lipidome_m3.dat"]
+mempro = ["Insane4MemPrO.py", "martini_v3.itp"]
