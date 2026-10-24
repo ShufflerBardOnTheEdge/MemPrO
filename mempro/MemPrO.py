@@ -133,7 +133,7 @@ class PDB_helper:
 		return False
 	#detects format of input
 	def detect_atomistic(self):
-		lfile = open(os.path.join(self.fn),"r")
+		lfile = open(os.path.join(self.fn),"r",encoding="utf-8")
 		content = lfile.read()
 		lfile.close()
 		content = content.split("\n")
@@ -201,7 +201,7 @@ class PDB_helper:
 		self.all_poses = []
 		atom_types = []
 		b_vals2 = []
-		lfile = open(os.path.join(self.fn),"r")
+		lfile = open(os.path.join(self.fn),"r",encoding="utf-8")
 		content = lfile.read()
 		lfile.close()
 		content = content.split("\n")
@@ -291,7 +291,7 @@ class PDB_helper:
 		self.b_vals = []
 
 		# Read PDB content
-		with open(os.path.join(self.fn), "r") as lfile:
+		with open(os.path.join(self.fn), "r", encoding="utf-8") as lfile:
 			content = lfile.read().split("\n")
 
 		# Group atom lines by (residue name, residue ID)
@@ -483,7 +483,7 @@ class PDB_helper:
 			else:
 				dpoints = np.random.rand(nnn,2)*2*np.pi
 			dpoints2 = np.array([[np.sin(i[0]),np.cos(i[0])*np.sin(i[1]),np.cos(i[0])*np.cos(i[1])] for i in dpoints])
-			inder = np.array([np.random.randint(0,points.shape[0]) for i in range(nnn)],dtype=int)
+			inder = np.array([np.random.randint(0,points.shape[0]) for i in range(nnn)],dtype=np.int64)
 			fpoints = jnp.array(mrange*dpoints2+points[inder])
 			direcs = jnp.array(-dpoints2)
 			start_h = hit_points[hit_points==0].shape[0]			
@@ -721,7 +721,7 @@ class PDB_helper:
 		self.all_poses = self.all_poses-surf_mean
 	
 	def get_data(self):		
-		return (self.surface,self.spheres,self.surface_poses,self.bead_types,self.surf_b_vals,self.poses,self.all_poses,self.b_vals,self.build_no,np.array(self.map_to_beads,dtype=int),self.normals,self.all_bead_types)
+		return (self.surface,self.spheres,self.surface_poses,self.bead_types,self.surf_b_vals,self.poses,self.all_poses,self.b_vals,self.build_no,np.array(self.map_to_beads,dtype=np.int64),self.normals,self.all_bead_types)
 		
 #This is the main orientation class
 class MemBrain:
@@ -1438,7 +1438,7 @@ class MemBrain:
 		numer = self.surface_poses.shape[0]
 		sposes = self.surface_poses
 		hydro_val = jnp.array(self.W_B_mins)
-		hydro_index = jnp.array(jax.device_get(self.bead_types),dtype=int)
+		hydro_index = jnp.array(jax.device_get(self.bead_types),dtype=jnp.int64)
 		
 		
 		@jax.vmap
@@ -1447,7 +1447,7 @@ class MemBrain:
 			mens = jnp.zeros(numer+1)
 			def gch2(mens,ind):
 				def in_r(mens):
-					vnd = jnp.array(mens[-1],dtype = int)
+					vnd = jnp.array(mens[-1],dtype=jnp.int64)
 					mens = mens.at[vnd].set(hydro_val[hydro_index[ind]])
 					mens = mens.at[-1].set(mens[-1] + 1)
 					return mens
@@ -1456,7 +1456,7 @@ class MemBrain:
 				mens = jax.lax.cond(jnp.linalg.norm(sposes[ind]-sposes[ind_fix]) < 20,in_r,nin_r,mens)
 				return mens,ind
 			mens,_ = jax.lax.scan(gch2,mens,jnp.arange(numer))
-			vnd = jnp.array(mens[-1],dtype = int)
+			vnd = jnp.array(mens[-1],dtype=jnp.int64)
 			nnh = jnp.sum(mens[:-1])/vnd
 			return nnh
 		nnh = gch1(jnp.arange(numer))
@@ -1468,7 +1468,7 @@ class MemBrain:
 		sposes = position_pointv2_jit(0,zdir,xydir,self.surface_poses)
 		numer = self.surface_poses.shape[0]
 		hydro_val = jnp.array(self.W_B_mins)
-		hydro_index = jnp.array(jax.device_get(self.bead_types),dtype=int)
+		hydro_index = jnp.array(jax.device_get(self.bead_types),dtype=jnp.int64)
 		
 		@jax.vmap
 		def gch1(ind):
@@ -1476,7 +1476,7 @@ class MemBrain:
 			mens = jnp.zeros(numer+1)
 			def gch2(mens,ind):
 				def in_r(mens):
-					vnd = jnp.array(mens[-1],dtype = int)
+					vnd = jnp.array(mens[-1],dtype=jnp.int64)
 					mens = mens.at[vnd].set(hydro_val[hydro_index[ind]])
 					mens = mens.at[-1].set(mens[-1] + 1)
 					return mens
@@ -1485,7 +1485,7 @@ class MemBrain:
 				mens = jax.lax.cond(jnp.linalg.norm(sposes[ind]-sposes[ind_fix]) < 20,in_r,nin_r,mens)
 				return mens,ind
 			mens,_ = jax.lax.scan(gch2,mens,jnp.arange(numer))
-			vnd = jnp.array(mens[-1],dtype = int)
+			vnd = jnp.array(mens[-1],dtype=jnp.int64)
 			nnh = jnp.sum(mens[:-1])/vnd
 			return nnh
 		nnh = gch1(jnp.arange(numer))
@@ -1540,9 +1540,9 @@ class MemBrain:
 
 	#An improved version of the above
 	def hydro_core_imp(self,surface_poses,bead_types):
-		num_binsx = jnp.array(jnp.floor(jnp.max(jnp.abs(surface_poses[:,0]))/10),dtype=int)
-		num_binsy = jnp.array(jnp.floor(jnp.max(jnp.abs(surface_poses[:,1]))/10),dtype=int)
-		num_binsz = jnp.array(jnp.floor(jnp.max(jnp.abs(surface_poses[:,2]))/10),dtype=int)
+		num_binsx = jnp.array(jnp.floor(jnp.max(jnp.abs(surface_poses[:,0]))/10),dtype=jnp.int64)
+		num_binsy = jnp.array(jnp.floor(jnp.max(jnp.abs(surface_poses[:,1]))/10),dtype=jnp.int64)
+		num_binsz = jnp.array(jnp.floor(jnp.max(jnp.abs(surface_poses[:,2]))/10),dtype=jnp.int64)
 		rangerx = jnp.max(surface_poses[:,0])
 		rangery = jnp.max(surface_poses[:,1])
 		rangerz = jnp.max(surface_poses[:,2])
@@ -1556,9 +1556,9 @@ class MemBrain:
 			ypos = surface_poses[ind][1]
 			zpos = surface_poses[ind][2]
 			hydro_val =self.W_B_mins[bead_types[ind]]
-			x_ind = jnp.array(num_binsx*(xpos+rangerx)/(rangerx*2),dtype=int)
-			y_ind = jnp.array(num_binsy*(ypos+rangery)/(rangery*2),dtype=int)
-			z_ind = jnp.array(num_binsz*(zpos+rangerz)/(rangerz*2),dtype=int)
+			x_ind = jnp.array(num_binsx*(xpos+rangerx)/(rangerx*2),dtype=jnp.int64)
+			y_ind = jnp.array(num_binsy*(ypos+rangery)/(rangery*2),dtype=jnp.int64)
+			z_ind = jnp.array(num_binsz*(zpos+rangerz)/(rangerz*2),dtype=jnp.int64)
 			ys = ys.at[x_ind,y_ind,z_ind,0].set(ys[x_ind,y_ind,z_ind,0]+hydro_val)
 			ys = ys.at[x_ind,y_ind,z_ind,1].set(ys[x_ind,y_ind,z_ind,1]+1)
 			return ys,ind
@@ -1732,7 +1732,7 @@ class MemBrain:
 		rang_max = maxi+(self.memt_tails/2+20)
 		zs = jnp.linspace(rang_min,rang_max,max_iter)
 		in_depth_ind = ((in_depth-rang_min)/(rang_max-rang_min))*max_iter
-		in_depth_ind = jnp.array(in_depth_ind,dtype=int) 
+		in_depth_ind = jnp.array(in_depth_ind,dtype=jnp.int64) 
 		pots = jnp.zeros(max_iter)
 		def calc_pot_fun(pots,ind):
 			posi = jnp.zeros(8)
@@ -2001,7 +2001,7 @@ class MemBrain:
 			pos_grid = pos_grid.at[ind].set(pos)
 			return pos_grid,ind
 			
-		no_runs = jnp.ceil(grid_size/no_cpu).astype(int)
+		no_runs = jnp.ceil(grid_size/no_cpu).astype(jnp.int64)
 		
 		pos_grid,_ = jax.lax.scan(min_plot_fun_1,pos_grid,jnp.arange(grid_size))
 		self.start_grid = pos_grid.copy()
@@ -2020,11 +2020,11 @@ class MemBrain:
 			result_grid = result_grid.at[i::no_runs].set(self.minimise_p(pos_grid[i::no_runs],max_iter))
 			times_taken = times_taken.at[i].set((time.time()-timers))
 			if(i > 5):
-				time_rem = jnp.array((no_runs-(i+1))*jnp.mean(times_taken[i-5:i+1]),dtype=int)
+				time_rem = jnp.array((no_runs-(i+1))*jnp.mean(times_taken[i-5:i+1]),dtype=jnp.int64)
 			elif(i>1):
-				time_rem = jnp.array((no_runs-(i+1))*jnp.mean(times_taken[1:i+1]),dtype=int)
+				time_rem = jnp.array((no_runs-(i+1))*jnp.mean(times_taken[1:i+1]),dtype=jnp.int64)
 			else:
-				time_rem = jnp.array((no_runs-(i+1))*jnp.mean(times_taken[:i+1]),dtype=int)
+				time_rem = jnp.array((no_runs-(i+1))*jnp.mean(times_taken[:i+1]),dtype=jnp.int64)
 		self.result_grid=result_grid[:no_grid]
 		jax.block_until_ready(result_grid)
 		
@@ -2199,7 +2199,7 @@ class MemBrain:
 		prev_sposes = prev_sposes.at[minima_types[-1]].set(2.0)
 		def fix_spos(prev_sposes,ind):
 			spos = sposs[ind].copy()
-			index = jnp.array(prev_sposes[-1],dtype=int)
+			index = jnp.array(prev_sposes[-1],dtype=jnp.int64)
 			def first(prev_sposes):
 				prev_sposes = prev_sposes.at[minima_types[ind]-1].set(spos[index])
 				return prev_sposes
@@ -2521,7 +2521,7 @@ class MemBrain:
 		dirs =  np.array([(points[ind]-cen)/disters[ind] for ind in range(points.shape[0])])
 		f_ind = np.argmax(disters)
 		f_point = points[f_ind]
-		convex_hull = np.zeros((points.shape[0]+1),dtype=int)
+		convex_hull = np.zeros((points.shape[0]+1),dtype=np.int64)
 		convex_hull[0] = f_ind
 		convex_hull[-1] = 1
 		
@@ -2730,7 +2730,7 @@ class MemBrain:
 				print("WARNING: There was an error when trying to build the system. Check -bd_args are correct.")
 	#Writes a pdb using a given file as a template and replacing positions
 	def write_oriented(self,temp_fn,orient_dir,run_cmd,flip):
-		lfile = open(temp_fn,"r")
+		lfile = open(temp_fn,"r",encoding="utf-8")
 		content = lfile.read()
 		lfile.close()
 		content = content.split("\n")
@@ -2750,15 +2750,15 @@ class MemBrain:
 		npmem_im = np.array(self.new_memt_im)
 		npmem_om = np.array(self.new_memt_om)
 
-		ranks = open(os.path.join(orient_dir,"orientation.txt"),"w")
-		all_orients = open(os.path.join(orient_dir,"orientations.pdb"),"w")
+		ranks = open(os.path.join(orient_dir,"orientation.txt"),"w",encoding="utf-8")
+		all_orients = open(os.path.join(orient_dir,"orientations.pdb"),"w",encoding="utf-8")
 		ranks.write("Generated by command: "+run_cmd+"\n")
 		ranks.write("Rank \t Relative potential \t % hits \t Re-rank pots \t Re-rank minima depth \t Re-rank values\n")# \t force max + \t force max -\n")
 		for i in range(min_poses.shape[0]):
 			if(not os.path.exists(orient_dir+"Rank_"+str(i+1)+"/")):
 				os.mkdir(orient_dir+"Rank_"+str(i+1)+"/")
 			rank_dir = orient_dir+"Rank_"+str(i+1)+"/"
-			infos = open(os.path.join(rank_dir,"info_rank_"+str(i+1)+".txt"),"w")
+			infos = open(os.path.join(rank_dir,"info_rank_"+str(i+1)+".txt"),"w",encoding="utf-8")
 			infos.write("Iter-Membrane distance (for -dm only): "+str(form(2*min_zdist[i]))+" A \n")
 			infos.write("Potential Energy (rel): "+str(form(min_pots[i]))+"\n")
 			infos.write("Global curvature (-c): "+str(form(min_curvs[i]))+" A^-1 \n")
@@ -2773,12 +2773,12 @@ class MemBrain:
 			
 			orient_poses = np.array(position_point_jit(min_poses[i][1],min_poses[i][2],min_poses[i][3],self.all_poses))
 			ranks.write(str(i+1)+"\t "+str(form(min_pots[i]))+"\t"+str(form(min_hits[i]))+"\t"+str(form(self.re_rank_pots[i]))+"\t"+str(form(self.re_rank_disses[i]))+"\t"+str(form(self.re_rank_vals[i]))+"\n")#+"\t"+str(pm)+"\t"+str(mm)+"\n")
-			new_file = open(os.path.join(rank_dir,"oriented_rank_"+str(i+1)+".pdb"),"w")
+			new_file = open(os.path.join(rank_dir,"oriented_rank_"+str(i+1)+".pdb"),"w",encoding="utf-8")
 			if(self.build_no > i):
 				cg_sys_dir = rank_dir+"CG_System_rank_"+str(i+1)
 				if(not os.path.exists(cg_sys_dir)):
 					os.mkdir(cg_sys_dir)
-				new_file_b = open(os.path.join(cg_sys_dir,"protein-cg.pdb"),"w")
+				new_file_b = open(os.path.join(cg_sys_dir,"protein-cg.pdb"),"w",encoding="utf-8")
 			count = 0
 			count2 = 0
 			neww = False
@@ -3019,7 +3019,7 @@ tree_util.register_pytree_node(PDB_helper,PDB_helper._tree_flatten,PDB_helper._t
 
 #A helper function the writes and arbritrary PDB file
 def write_point(points,fn,orient_dir):
-	new_file = open(os.path.join(orient_dir,fn),"w")
+	new_file = open(os.path.join(orient_dir,fn),"w",encoding="utf-8")
 	count = 0
 	for i in points:
 		count += 1
@@ -3201,7 +3201,7 @@ def create_sph_grid(bsize):
 	return sgrid
 	
 def create_sph_grid_charg(bsize,end_ang,orad):
-	bsize_true = jnp.array(end_ang,dtype=int)
+	bsize_true = jnp.array(end_ang,dtype=jnp.int64)
 	
 	
 	sgrid = jnp.zeros((bsize,3))
@@ -3291,7 +3291,7 @@ def get_int_strength(bead_1,bead_2,martini_file):
 		return 0
 	string = " "*(6-len(bead_1))+bead_1+" "*(6-len(bead_2))+bead_2
 	string2 = " "*(6-len(bead_2))+bead_2+" "*(6-len(bead_1))+bead_1
-	mfile = open(martini_file,"r")
+	mfile = open(martini_file,"r",encoding="utf-8")
 	content = mfile.readlines()
 	for i,line in enumerate(content):
 		if(string in line or string2 in line):
@@ -3324,8 +3324,8 @@ def create_graphs(orient_dir,col_grid,pot_grid,angs,resa):
 		ind2 = resa*ang2/(2*jnp.pi)
 		ind1 = jnp.floor(ind1)
 		ind2 = jnp.floor(ind2)
-		ind1 = jnp.array(ind1,dtype=int)
-		ind2 = jnp.array(ind2,dtype=int)
+		ind1 = jnp.array(ind1,dtype=jnp.int64)
+		ind2 = jnp.array(ind2,dtype=jnp.int64)
 		return ind1,ind2
 	def set_vals(graph_mesh,vals,leng):
 		graph_mesh = graph_mesh.at[:,:,-1].set(1e-5)
@@ -3435,7 +3435,7 @@ def shifted_cos_cutoff(x,deg):
 
 
 def pts_around(pointsA,points,rng):
-	hitpts = jnp.zeros(points.shape[0],dtype=int)
+	hitpts = jnp.zeros(points.shape[0],dtype=jnp.int64)
 	def a1fun(hitpts,ind):
 		ind_fix=ind
 		def a2fun(hitpts,ind):
@@ -3519,7 +3519,7 @@ def get_box_slice(points,p,r):
 	return pslice,islice
 	
 def get_binned_points(points,rad):
-	binned_points = np.zeros((points.shape[0],points.shape[0]),dtype=int)
+	binned_points = np.zeros((points.shape[0],points.shape[0]),dtype=np.int64)
 	max_in_rad = 0	
 	for i,p in enumerate(points):
 		_,box = get_box_slice(points,p,[rad,rad,rad])
@@ -3560,7 +3560,7 @@ def add_Reses(Res, Resitp):
 
     Reses[Res] = current_res_no
 
-    with open(Resitp, "r") as itpfile:
+    with open(Resitp, "r", encoding="utf-8") as itpfile:
         itp_lines = itpfile.readlines()
 
     restobead_add = []
@@ -3599,7 +3599,7 @@ def add_AtomToBeads(fn):
 	bead_names = []
 	beads = []
 	first_bead = True
-	lfile = open(os.path.join(fn),"r")
+	lfile = open(os.path.join(fn),"r",encoding="utf-8")
 	content = lfile.read()
 	lfile.close()
 	content = content.split("\n")

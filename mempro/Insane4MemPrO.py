@@ -593,7 +593,7 @@ def readBox(a):
 		return x[0],x[3],x[4],x[5],x[1],x[6],x[7],x[8],x[2]
 #A helper function the writes and arbritrary PDB file
 def write_point(points,fn):
-	new_file = open(fn,"w")
+	new_file = open(fn,"w",encoding="utf-8")
 	count = 0
 	for i in points:
 		count += 1
@@ -619,7 +619,7 @@ class Structure:
 		self._center = None
 
 		if filename:
-			lines = open(filename).readlines()
+			lines = open(filename,encoding="utf-8").readlines()
 			# Try extracting PDB atom/hetatm definitions
 			self.rest   = []
 			self.atoms  = [pdbAtom(i) for i in lines if isPDBAtom(i) or self.rest.append(i)]
@@ -1644,7 +1644,7 @@ def count_all_olig(all_lines):
 
 #loads an itp file
 def load_itp(fn):
-	tmp_f = open(fn,"r")
+	tmp_f = open(fn,"r",encoding="utf-8")
 	tmp_lines = tmp_f.readlines()
 	tmp_f.close()
 	
@@ -1881,7 +1881,7 @@ def write_PGL_itp(all_lines,nam_itp,nag_itp,spep_itp,upep_itp,uupep_itp,prev_str
 					
 #write the PG itp	 
 def write_all_itp(itp_str,out_folder):
-	pgl_file = open(out_folder+"PGL.itp","w")	
+	pgl_file = open(out_folder+"PGL.itp","w",encoding="utf-8")	
 	pgl_file.write("[ moleculetype ]\n")
 	pgl_file.write("PGL	1\n\n")
 	pgl_file.write(itp_str[0]+"\n")
@@ -2276,8 +2276,8 @@ def enforce_pbc_jax(ppos,box_size):
 def calc_acc_jax(ppos,bonds,box_size):
 	pacc = jnp.zeros_like(ppos)
 	def bond_loop(pacc,ind):
-		bind1 = jnp.array(bonds[ind,0],dtype=int)
-		bind2 = jnp.array(bonds[ind,1],dtype=int)
+		bind1 = jnp.array(bonds[ind,0],dtype=jnp.int64)
+		bind2 = jnp.array(bonds[ind,1],dtype=jnp.int64)
 		pa = ppos[bind1]
 		pb = ppos[bind2]
 		min_dist,part_copy = get_closest_pos_jax(pa,pb,box_size)
@@ -2343,8 +2343,8 @@ def get_boxforce_jax(bonds,ppos,box_size):
 	total_force = jnp.zeros(2)
 
 	def bfor_loop(total_force,ind):
-		bind1 = jnp.array(bonds[ind,0],dtype=int)
-		bind2 = jnp.array(bonds[ind,1],dtype=int)
+		bind1 = jnp.array(bonds[ind,0],dtype=jnp.int64)
+		bind2 = jnp.array(bonds[ind,1],dtype=jnp.int64)
 		pa = ppos[bind1]
 		pb = ppos[bind2]
 		min_dist,part_copy = get_closest_pos_jax(pa,pb,box_size)
@@ -2514,7 +2514,7 @@ def relax_pg(gposes,box_size,tol,all_p):
 	for ap in range(all_p_lens.shape[0]):
 		all_p[ap] = np.pad(all_p[ap],((0,max_len-all_p[ap].shape[0]),(0,0)),"constant",constant_values=((0,0),(0,0)))
 	all_p_pad = jnp.array(all_p)
-	all_p_lens = jnp.array(all_p_lens,dtype=int)
+	all_p_lens = jnp.array(all_p_lens,dtype=jnp.int64)
 	if all_p_pad.shape[1] == 0:
 		all_p_pad = jnp.zeros((all_p_pad.shape[0],1,3))
 
@@ -3123,7 +3123,7 @@ if not tm or options["-ct"].value != None or using_temp:
 	#for writing a template for muliple protein placments
 	if(options["-ct"].value != None):
 		print("Writing template file...")
-		new_file = open(options["-ct"].value,"w")
+		new_file = open(options["-ct"].value,"w",encoding="utf-8")
 		count = 0
 		trufal = [True,False]
 		ang_exts = np.array([np.arcsin(curvs_mid[0]*extent),np.arcsin(curvs_mid[1]*extent)])
@@ -3154,7 +3154,7 @@ if not tm or options["-ct"].value != None or using_temp:
 			
 		new_file.close()
 		info_fn = options["-ct"].value.split(".")[0]+".txt"
-		info_file = open(info_fn,"w")
+		info_file = open(info_fn,"w",encoding="utf-8")
 		info_file.write("Curvature values:"+options["-curv"].value+"\n")
 		info_file.write("Outer curvature values:"+options["-curv_o"].value+"\n")
 		info_file.write("Pore:"+str(add_pore)+"\n")
@@ -3170,13 +3170,13 @@ if not tm or options["-ct"].value != None or using_temp:
 		print("Extracting data from template...")
 		#WHen a template is present it used to build membrane
 		in_prots = options["-fs"].value
-		prot_file = open(in_prots,"r")
+		prot_file = open(in_prots,"r",encoding="utf-8")
 		lines = prot_file.read().split("\n")
 		prot_file.close()
 		
   
 		
-		temp_file = open(options["-in_t"].value,"r")
+		temp_file = open(options["-in_t"].value,"r",encoding="utf-8")
 		temp_lines = temp_file.read().split("\n")
 		temp_file.close()
 		poses = np.zeros((len(lines),3))
@@ -4233,10 +4233,10 @@ if solv:
 	else:
 		charge = 0
  
-	ncharges = np.zeros(3,dtype=int)
+	ncharges = np.zeros(3,dtype=np.int64)
 	if options["-charge_ratio"].value:
 		charge_rats /= np.sum(charge_rats[:non_zero])
-		ncharges = np.array(charge*charge_rats,dtype=int)
+		ncharges = np.array(charge*charge_rats,dtype=np.int64)
 	else:
 		if(zdist > 1e-5):
 			ncharges[1],_,_,_ = get_charge(mz-zdist,mz+zdist)
@@ -4449,7 +4449,7 @@ print("; NDX System %d %d" % (1, plen+mlen+slen+pglen),file=sys.stderr)
 print("; \"I mean, the good stuff is just INSANE\" --Julia Ormond",file=sys.stderr)
 
 # Open the output stream
-oStream = options["-o"] and open(options["-o"].value,"w") or sys.stdout
+oStream = options["-o"] and open(options["-o"].value,"w",encoding="utf-8") or sys.stdout
 
 # print(the title)
 if membrane.atoms:
@@ -4512,7 +4512,7 @@ print("%10.5f%10.5f%10.5f%10.5f%10.5f%10.5f%10.5f%10.5f%10.5f\n"%grobox,file=oSt
 oStream.close()
 if options["-p"].value:
 	# Write a rudimentary topology file
-	with open(options["-p"].value,"w") as top:
+	with open(options["-p"].value,"w",encoding="utf-8") as top:
 		#print('#include "martini_v3.itp"\n',file=top)
 		print('; '+' '.join(sys.argv),file=top)
 		print('#include "martini_v3.0.0.itp"',file=top)
